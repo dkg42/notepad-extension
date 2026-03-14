@@ -5,3 +5,8 @@ export interface Snippet {
   source: string;
   savedAt: number;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}

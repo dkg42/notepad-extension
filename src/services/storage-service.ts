@@ -24,6 +24,23 @@ export const storageService = {
     return snippet;
   },
 
+  /**
+   * Saves multiple texts in a single read-write cycle to avoid race conditions.
+   * Use this instead of calling save() in a Promise.all loop.
+   */
+  async saveMany(texts: string[], source: string): Promise<Snippet[]> {
+    const now = Date.now();
+    const newSnippets: Snippet[] = texts.map((text) => ({
+      id: crypto.randomUUID(),
+      text,
+      source,
+      savedAt: now,
+    }));
+    const existing = await this.getAll();
+    await chrome.storage.local.set({ [STORAGE_KEY]: [...newSnippets, ...existing] });
+    return newSnippets;
+  },
+
   async remove(id: string): Promise<void> {
     const existing = await this.getAll();
     await chrome.storage.local.set({

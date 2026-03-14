@@ -33,34 +33,57 @@ npm run typecheck  # Type-check without emitting
 
 ```
 src/
+├── adapters/
+│   ├── adapter.interface.ts      ← ChatSiteAdapter (findHeaderAnchor, extractMessages, extractPrompts)
+│   ├── adapter-registry.ts       ← getAdapter(hostname) — single place to register adapters
+│   ├── chatgpt.adapter.ts
+│   ├── claude.adapter.ts
+│   ├── gemini.adapter.ts
+│   ├── perplexity.adapter.ts
+│   └── copilot.adapter.ts
+├── content/
+│   ├── selection-save.ts         ← Floating "Save snippet" button on text selection
+│   └── header-injector.ts        ← "Export chat" + "Save prompts" buttons in page header
+├── export/
+│   ├── export-strategy.interface.ts  ← ExportStrategy (type, export(messages, filename))
+│   └── markdown.export.ts            ← MarkdownExportStrategy: downloads .md, clipboard fallback
 ├── entrypoints/
-│   ├── content.ts          # Content script injected into LLM chatbot pages
+│   ├── content.ts          ← Thin orchestrator: calls setupSelectionSave + setupHeaderButtons
 │   └── popup/
-│       ├── index.html      # Popup shell
-│       ├── main.tsx        # React root mount
-│       └── App.tsx         # Popup root component
+│       ├── index.html
+│       ├── main.tsx
+│       └── App.tsx
 ├── components/
-│   ├── SnippetList.tsx     # Renders the list of saved snippets
-│   └── SnippetItem.tsx     # Single snippet card (copy / delete)
+│   ├── SnippetList.tsx
+│   └── SnippetItem.tsx
 ├── services/
-│   └── storage-service.ts  # All chrome.storage.local reads/writes
+│   └── storage-service.ts  ← All chrome.storage.local reads/writes (getAll, save, remove, clear)
+├── utils/
+│   └── dom.ts              ← waitForElement, onUrlChange (SPA navigation helper)
 └── types/
-    └── index.ts            # Shared TypeScript interfaces (Snippet)
+    └── index.ts            ← Snippet, ChatMessage
 ```
 
 ### Key architectural decisions
 
-**Content script (`content.ts`)** — Vanilla TypeScript, no React. Creates a shadow-DOM container so its CSS is fully isolated from the host page. Listens for `mouseup` to detect text selections; shows a floating **Save snippet** button anchored below the selection using `getBoundingClientRect()` (viewport coords → `position: fixed`). Saves via `storageService` and shows brief "Saved!" feedback.
+**Adapter pattern** — Each LLM site has its own adapter implementing `ChatSiteAdapter`. The registry maps hostnames to adapters. Adding a new site means creating one new file and registering it in `adapter-registry.ts`; nothing else changes (Open/Closed principle).
 
-**Storage service (`storage-service.ts`)** — Single module that owns all `chrome.storage.local` access. The popup and content script both import this; no direct storage calls elsewhere.
+**Export Strategy pattern** — `ExportStrategy` interface makes adding new formats (PDF, Google Docs) a matter of implementing a new class without modifying existing code. `MarkdownExportStrategy` downloads a `.md` file and falls back to clipboard on failure.
 
-**Popup** — React + TypeScript. Loads all snippets on mount, updates local state optimistically on delete.
+**Content script (`content.ts`)** — Thin orchestrator. Feature logic lives in `src/content/`. Uses vanilla TypeScript (no React) with shadow DOM so extension CSS is fully isolated from host pages.
 
-### Supported LLM hosts (declared in `wxt.config.ts` as `host_permissions`)
+**Header injection** — Buttons are appended to the adapter's `findHeaderAnchor()` element inside a shadow-DOM container. `onUrlChange()` watches for SPA navigation and re-injects after a settle delay. The marker ID `llm-enhancer-header-buttons` prevents duplicate injection.
+
+**Storage service** — Single module owning all `chrome.storage.local` access. Popup and content script both import it; no direct storage calls elsewhere.
+
+### Supported LLM hosts
 - chatgpt.com / chat.openai.com
 - claude.ai
 - gemini.google.com
 - perplexity.ai
 - copilot.microsoft.com
 
-To add a new host, add its pattern to both `host_permissions` in `wxt.config.ts` **and** the `matches` array in `src/entrypoints/content.ts`.
+To add a new host: create `src/adapters/{site}.adapter.ts`, register it in `adapter-registry.ts`, and add the URL pattern to both `host_permissions` in `wxt.config.ts` and `matches` in `src/entrypoints/content.ts`.
+
+### DOM selector maintenance
+Each adapter's `findHeaderAnchor()` and `extractMessages()` target live DOM elements via CSS selectors. These sites update their UI regularly — if a feature stops working on a specific site, check that site's adapter file first.
