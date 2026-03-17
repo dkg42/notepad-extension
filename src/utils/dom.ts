@@ -27,6 +27,21 @@ export function waitForElement(selector: string, timeout = 10_000): Promise<Elem
 }
 
 /**
+ * Calls callback once when the element with the given ID is removed from the DOM.
+ * Useful for detecting when a host SPA re-renders and discards injected nodes.
+ */
+export function onElementRemoved(id: string, callback: () => void): () => void {
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById(id)) {
+      observer.disconnect();
+      callback();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
+/**
  * Calls callback whenever the page URL changes (handles SPA client-side navigation).
  * Returns a cleanup function to stop observing.
  */

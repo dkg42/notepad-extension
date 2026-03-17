@@ -1,7 +1,7 @@
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
 import { MarkdownExportStrategy } from '@/export/markdown.export';
 import { storageService } from '@/services/storage-service';
-import { onUrlChange } from '@/utils/dom';
+import { onElementRemoved, onUrlChange } from '@/utils/dom';
 
 const INJECTED_MARKER_ID = 'llm-enhancer-header-buttons';
 const INJECT_RETRY_DELAY_MS = 500;
@@ -32,6 +32,10 @@ function tryInject(adapter: ChatSiteAdapter): void {
   const { container, shadow } = createButtonContainer();
   container.id = INJECTED_MARKER_ID;
   anchor.appendChild(container);
+
+  // ChatGPT (and other React SPAs) may replace the header node after hydration,
+  // silently discarding our injected buttons. Re-inject as soon as that happens.
+  onElementRemoved(INJECTED_MARKER_ID, () => tryInject(adapter));
 
   const exportBtn = addButton('Export chat', '#2563eb', shadow);
   const savePromptsBtn = addButton('Save prompts', '#7c3aed', shadow);
@@ -65,7 +69,9 @@ function tryInject(adapter: ChatSiteAdapter): void {
 function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot } {
   const container = document.createElement('div');
   // Reset host styles so the site's CSS doesn't bleed in
-  container.style.cssText = 'all: initial; display: inline-flex;';
+  // margin-left:auto right-aligns the container within its flex parent
+  // (used by the Claude adapter which injects into the flex-1 title div).
+  container.style.cssText = 'all: initial; display: inline-flex; margin-left: auto;';
 
   const shadow = container.attachShadow({ mode: 'open' });
 

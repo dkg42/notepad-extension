@@ -5,11 +5,9 @@ export class GeminiAdapter implements ChatSiteAdapter {
   readonly hostnames = ['gemini.google.com'] as const;
 
   findHeaderAnchor(): Element | null {
-    // Gemini uses Angular Material — the top toolbar
     return (
-      document.querySelector('mat-toolbar') ??
-      document.querySelector('.top-app-bar') ??
-      document.querySelector('header') ??
+      document.querySelector('.top-bar-actions .right-section') ??
+      document.querySelector('.top-bar-actions') ??
       null
     );
   }
@@ -17,29 +15,19 @@ export class GeminiAdapter implements ChatSiteAdapter {
   extractMessages(): ChatMessage[] {
     const messages: ChatMessage[] = [];
 
-    document.querySelectorAll<HTMLElement>('.conversation-turn').forEach((turn) => {
-      const queryEl = turn.querySelector<HTMLElement>('.query-text');
-      const responseEl = turn.querySelector<HTMLElement>('.model-response-text');
+    // Each turn is wrapped in .conversation-container with a user-query and model-response child.
+    // User text:      user-query .query-text            (div.query-text gds-body-l query-text-animated)
+    // Assistant text: model-response .markdown          (div.markdown.markdown-main-panel)
+    document.querySelectorAll<HTMLElement>('.conversation-container').forEach((turn) => {
+      const userEl = turn.querySelector<HTMLElement>('user-query .query-text');
+      const assistantEl = turn.querySelector<HTMLElement>('model-response .markdown');
 
-      if (queryEl?.textContent?.trim()) {
-        messages.push({ role: 'user', content: queryEl.textContent.trim() });
-      }
-      if (responseEl?.textContent?.trim()) {
-        messages.push({ role: 'assistant', content: responseEl.textContent.trim() });
-      }
+      const userText = userEl?.textContent?.trim() ?? '';
+      const assistantText = assistantEl?.textContent?.trim() ?? '';
+
+      if (userText) messages.push({ role: 'user', content: userText });
+      if (assistantText) messages.push({ role: 'assistant', content: assistantText });
     });
-
-    // Fallback: try user-query-bubble and model-response selectors
-    if (messages.length === 0) {
-      document.querySelectorAll<HTMLElement>('user-query-bubble').forEach((el) => {
-        const content = el.textContent?.trim() ?? '';
-        if (content) messages.push({ role: 'user', content });
-      });
-      document.querySelectorAll<HTMLElement>('model-response').forEach((el) => {
-        const content = el.querySelector('.markdown')?.textContent?.trim() ?? el.textContent?.trim() ?? '';
-        if (content) messages.push({ role: 'assistant', content });
-      });
-    }
 
     return messages;
   }
