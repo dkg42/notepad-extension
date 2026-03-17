@@ -1,0 +1,58 @@
+.snippet-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.snippet-item__folder-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-bottom: 5px;
+}
+
+.snippet-item__text {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.snippet-item__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.snippet-item__meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.snippet-item__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  font-size: 11px;
+  background: none;
+  border-radius: 4px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.action-btn--copy {
+  color: #2563eb;
+  border: 1px solid #2563eb;
+}
+
+.action-btn--delete {
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}

@@ -1,0 +1,124 @@
+.folder-manager {
+  margin-bottom: 8px;
+}
+
+.folder-manager__toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  background: #f9fafb;
+  cursor: pointer;
+  color: #374151;
+  text-align: left;
+  font-family: inherit;
+}
+
+.folder-manager__toggle-arrow {
+  font-size: 9px;
+}
+
+.folder-manager__panel {
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  padding: 8px 8px 6px;
+  background: #fff;
+}
+
+.folder-manager__new-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.folder-manager__input {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 12px;
+  outline: none;
+  font-family: inherit;
+}
+
+.folder-manager__new-row .folder-manager__input {
+  flex: 1;
+}
+
+.folder-manager__add-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.folder-manager__add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.folder-manager__folder-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.folder-manager__folder-row .folder-manager__input {
+  flex: 1;
+}
+
+.folder-manager__folder-name {
+  flex: 1;
+  font-size: 12px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-manager__icon-btn {
+  font-size: 11px;
+  padding: 1px 5px;
+  background: none;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.folder-manager__icon-btn--rename {
+  color: #2563eb;
+  border: 1px solid #2563eb;
+}
+
+.folder-manager__icon-btn--delete {
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.folder-manager__icon-btn--confirm {
+  color: #16a34a;
+  border: 1px solid #16a34a;
+}
+
+.folder-manager__icon-btn--cancel {
+  color: #6b7280;
+  border: 1px solid #6b7280;
+}
+
+.folder-manager__empty {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 4px 0 0;
+}
