@@ -3,12 +3,13 @@ import type { Snippet } from '@/types';
 
 interface Props {
   snippet: Snippet;
+  folderName?: string;
   onDelete: (id: string) => void;
 }
 
 const MAX_PREVIEW_LENGTH = 200;
 
-export default function SnippetItem({ snippet, onDelete }: Props) {
+export default function SnippetItem({ snippet, folderName, onDelete }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -25,6 +26,11 @@ export default function SnippetItem({ snippet, onDelete }: Props) {
 
   return (
     <li style={itemStyle}>
+      {folderName && (
+        <span style={folderBadgeStyle} title={`Folder: ${folderName}`}>
+          📁 {folderName}
+        </span>
+      )}
       <p style={textStyle}>{preview}</p>
       <div style={footerStyle}>
         <span style={metaStyle}>
@@ -56,6 +62,17 @@ const itemStyle: React.CSSProperties = {
   border: '1px solid #e5e7eb',
   borderRadius: 6,
   padding: '8px 10px',
+};
+
+const folderBadgeStyle: React.CSSProperties = {
+  display: 'inline-block',
+  fontSize: 10,
+  color: '#7c3aed',
+  background: '#f5f3ff',
+  border: '1px solid #ddd6fe',
+  borderRadius: 3,
+  padding: '1px 5px',
+  marginBottom: 5,
 };
 
 const textStyle: React.CSSProperties = {

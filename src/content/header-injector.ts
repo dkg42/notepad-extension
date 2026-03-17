@@ -1,6 +1,7 @@
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
 import { MarkdownExportStrategy } from '@/export/markdown.export';
 import { storageService } from '@/services/storage-service';
+import type { Folder } from '@/types';
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 
 const INJECTED_MARKER_ID = 'llm-enhancer-header-buttons';
@@ -57,9 +58,158 @@ function tryInject(adapter: ChatSiteAdapter): void {
       showFeedback(savePromptsBtn, 'No prompts found', '#6b7280');
       return;
     }
-    await storageService.saveMany(prompts, location.href);
-    showFeedback(savePromptsBtn, `Saved ${prompts.length}!`, '#16a34a');
+
+    savePromptsBtn.disabled = true;
+
+    try {
+      const folders = await storageService.getFolders();
+      const result = await showFolderPicker(shadow, folders);
+
+      if (result === null) {
+        // User cancelled — re-enable and bail out
+        savePromptsBtn.disabled = false;
+        return;
+      }
+
+      await storageService.saveMany(prompts, location.href, result.folderId);
+      showFeedback(savePromptsBtn, `Saved ${prompts.length}!`, '#16a34a');
+    } catch {
+      showFeedback(savePromptsBtn, 'Error saving', '#ef4444');
+    }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Folder picker — rendered inside the shadow DOM
+// ---------------------------------------------------------------------------
+
+/**
+ * Shows a compact folder-selection panel anchored below the Save prompts button.
+ * Resolves with `{ folderId }` on confirm (folderId may be undefined = no folder),
+ * or `null` when the user cancels.
+ */
+function showFolderPicker(
+  shadow: ShadowRoot,
+  folders: Folder[],
+): Promise<{ folderId?: string } | null> {
+  return new Promise((resolve) => {
+    // Guard against duplicate pickers (e.g. rapid double-click)
+    if (shadow.querySelector('.folder-picker')) return;
+
+    let selectedFolderId: string | undefined = undefined;
+
+    const panel = document.createElement('div');
+    panel.className = 'folder-picker';
+
+    // Title
+    const title = document.createElement('p');
+    title.className = 'picker-title';
+    title.textContent = 'Save to folder';
+    panel.appendChild(title);
+
+    // "No folder" radio — selected by default
+    const noFolderLabel = buildRadioOption('No folder', 'folder-pick', '');
+    const noFolderRadio = noFolderLabel.querySelector('input') as HTMLInputElement;
+    noFolderRadio.checked = true;
+    noFolderRadio.addEventListener('change', () => {
+      selectedFolderId = undefined;
+      newFolderInput.value = '';
+    });
+    panel.appendChild(noFolderLabel);
+
+    // Existing folder radios
+    for (const folder of folders) {
+      const label = buildRadioOption(folder.name, 'folder-pick', folder.id);
+      const radio = label.querySelector('input') as HTMLInputElement;
+      radio.addEventListener('change', () => {
+        selectedFolderId = folder.id;
+        newFolderInput.value = '';
+      });
+      panel.appendChild(label);
+    }
+
+    // Divider
+    const divider = document.createElement('hr');
+    divider.className = 'picker-divider';
+    panel.appendChild(divider);
+
+    // New folder input
+    const newFolderInput = document.createElement('input');
+    newFolderInput.type = 'text';
+    newFolderInput.className = 'picker-input';
+    newFolderInput.placeholder = 'Or create new folder...';
+    newFolderInput.addEventListener('input', () => {
+      if (newFolderInput.value.trim()) {
+        // Deselect all radios when typing a new name
+        panel.querySelectorAll<HTMLInputElement>('input[type=radio]').forEach((r) => {
+          r.checked = false;
+        });
+        selectedFolderId = undefined;
+      } else {
+        noFolderRadio.checked = true;
+      }
+    });
+    newFolderInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        panel.remove();
+        resolve(null);
+      }
+    });
+    panel.appendChild(newFolderInput);
+
+    // Action buttons
+    const actions = document.createElement('div');
+    actions.className = 'picker-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'picker-btn-cancel';
+    cancelBtn.addEventListener('click', () => {
+      panel.remove();
+      resolve(null);
+    });
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.className = 'picker-btn-save';
+    saveBtn.addEventListener('click', async () => {
+      const newName = newFolderInput.value.trim();
+      let folderId: string | undefined;
+
+      if (newName) {
+        const folder = await storageService.createFolder(newName);
+        folderId = folder.id;
+      } else {
+        folderId = selectedFolderId;
+      }
+
+      panel.remove();
+      resolve({ folderId });
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    panel.appendChild(actions);
+
+    shadow.appendChild(panel);
+
+    // Auto-focus so keyboard users can immediately type a new folder name
+    setTimeout(() => newFolderInput.focus(), 50);
+  });
+}
+
+function buildRadioOption(label: string, name: string, value: string): HTMLLabelElement {
+  const el = document.createElement('label');
+  el.className = 'folder-option';
+
+  const radio = document.createElement('input');
+  radio.type = 'radio';
+  radio.name = name;
+  radio.value = value;
+
+  el.appendChild(radio);
+  el.appendChild(document.createTextNode(label));
+  return el;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,10 +218,12 @@ function tryInject(adapter: ChatSiteAdapter): void {
 
 function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot } {
   const container = document.createElement('div');
-  // Reset host styles so the site's CSS doesn't bleed in
-  // margin-left:auto right-aligns the container within its flex parent
-  // (used by the Claude adapter which injects into the flex-1 title div).
-  container.style.cssText = 'all: initial; display: inline-flex; margin-left: auto;';
+  // all:initial resets host styles so the site's CSS doesn't bleed in.
+  // position:relative is required so the folder-picker panel (position:absolute)
+  // anchors correctly to this container. margin-left:auto right-aligns within
+  // flex parents (used by the Claude adapter).
+  container.style.cssText =
+    'all: initial; display: inline-flex; margin-left: auto; position: relative; z-index: 9999;';
 
   const shadow = container.attachShadow({ mode: 'open' });
 
@@ -83,6 +235,8 @@ function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot }
       gap: 6px;
       padding: 0 8px;
     }
+
+    /* ── Header buttons ── */
     button {
       padding: 5px 12px;
       color: #fff;
@@ -97,6 +251,77 @@ function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot }
     }
     button:hover   { opacity: 0.85; }
     button:disabled { opacity: 0.6; cursor: default; }
+
+    /* ── Folder picker panel ── */
+    .folder-picker {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+      padding: 12px;
+      min-width: 210px;
+      z-index: 10000;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .picker-title {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .folder-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      white-space: normal;
+    }
+
+    .picker-divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 8px 0;
+    }
+
+    .picker-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 4px 7px;
+      font-size: 12px;
+      font-family: system-ui, -apple-system, sans-serif;
+      outline: none;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+    .picker-input:focus { border-color: #7c3aed; }
+
+    .picker-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .picker-btn-cancel {
+      padding: 3px 10px;
+      font-size: 11px;
+      background: #6b7280;
+    }
+
+    .picker-btn-save {
+      padding: 3px 10px;
+      font-size: 11px;
+      background: #7c3aed;
+    }
   `;
   shadow.appendChild(style);
 

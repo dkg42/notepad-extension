@@ -1,27 +1,35 @@
 import React from 'react';
-import type { Snippet } from '@/types';
+import type { Folder, Snippet } from '@/types';
 import SnippetItem from './SnippetItem';
 
 interface Props {
   snippets: Snippet[];
+  folders: Folder[];
   onDelete: (id: string) => void;
 }
 
-export default function SnippetList({ snippets, onDelete }: Props) {
+export default function SnippetList({ snippets, folders, onDelete }: Props) {
   if (snippets.length === 0) {
     return (
       <p style={emptyStyle}>
-        No snippets saved yet.
+        No prompts saved yet.
         <br />
-        Select text on any LLM chatbot page and click <strong>Save snippet</strong>.
+        Use <strong>Save prompts</strong> on any LLM chatbot page.
       </p>
     );
   }
 
+  const folderMap = new Map(folders.map((f) => [f.id, f.name]));
+
   return (
     <ul style={listStyle}>
       {snippets.map((snippet) => (
-        <SnippetItem key={snippet.id} snippet={snippet} onDelete={onDelete} />
+        <SnippetItem
+          key={snippet.id}
+          snippet={snippet}
+          folderName={snippet.folderId ? folderMap.get(snippet.folderId) : undefined}
+          onDelete={onDelete}
+        />
       ))}
     </ul>
   );
@@ -34,7 +42,7 @@ const listStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
-  maxHeight: 480,
+  maxHeight: 400,
   overflowY: 'auto',
 };
 

@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - The code will use wxt as a framework for extension with react for the UI.
 - Structure the code appropriately so that it follows SOLID principles.
 - Use camelCase for variable names and kebab-case for selectors and html elements.
+- Practise separation of concerns. All HTML elements should go into a .html file for that component. Similarly all CSS classes should go to a .css file for that component. All logic will remain in a .ts file. A folder containing these three files is classified as a component which will result in a UI rendered component.
 
 ## Commands
 
