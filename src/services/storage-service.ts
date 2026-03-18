@@ -62,6 +62,15 @@ export const storageService = {
     });
   },
 
+  async updateTags(snippetId: string, tags: string[]): Promise<void> {
+    const existing = await this.getAll();
+    await chrome.storage.local.set({
+      [SNIPPETS_KEY]: existing.map((s) =>
+        s.id === snippetId ? { ...s, tags } : s,
+      ),
+    });
+  },
+
   async clear(): Promise<void> {
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [] });
   },

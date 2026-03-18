@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export const MAX_PREVIEW_LENGTH = 200;
 
@@ -10,8 +10,15 @@ export function parseHostname(url: string): string {
   }
 }
 
-export function useSnippetItem(text: string) {
+export function useSnippetItem(
+  text: string,
+  tags: string[],
+  onUpdateTags: (tags: string[]) => void,
+) {
   const [copied, setCopied] = useState(false);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -19,5 +26,48 @@ export function useSnippetItem(text: string) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  return { copied, handleCopy };
+  const handleStartAddTag = () => {
+    setIsAddingTag(true);
+    setTimeout(() => tagInputRef.current?.focus(), 0);
+  };
+
+  const commitTag = () => {
+    const raw = tagInput.trim().toLowerCase();
+    if (raw && !tags.includes(raw)) {
+      onUpdateTags([...tags, raw]);
+    }
+    setTagInput('');
+    setIsAddingTag(false);
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      commitTag();
+    } else if (e.key === 'Escape') {
+      setTagInput('');
+      setIsAddingTag(false);
+    }
+  };
+
+  const handleTagInputBlur = () => {
+    commitTag();
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    onUpdateTags(tags.filter((t) => t !== tag));
+  };
+
+  return {
+    copied,
+    handleCopy,
+    isAddingTag,
+    tagInput,
+    setTagInput,
+    tagInputRef,
+    handleStartAddTag,
+    handleTagInputKeyDown,
+    handleTagInputBlur,
+    handleRemoveTag,
+  };
 }

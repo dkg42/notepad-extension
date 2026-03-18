@@ -7,10 +7,23 @@ interface Props {
   snippet: Snippet;
   folderName?: string;
   onDelete: (id: string) => void;
+  onUpdateTags: (id: string, tags: string[]) => void;
 }
 
-export default function SnippetItem({ snippet, folderName, onDelete }: Props) {
-  const { copied, handleCopy } = useSnippetItem(snippet.text);
+export default function SnippetItem({ snippet, folderName, onDelete, onUpdateTags }: Props) {
+  const tags = snippet.tags ?? [];
+  const {
+    copied,
+    handleCopy,
+    isAddingTag,
+    tagInput,
+    setTagInput,
+    tagInputRef,
+    handleStartAddTag,
+    handleTagInputKeyDown,
+    handleTagInputBlur,
+    handleRemoveTag,
+  } = useSnippetItem(snippet.text, tags, (updated) => onUpdateTags(snippet.id, updated));
 
   const sourceLabel = parseHostname(snippet.source);
   const preview =
@@ -26,6 +39,39 @@ export default function SnippetItem({ snippet, folderName, onDelete }: Props) {
         </span>
       )}
       <p className="snippet-item__text">{preview}</p>
+
+      <div className="snippet-item__tags">
+        {tags.map((tag) => (
+          <span key={tag} className="snippet-item__tag">
+            #{tag}
+            <button
+              className="snippet-item__tag-remove"
+              onClick={() => handleRemoveTag(tag)}
+              title={`Remove tag "${tag}"`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+
+        {isAddingTag ? (
+          <input
+            ref={tagInputRef}
+            className="snippet-item__tag-input"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagInputKeyDown}
+            onBlur={handleTagInputBlur}
+            placeholder="tag name…"
+            maxLength={32}
+          />
+        ) : (
+          <button className="snippet-item__tag-add" onClick={handleStartAddTag} title="Add tag">
+            + tag
+          </button>
+        )}
+      </div>
+
       <div className="snippet-item__footer">
         <span className="snippet-item__meta">
           {sourceLabel} · {new Date(snippet.savedAt).toLocaleTimeString()}

@@ -2,6 +2,7 @@ import React from 'react';
 import FolderFilterDropdown from '@/components/FolderFilterDropdown/FolderFilterDropdown';
 import FolderManager from '@/components/FolderManager/FolderManager';
 import SnippetList from '@/components/SnippetList/SnippetList';
+import TagFilter from '@/components/TagFilter/TagFilter';
 import { useApp } from './useApp';
 import './App.css';
 
@@ -9,18 +10,24 @@ export default function App() {
   const {
     snippets,
     folders,
+    allTags,
     searchQuery,
     setSearchQuery,
     selectedFolderIds,
     setSelectedFolderIds,
+    selectedTags,
+    setSelectedTags,
     hasUncategorized,
     filteredSnippets,
     handleDelete,
     handleClear,
+    handleUpdateTags,
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,
   } = useApp();
+
+  const isFiltering = searchQuery || selectedFolderIds.size > 0 || selectedTags.size > 0;
 
   return (
     <div className="app-container">
@@ -62,6 +69,10 @@ export default function App() {
         />
       </div>
 
+      <div className="app-tag-filter">
+        <TagFilter allTags={allTags} selectedTags={selectedTags} onChange={setSelectedTags} />
+      </div>
+
       <FolderManager
         folders={folders}
         onCreateFolder={handleCreateFolder}
@@ -69,14 +80,19 @@ export default function App() {
         onDeleteFolder={handleDeleteFolder}
       />
 
-      {(searchQuery || selectedFolderIds.size > 0) && snippets.length > 0 && (
+      {isFiltering && snippets.length > 0 && (
         <p className="app-result-count">
           {filteredSnippets.length} of {snippets.length} prompt
           {snippets.length !== 1 ? 's' : ''}
         </p>
       )}
 
-      <SnippetList snippets={filteredSnippets} folders={folders} onDelete={handleDelete} />
+      <SnippetList
+        snippets={filteredSnippets}
+        folders={folders}
+        onDelete={handleDelete}
+        onUpdateTags={handleUpdateTags}
+      />
     </div>
   );
 }

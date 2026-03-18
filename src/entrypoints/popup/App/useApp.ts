@@ -8,6 +8,7 @@ export function useApp() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     Promise.all([storageService.getAll(), storageService.getFolders()]).then(
@@ -19,6 +20,12 @@ export function useApp() {
   }, []);
 
   const hasUncategorized = useMemo(() => snippets.some((s) => !s.folderId), [snippets]);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    snippets.forEach((s) => s.tags?.forEach((t) => tagSet.add(t)));
+    return Array.from(tagSet).sort();
+  }, [snippets]);
 
   const filteredSnippets = useMemo(() => {
     let result = snippets;
@@ -35,8 +42,14 @@ export function useApp() {
       });
     }
 
+    if (selectedTags.size > 0) {
+      result = result.filter((s) =>
+        s.tags?.some((t) => selectedTags.has(t)),
+      );
+    }
+
     return result;
-  }, [snippets, searchQuery, selectedFolderIds]);
+  }, [snippets, searchQuery, selectedFolderIds, selectedTags]);
 
   const handleDelete = async (id: string) => {
     await storageService.remove(id);
@@ -46,6 +59,13 @@ export function useApp() {
   const handleClear = async () => {
     await storageService.clear();
     setSnippets([]);
+  };
+
+  const handleUpdateTags = async (snippetId: string, tags: string[]) => {
+    await storageService.updateTags(snippetId, tags);
+    setSnippets((prev) =>
+      prev.map((s) => (s.id === snippetId ? { ...s, tags } : s)),
+    );
   };
 
   const handleCreateFolder = async (name: string) => {
@@ -74,14 +94,18 @@ export function useApp() {
   return {
     snippets,
     folders,
+    allTags,
     searchQuery,
     setSearchQuery,
     selectedFolderIds,
     setSelectedFolderIds,
+    selectedTags,
+    setSelectedTags,
     hasUncategorized,
     filteredSnippets,
     handleDelete,
     handleClear,
+    handleUpdateTags,
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,

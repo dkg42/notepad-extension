@@ -8,9 +8,10 @@ interface Props {
   snippets: Snippet[];
   folders: Folder[];
   onDelete: (id: string) => void;
+  onUpdateTags: (id: string, tags: string[]) => void;
 }
 
-export default function SnippetList({ snippets, folders, onDelete }: Props) {
+export default function SnippetList({ snippets, folders, onDelete, onUpdateTags }: Props) {
   if (snippets.length === 0) {
     return (
       <p className="snippet-list__empty">
@@ -31,6 +32,7 @@ export default function SnippetList({ snippets, folders, onDelete }: Props) {
           snippet={snippet}
           folderName={snippet.folderId ? folderMap.get(snippet.folderId) : undefined}
           onDelete={onDelete}
+          onUpdateTags={onUpdateTags}
         />
       ))}
     </ul>

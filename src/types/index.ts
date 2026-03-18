@@ -11,6 +11,7 @@ export interface Snippet {
   source: string;
   savedAt: number;
   folderId?: string;
+  tags?: string[];
 }
 
 export interface ChatMessage {

@@ -67,6 +67,10 @@
 }
 
 .app-folder-filter {
+  margin-bottom: 6px;
+}
+
+.app-tag-filter {
   margin-bottom: 8px;
 }
 
