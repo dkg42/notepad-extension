@@ -139,6 +139,8 @@ function showFolderPicker(
     newFolderInput.className = 'picker-input';
     newFolderInput.placeholder = 'Or create new folder...';
     newFolderInput.addEventListener('input', () => {
+      pickerError.hidden = true;
+      newFolderInput.classList.remove('picker-input--error');
       if (newFolderInput.value.trim()) {
         // Deselect all radios when typing a new name
         panel.querySelectorAll<HTMLInputElement>('input[type=radio]').forEach((r) => {
@@ -156,6 +158,12 @@ function showFolderPicker(
       }
     });
     panel.appendChild(newFolderInput);
+
+    // Error message (hidden until a duplicate-name attempt occurs)
+    const pickerError = document.createElement('p');
+    pickerError.className = 'picker-error';
+    pickerError.hidden = true;
+    panel.appendChild(pickerError);
 
     // Action buttons
     const actions = document.createElement('div');
@@ -177,8 +185,15 @@ function showFolderPicker(
       let folderId: string | undefined;
 
       if (newName) {
-        const folder = await storageService.createFolder(newName);
-        folderId = folder.id;
+        try {
+          const folder = await storageService.createFolder(newName);
+          folderId = folder.id;
+        } catch (err) {
+          pickerError.textContent = err instanceof Error ? err.message : 'Failed to create folder.';
+          pickerError.hidden = false;
+          newFolderInput.classList.add('picker-input--error');
+          return; // Keep picker open so the user can correct the name
+        }
       } else {
         folderId = selectedFolderId;
       }
@@ -304,6 +319,13 @@ function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot }
       color: #111827;
     }
     .picker-input:focus { border-color: #7c3aed; }
+    .picker-input--error { border-color: #ef4444; }
+
+    .picker-error {
+      font-size: 11px;
+      color: #ef4444;
+      margin: 0 0 8px;
+    }
 
     .picker-actions {
       display: flex;

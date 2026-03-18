@@ -74,20 +74,28 @@ export const storageService = {
   },
 
   async createFolder(name: string): Promise<Folder> {
+    const trimmed = name.trim();
+    const existing = await this.getFolders();
+    if (existing.some((f) => f.name.toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error(`A folder named "${trimmed}" already exists.`);
+    }
     const folder: Folder = {
       id: crypto.randomUUID(),
-      name: name.trim(),
+      name: trimmed,
       createdAt: Date.now(),
     };
-    const existing = await this.getFolders();
     await chrome.storage.local.set({ [FOLDERS_KEY]: [...existing, folder] });
     return folder;
   },
 
   async renameFolder(id: string, name: string): Promise<void> {
+    const trimmed = name.trim();
     const existing = await this.getFolders();
+    if (existing.some((f) => f.id !== id && f.name.toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error(`A folder named "${trimmed}" already exists.`);
+    }
     await chrome.storage.local.set({
-      [FOLDERS_KEY]: existing.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)),
+      [FOLDERS_KEY]: existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f)),
     });
   },
 

@@ -20,10 +20,12 @@ export default function FolderManager({
     isOpen,
     setIsOpen,
     newName,
-    setNewName,
+    createError,
     editingId,
     editName,
-    setEditName,
+    editError,
+    handleNewNameChange,
+    handleEditNameChange,
     handleCreate,
     handleRename,
     startEdit,
@@ -42,10 +44,10 @@ export default function FolderManager({
           <div className="folder-manager__new-row">
             <input
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => handleNewNameChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               placeholder="New folder name..."
-              className="folder-manager__input"
+              className={`folder-manager__input${createError ? ' folder-manager__input--error' : ''}`}
             />
             <button
               onClick={handleCreate}
@@ -55,36 +57,40 @@ export default function FolderManager({
               + Add
             </button>
           </div>
+          {createError && <p className="folder-manager__error">{createError}</p>}
 
           {folders.map((folder) => (
-            <div key={folder.id} className="folder-manager__folder-row">
+            <div key={folder.id}>
               {editingId === folder.id ? (
                 <>
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleRename(folder.id);
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                    className="folder-manager__input"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleRename(folder.id)}
-                    className="folder-manager__icon-btn folder-manager__icon-btn--confirm"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="folder-manager__icon-btn folder-manager__icon-btn--cancel"
-                  >
-                    ✕
-                  </button>
+                  <div className="folder-manager__folder-row">
+                    <input
+                      value={editName}
+                      onChange={(e) => handleEditNameChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRename(folder.id);
+                        if (e.key === 'Escape') cancelEdit();
+                      }}
+                      className={`folder-manager__input${editError ? ' folder-manager__input--error' : ''}`}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleRename(folder.id)}
+                      className="folder-manager__icon-btn folder-manager__icon-btn--confirm"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="folder-manager__icon-btn folder-manager__icon-btn--cancel"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {editError && <p className="folder-manager__error">{editError}</p>}
                 </>
               ) : (
-                <>
+                <div className="folder-manager__folder-row">
                   <span className="folder-manager__folder-name" title={folder.name}>
                     📁 {folder.name}
                   </span>
@@ -102,7 +108,7 @@ export default function FolderManager({
                   >
                     🗑
                   </button>
-                </>
+                </div>
               )}
             </div>
           ))}
