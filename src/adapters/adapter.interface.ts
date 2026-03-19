@@ -1,8 +1,7 @@
 import type { ChatMessage } from '@/types';
+import type { SiteAdapter } from './site-adapter.interface';
 
-export interface ChatSiteAdapter {
-  /** Hostname substrings this adapter handles (e.g. ['chatgpt.com', 'chat.openai.com']) */
-  readonly hostnames: readonly string[];
+export interface ChatSiteAdapter extends SiteAdapter {
 
   /**
    * Returns the DOM element to append the export button group to.

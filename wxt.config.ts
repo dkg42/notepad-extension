@@ -15,6 +15,18 @@ export default defineConfig({
       'https://gemini.google.com/*',
       'https://www.perplexity.ai/*',
       'https://copilot.microsoft.com/*',
+      'https://notebooklm.google.com/*',
+      // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
     ],
+    // ── Future: Google Docs sync ──────────────────────────────────────────────
+    // Uncomment and fill in client_id when enabling direct Google Drive sync.
+    // See background.ts for the identity message handler.
+    //
+    // permissions: ['storage', 'identity'],
+    // oauth2: {
+    //   client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
+    //   scopes: ['https://www.googleapis.com/auth/drive.file'],
+    // },
+    // ─────────────────────────────────────────────────────────────────────────
   },
 });

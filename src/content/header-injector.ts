@@ -1,5 +1,6 @@
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
-import { MarkdownExportStrategy } from '@/export/markdown.export';
+import { exportStrategies } from '@/export/export-registry';
+import { showFormatPicker } from './format-picker';
 import { storageService } from '@/services/storage-service';
 import type { Folder } from '@/types';
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
@@ -7,8 +8,6 @@ import { onElementRemoved, onUrlChange } from '@/utils/dom';
 const INJECTED_MARKER_ID = 'llm-enhancer-header-buttons';
 const INJECT_RETRY_DELAY_MS = 500;
 const NAV_SETTLE_DELAY_MS = 1000;
-
-const exporter = new MarkdownExportStrategy();
 
 export function setupHeaderButtons(adapter: ChatSiteAdapter): void {
   tryInject(adapter);
@@ -47,9 +46,32 @@ function tryInject(adapter: ChatSiteAdapter): void {
       showFeedback(exportBtn, 'Nothing to export', '#6b7280');
       return;
     }
+
+    exportBtn.disabled = true;
+    const strategy = await showFormatPicker(shadow, exportStrategies);
+    exportBtn.disabled = false;
+
+    if (!strategy) return;
+
     const filename = `chat-${new Date().toISOString().slice(0, 10)}`;
-    await exporter.export(messages, filename);
-    showFeedback(exportBtn, 'Exported!', '#16a34a');
+
+    // Set loading state directly — do NOT use showFeedback here because it
+    // captures btn.textContent as the restore value, and a subsequent
+    // showFeedback call while 'Exporting…' is visible would restore back to
+    // 'Exporting…' instead of the original label.
+    exportBtn.textContent = 'Exporting…';
+    exportBtn.style.background = '#6b7280';
+    exportBtn.disabled = true;
+
+    try {
+      await strategy.export(messages, filename);
+      restoreButton(exportBtn);
+      showFeedback(exportBtn, 'Exported!', '#16a34a');
+    } catch (err) {
+      restoreButton(exportBtn);
+      const msg = err instanceof Error ? err.message : 'Export failed';
+      showFeedback(exportBtn, msg.slice(0, 30), '#ef4444');
+    }
   });
 
   savePromptsBtn.addEventListener('click', async () => {
@@ -267,6 +289,49 @@ function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot }
     button:hover   { opacity: 0.85; }
     button:disabled { opacity: 0.6; cursor: default; }
 
+    /* ── Format picker panel ── */
+    .format-picker {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+      padding: 12px;
+      min-width: 210px;
+      z-index: 10000;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .format-options {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+
+    .format-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .format-option:hover {
+      background: #f3f4f6;
+    }
+
+    .picker-btn-export {
+      padding: 3px 10px;
+      font-size: 11px;
+      background: #2563eb;
+    }
+
     /* ── Folder picker panel ── */
     .folder-picker {
       position: absolute;
@@ -354,8 +419,16 @@ function addButton(label: string, bg: string, shadow: ShadowRoot): HTMLButtonEle
   const btn = document.createElement('button');
   btn.textContent = label;
   btn.style.background = bg;
+  btn.dataset.originalLabel = label;
+  btn.dataset.originalBg = bg;
   shadow.appendChild(btn);
   return btn;
+}
+
+function restoreButton(btn: HTMLButtonElement): void {
+  btn.textContent = btn.dataset.originalLabel ?? '';
+  btn.style.background = btn.dataset.originalBg ?? '';
+  btn.disabled = false;
 }
 
 function showFeedback(btn: HTMLButtonElement, message: string, bg: string): void {

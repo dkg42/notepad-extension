@@ -1,0 +1,135 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.nlm-source-enhancer {
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+/* ── Search bar ─────────────────────────────────────────────────────────────── */
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #dadce0;
+  border-radius: 24px;
+  background: #f8f9fa;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.search-wrapper:focus-within {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+  background: #fff;
+}
+
+.search-icon {
+  width: 15px;
+  height: 15px;
+  color: #80868b;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.search-wrapper:focus-within .search-icon {
+  color: #1a73e8;
+}
+
+.source-search {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #202124;
+  font-family: inherit;
+  line-height: 20px;
+}
+
+.source-search::placeholder {
+  color: #80868b;
+}
+
+.clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #5f6368;
+  font-size: 13px;
+  border-radius: 50%;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.clear-btn:hover {
+  background: #e8eaed;
+  color: #202124;
+}
+
+.clear-btn.hidden {
+  display: none;
+}
+
+/* ── Filter chips ───────────────────────────────────────────────────────────── */
+
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  /* Hide scrollbar while keeping scroll functionality */
+  scrollbar-width: none;
+}
+
+.filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  border: 1px solid #dadce0;
+  background: #fff;
+  color: #444746;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 400;
+  padding: 3px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 20px;
+  transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+.filter-chip:hover {
+  background: #f1f3f4;
+  border-color: #bdc1c6;
+}
+
+.filter-chip.active {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 1px;
+}
