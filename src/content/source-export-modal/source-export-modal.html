@@ -1,0 +1,51 @@
+<div class="modal-backdrop" id="source-export-modal">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Export Sources</h3>
+      <button class="modal-close-btn" id="modal-close-btn" aria-label="Close">&#x2715;</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="modal-search-wrapper">
+        <svg class="modal-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          class="modal-search-input"
+          id="modal-search-input"
+          placeholder="Search sources..."
+          autocomplete="off"
+          aria-label="Search sources"
+        />
+        <button class="modal-search-clear hidden" id="modal-search-clear" aria-label="Clear search">&#x2715;</button>
+      </div>
+
+      <div class="select-all-row">
+        <label class="select-all-label">
+          <input type="checkbox" id="modal-select-all" aria-label="Select all sources" />
+          <span>Select all</span>
+          <span class="visible-count" id="visible-count"></span>
+        </label>
+        <span class="selected-count" id="selected-count"></span>
+      </div>
+
+      <div class="source-list" id="modal-source-list" role="list"></div>
+
+      <div class="format-section">
+        <p class="format-label">Export format</p>
+        <div class="format-options" id="format-options" role="radiogroup" aria-label="Export format"></div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" id="modal-cancel-btn">Cancel</button>
+      <button class="btn-export" id="modal-export-btn" disabled>Export</button>
+    </div>
+
+  </div>
+</div>

@@ -1,18 +1,21 @@
 <div class="nlm-source-enhancer" id="nlm-source-enhancer">
-  <div class="search-wrapper">
-    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-    <input
-      type="text"
-      class="source-search"
-      id="source-search-input"
-      placeholder="Search sources..."
-      autocomplete="off"
-      aria-label="Search sources"
-    />
-    <button class="clear-btn hidden" id="clear-search-btn" aria-label="Clear search">&#x2715;</button>
+  <div class="top-row">
+    <div class="search-wrapper">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        class="source-search"
+        id="source-search-input"
+        placeholder="Search sources..."
+        autocomplete="off"
+        aria-label="Search sources"
+      />
+      <button class="clear-btn hidden" id="clear-search-btn" aria-label="Clear search">&#x2715;</button>
+    </div>
+    <button class="export-btn" id="export-sources-btn" aria-label="Export sources">Export</button>
   </div>
   <div class="filter-chips" id="filter-chips" role="group" aria-label="Filter by source type">
     <button class="filter-chip active" data-filter="all">All</button>

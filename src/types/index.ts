@@ -21,3 +21,9 @@ export interface ChatMessage {
 
 /** Sentinel ID used to represent snippets with no folder assigned */
 export const UNCATEGORIZED_ID = '__uncategorized__';
+
+/** A single NotebookLM source entry used for source list exports. */
+export interface SourceRecord {
+  title: string;
+  type: string; // matches SourceType from source-panel-adapter.interface.ts
+}

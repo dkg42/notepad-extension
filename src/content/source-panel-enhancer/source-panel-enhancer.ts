@@ -1,5 +1,6 @@
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 import type { SourcePanelAdapter, SourceType } from '@/adapters/source-panel-adapter.interface';
+import { showSourceExportModal } from '@/content/source-export-modal/source-export-modal';
 import enhancerHtml from './source-panel-enhancer.html?raw';
 import enhancerCss from './source-panel-enhancer.css?raw';
 
@@ -47,7 +48,10 @@ function tryInject(adapter: SourcePanelAdapter): void {
 function setupInteractivity(shadow: ShadowRoot, adapter: SourcePanelAdapter): void {
   const searchInput = shadow.querySelector<HTMLInputElement>('#source-search-input')!;
   const clearBtn = shadow.querySelector<HTMLButtonElement>('#clear-search-btn')!;
+  const exportBtn = shadow.querySelector<HTMLButtonElement>('#export-sources-btn')!;
   const chips = shadow.querySelectorAll<HTMLButtonElement>('.filter-chip');
+
+  exportBtn.addEventListener('click', () => showSourceExportModal(adapter));
 
   let activeFilter: SourceType = 'all';
 
