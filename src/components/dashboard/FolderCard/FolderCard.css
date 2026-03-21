@@ -1,0 +1,117 @@
+.folder-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.folder-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.folder-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.folder-card__icon-wrap {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.folder-card__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.folder-card__icon {
+  font-size: 18px;
+  color: var(--color-text-secondary);
+}
+
+.folder-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.folder-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-card__edit-input {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  background: var(--color-surface);
+}
+
+.folder-card__count {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.folder-card__color-picker {
+  border-top: 1px solid var(--color-border);
+  padding-top: 4px;
+  margin: 0 -16px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.folder-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.folder-card__action-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.folder-card__action-btn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.folder-card__action-btn--danger:hover {
+  background: #fff5f5;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}

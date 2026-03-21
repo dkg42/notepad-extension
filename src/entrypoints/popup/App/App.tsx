@@ -33,11 +33,20 @@ export default function App() {
     <div className="app-container">
       <div className="app-header">
         <h2 className="app-header__title">Saved Prompts</h2>
-        {snippets.length > 0 && (
-          <button onClick={handleClear} className="app-header__clear-btn">
-            Clear all
+        <div className="app-header__actions">
+          <button
+            onClick={() => chrome.runtime.openOptionsPage()}
+            className="app-header__dashboard-btn"
+            title="Open full dashboard"
+          >
+            Dashboard ↗
           </button>
-        )}
+          {snippets.length > 0 && (
+            <button onClick={handleClear} className="app-header__clear-btn">
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="app-search">

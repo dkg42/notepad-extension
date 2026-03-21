@@ -1,5 +1,6 @@
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
+import { storageService } from '@/services/storage-service';
 
 export class MarkdownExportStrategy implements ExportStrategy {
   readonly type = 'markdown';
@@ -13,6 +14,17 @@ export class MarkdownExportStrategy implements ExportStrategy {
     } catch {
       // Fallback: copy to clipboard if file download is blocked
       await navigator.clipboard.writeText(content);
+    }
+    try {
+      await storageService.addExportRecord({
+        exportedAt: Date.now(),
+        format: this.type,
+        itemCount: messages.length,
+        source: document.location.hostname,
+        filename: `${filename}.${this.fileExtension}`,
+      });
+    } catch {
+      // Non-critical: ignore logging errors
     }
   }
 

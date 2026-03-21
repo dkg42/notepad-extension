@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
+import { storageService } from '@/services/storage-service';
 
 const PAGE_WIDTH_MM = 210; // A4
 const PAGE_HEIGHT_MM = 297; // A4
@@ -95,5 +96,16 @@ export class PdfExportStrategy implements ExportStrategy {
     }
 
     doc.save(`${filename}.${this.fileExtension}`);
+    try {
+      await storageService.addExportRecord({
+        exportedAt: Date.now(),
+        format: this.type,
+        itemCount: messages.length,
+        source: document.location.hostname,
+        filename: `${filename}.${this.fileExtension}`,
+      });
+    } catch {
+      // Non-critical: ignore logging errors
+    }
   }
 }

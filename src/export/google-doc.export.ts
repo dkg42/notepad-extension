@@ -1,5 +1,6 @@
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
+import { storageService } from '@/services/storage-service';
 
 /**
  * Exports the chat as an HTML-based .doc file.
@@ -25,6 +26,17 @@ export class GoogleDocExportStrategy implements ExportStrategy {
   async export(messages: ChatMessage[], filename = 'chat-export'): Promise<void> {
     const content = this.formatAsHtml(messages, filename);
     await this.downloadFile(content, filename);
+    try {
+      await storageService.addExportRecord({
+        exportedAt: Date.now(),
+        format: this.type,
+        itemCount: messages.length,
+        source: document.location.hostname,
+        filename: `${filename}.${this.fileExtension}`,
+      });
+    } catch {
+      // Non-critical: ignore logging errors
+    }
   }
 
   private formatAsHtml(messages: ChatMessage[], title: string): string {

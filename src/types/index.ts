@@ -1,7 +1,17 @@
+export * from './dashboard';
+
 export interface Folder {
   id: string;
   name: string;
   createdAt: number;
+  color?: string;
+  parentId?: string;
+  sortOrder?: number;
+}
+
+export interface TagMeta {
+  name: string;
+  color?: string;
 }
 
 export interface Snippet {
@@ -12,6 +22,7 @@ export interface Snippet {
   savedAt: number;
   folderId?: string;
   tags?: string[];
+  isFavorite?: boolean;
 }
 
 export interface ChatMessage {

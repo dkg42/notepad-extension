@@ -1,5 +1,6 @@
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
+import { storageService } from '@/services/storage-service';
 
 export class PlainTextExportStrategy implements ExportStrategy {
   readonly type = 'plain-text';
@@ -12,6 +13,17 @@ export class PlainTextExportStrategy implements ExportStrategy {
       await this.downloadFile(content, filename);
     } catch {
       await navigator.clipboard.writeText(content);
+    }
+    try {
+      await storageService.addExportRecord({
+        exportedAt: Date.now(),
+        format: this.type,
+        itemCount: messages.length,
+        source: document.location.hostname,
+        filename: `${filename}.${this.fileExtension}`,
+      });
+    } catch {
+      // Non-critical: ignore logging errors
     }
   }
 

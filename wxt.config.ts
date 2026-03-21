@@ -8,6 +8,10 @@ export default defineConfig({
     description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
     version: '1.0.0',
     permissions: ['storage'],
+    options_ui: {
+      page: 'dashboard.html',
+      open_in_tab: true,
+    },
     host_permissions: [
       'https://chatgpt.com/*',
       'https://chat.openai.com/*',

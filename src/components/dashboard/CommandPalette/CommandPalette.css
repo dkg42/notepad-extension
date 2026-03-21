@@ -1,0 +1,122 @@
+.command-palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.command-palette {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+}
+
+.command-palette__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.command-palette__search-icon {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.command-palette__input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.command-palette__input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.command-palette__esc {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.command-palette__empty {
+  padding: 28px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.command-palette__list {
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.command-palette__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.08s;
+}
+
+.command-palette__item:last-child {
+  border-bottom: none;
+}
+
+.command-palette__item--active {
+  background: var(--color-primary-light);
+}
+
+.command-palette__item-label {
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+}
+
+.command-palette__item--active .command-palette__item-label {
+  color: var(--color-primary);
+}
+
+.command-palette__item-sublabel {
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.command-palette__footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+
+.command-palette__footer-hint {
+  margin-left: auto;
+}

@@ -1,0 +1,59 @@
+.folder-tree {
+  list-style: none;
+}
+
+.folder-tree__item {
+  margin-bottom: 2px;
+}
+
+.folder-tree__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.folder-tree__btn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.folder-tree__btn--active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.folder-tree__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.folder-tree__icon {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.folder-tree__btn--active .folder-tree__icon,
+.folder-tree__btn:hover .folder-tree__icon {
+  color: var(--color-primary);
+}
+
+.folder-tree__name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

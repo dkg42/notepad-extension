@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
-import { UNCATEGORIZED_ID } from '@/types';
 import { storageService } from '@/services/storage-service';
+import { filterSnippets } from '@/utils/filter-snippets';
 
 export function useApp() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -27,29 +27,10 @@ export function useApp() {
     return Array.from(tagSet).sort();
   }, [snippets]);
 
-  const filteredSnippets = useMemo(() => {
-    let result = snippets;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((s) => s.text.toLowerCase().includes(q));
-    }
-
-    if (selectedFolderIds.size > 0) {
-      result = result.filter((s) => {
-        const id = s.folderId ?? UNCATEGORIZED_ID;
-        return selectedFolderIds.has(id);
-      });
-    }
-
-    if (selectedTags.size > 0) {
-      result = result.filter((s) =>
-        s.tags?.some((t) => selectedTags.has(t)),
-      );
-    }
-
-    return result;
-  }, [snippets, searchQuery, selectedFolderIds, selectedTags]);
+  const filteredSnippets = useMemo(
+    () => filterSnippets(snippets, searchQuery, selectedFolderIds, selectedTags),
+    [snippets, searchQuery, selectedFolderIds, selectedTags],
+  );
 
   const handleDelete = async (id: string) => {
     await storageService.remove(id);

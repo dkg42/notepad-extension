@@ -1,0 +1,28 @@
+.favorite-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, transform 0.12s;
+  opacity: 0.5;
+}
+
+.favorite-btn:hover {
+  color: #f59e0b;
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.favorite-btn--active {
+  color: #f59e0b;
+  opacity: 1;
+}
+
+.favorite-btn--active:hover {
+  color: #d97706;
+  transform: scale(1.15);
+}

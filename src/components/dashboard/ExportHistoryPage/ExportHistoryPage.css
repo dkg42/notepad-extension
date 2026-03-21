@@ -1,0 +1,118 @@
+.export-history-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.export-history-page__heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.export-history-page__subheading {
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.export-history-page__clear-btn {
+  padding: 7px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.export-history-page__clear-btn:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: #fff5f5;
+}
+
+.export-history-page__loading,
+.export-history-page__empty {
+  text-align: center;
+  padding: 48px 24px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.export-history-page__empty-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 10px;
+  opacity: 0.35;
+}
+
+.export-history-page__table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+}
+
+.export-history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.export-history-table__th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+
+.export-history-table__row {
+  transition: background 0.1s;
+}
+
+.export-history-table__row:hover {
+  background: var(--color-bg);
+}
+
+.export-history-table__td {
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.export-history-table__row:last-child .export-history-table__td {
+  border-bottom: none;
+}
+
+.export-history-table__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.export-history-table__td--source {
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
