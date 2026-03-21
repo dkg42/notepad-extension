@@ -15,7 +15,13 @@ export interface Snippet {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  /**
+   * 'user' — a human turn
+   * 'assistant' — the AI response turn
+   * 'system' — injected metadata (e.g. notebook source list); rendered as a
+   *             preamble block with no role label in all export formats
+   */
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 

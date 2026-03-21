@@ -49,6 +49,22 @@ export class PdfExportStrategy implements ExportStrategy {
 
     // ── Messages ────────────────────────────────────────────────────────────
     for (const message of messages) {
+      if (message.role === 'system') {
+        // Render as a metadata block: light grey box, no role label
+        ensureSpace(lineHeight(10) + 4);
+        doc.setFillColor(248, 249, 250);
+        doc.setDrawColor(218, 220, 224);
+        const contentLines = doc.splitTextToSize(message.content, TEXT_WIDTH_MM - 8) as string[];
+        const blockHeight = contentLines.length * lineHeight(10) + 8;
+        ensureSpace(blockHeight);
+        doc.roundedRect(MARGIN_MM, y - 2, TEXT_WIDTH_MM, blockHeight, 2, 2, 'FD');
+        doc.setTextColor(95, 99, 104);
+        writeLine(message.content, 10, 'italic');
+        doc.setTextColor(0, 0, 0);
+        y += 6;
+        continue;
+      }
+
       const roleLabel = message.role === 'user' ? 'You' : 'Assistant';
 
       // Role label with coloured underline bar

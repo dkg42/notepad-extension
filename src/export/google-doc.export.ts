@@ -30,6 +30,14 @@ export class GoogleDocExportStrategy implements ExportStrategy {
   private formatAsHtml(messages: ChatMessage[], title: string): string {
     const blocks = messages
       .map((m) => {
+        if (m.role === 'system') {
+          const escapedContent = this.escapeHtml(m.content).replace(/\n/g, '<br>');
+          return `
+        <div style="margin-bottom:20px; padding:10px 14px; background:#f8f9fa;
+                    border:1px solid #e8eaed; border-radius:6px;">
+          <p style="margin:0; font-size:10pt; color:#5f6368; line-height:1.6;">${escapedContent}</p>
+        </div>`;
+        }
         const roleLabel = m.role === 'user' ? 'You' : 'Assistant';
         const roleColor = m.role === 'user' ? '#2563eb' : '#7c3aed';
         const escapedContent = this.escapeHtml(m.content).replace(/\n/g, '<br>');

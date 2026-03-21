@@ -1,14 +1,24 @@
 import type { ExportStrategy } from '@/export/export-strategy.interface';
 import pickerHtml from './format-picker.html?raw';
 
+export interface FormatPickerResult {
+  strategy: ExportStrategy;
+  /** True only when the "Include notebook sources" checkbox is shown and checked. */
+  includeSources: boolean;
+}
+
 /**
  * Renders the format-picker panel into the given shadow root.
- * Resolves with the chosen ExportStrategy, or null if the user cancels.
+ * Resolves with the chosen strategy (and options), or null if the user cancels.
+ *
+ * @param options.includeSourcesToggle - When true, shows an "Include notebook sources"
+ *   checkbox (NotebookLM only). Defaults to false.
  */
 export function showFormatPicker(
   shadow: ShadowRoot,
   strategies: ExportStrategy[],
-): Promise<ExportStrategy | null> {
+  options: { includeSourcesToggle?: boolean } = {},
+): Promise<FormatPickerResult | null> {
   return new Promise((resolve) => {
     if (shadow.querySelector('#format-picker-panel')) return;
 
@@ -17,9 +27,16 @@ export function showFormatPicker(
     const panel = wrapper.firstElementChild as HTMLElement;
     shadow.appendChild(panel);
 
-    const optionsList = panel.querySelector<HTMLDivElement>('#format-options-list')!;
-    const cancelBtn = panel.querySelector<HTMLButtonElement>('#format-picker-cancel')!;
-    const confirmBtn = panel.querySelector<HTMLButtonElement>('#format-picker-confirm')!;
+    const optionsList     = panel.querySelector<HTMLDivElement>('#format-options-list')!;
+    const cancelBtn       = panel.querySelector<HTMLButtonElement>('#format-picker-cancel')!;
+    const confirmBtn      = panel.querySelector<HTMLButtonElement>('#format-picker-confirm')!;
+    const sourcesOption   = panel.querySelector<HTMLLabelElement>('#include-sources-option')!;
+    const sourcesCheckbox = panel.querySelector<HTMLInputElement>('#include-sources-checkbox')!;
+
+    // Show the sources toggle only when explicitly requested.
+    if (options.includeSourcesToggle) {
+      sourcesOption.classList.remove('hidden');
+    }
 
     let selectedType = strategies[0]?.type ?? '';
 
@@ -52,7 +69,8 @@ export function showFormatPicker(
     confirmBtn.addEventListener('click', () => {
       const chosen = strategies.find((s) => s.type === selectedType) ?? null;
       dismiss();
-      resolve(chosen);
+      if (!chosen) { resolve(null); return; }
+      resolve({ strategy: chosen, includeSources: sourcesCheckbox.checked });
     });
 
     panel.addEventListener('keydown', (e: KeyboardEvent) => {

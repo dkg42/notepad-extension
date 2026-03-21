@@ -25,6 +25,10 @@ export class PlainTextExportStrategy implements ExportStrategy {
 
     const body = messages
       .map((m) => {
+        if (m.role === 'system') {
+          const divider = '='.repeat(40);
+          return `${divider}\n${m.content}\n${divider}`;
+        }
         const role = m.role === 'user' ? 'YOU' : 'ASSISTANT';
         const divider = '-'.repeat(40);
         return `${role}\n${divider}\n${m.content}`;

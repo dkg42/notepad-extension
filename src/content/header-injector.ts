@@ -1,8 +1,9 @@
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
+import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
 import { exportStrategies } from '@/export/export-registry';
 import { showFormatPicker } from './format-picker';
 import { storageService } from '@/services/storage-service';
-import type { Folder } from '@/types';
+import type { ChatMessage, Folder } from '@/types';
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 
 const INJECTED_MARKER_ID = 'llm-enhancer-header-buttons';
@@ -40,6 +41,8 @@ function tryInject(adapter: ChatSiteAdapter): void {
   const exportBtn = addButton('Export chat', '#2563eb', shadow);
   const savePromptsBtn = addButton('Save prompts', '#7c3aed', shadow);
 
+  const supportsSourcesToggle = isSourcePanelAdapter(adapter);
+
   exportBtn.addEventListener('click', async () => {
     const messages = adapter.extractMessages();
     if (messages.length === 0) {
@@ -48,12 +51,18 @@ function tryInject(adapter: ChatSiteAdapter): void {
     }
 
     exportBtn.disabled = true;
-    const strategy = await showFormatPicker(shadow, exportStrategies);
+    const result = await showFormatPicker(shadow, exportStrategies, {
+      includeSourcesToggle: supportsSourcesToggle,
+    });
     exportBtn.disabled = false;
 
-    if (!strategy) return;
+    if (!result) return;
 
     const filename = `chat-${new Date().toISOString().slice(0, 10)}`;
+    const exportMessages: ChatMessage[] =
+      result.includeSources && isSourcePanelAdapter(adapter)
+        ? [buildSourcesPreamble(adapter), ...messages]
+        : messages;
 
     // Set loading state directly — do NOT use showFeedback here because it
     // captures btn.textContent as the restore value, and a subsequent
@@ -64,7 +73,7 @@ function tryInject(adapter: ChatSiteAdapter): void {
     exportBtn.disabled = true;
 
     try {
-      await strategy.export(messages, filename);
+      await result.strategy.export(exportMessages, filename);
       restoreButton(exportBtn);
       showFeedback(exportBtn, 'Exported!', '#16a34a');
     } catch (err) {
@@ -99,6 +108,36 @@ function tryInject(adapter: ChatSiteAdapter): void {
       showFeedback(savePromptsBtn, 'Error saving', '#ef4444');
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Sources preamble — prepended to chat export when "Include sources" is on
+// ---------------------------------------------------------------------------
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  pdf:     'PDF',
+  youtube: 'YouTube',
+  gdoc:    'Google Doc',
+  gslide:  'Slides',
+  website: 'Website',
+  audio:   'Audio',
+  text:    'Text',
+  unknown: 'Unknown',
+};
+
+function buildSourcesPreamble(
+  adapter: import('@/adapters/source-panel-adapter.interface').SourcePanelAdapter,
+): ChatMessage {
+  const items = adapter.findSourceItems();
+  const lines = items.map((item) => {
+    const title = adapter.getSourceTitle(item);
+    const type  = adapter.getSourceType(item);
+    return `- ${title} (${SOURCE_TYPE_LABELS[type] ?? type})`;
+  });
+  return {
+    role: 'system',
+    content: `Notebook Sources\n\n${lines.join('\n')}`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -330,6 +369,24 @@ function createButtonContainer(): { container: HTMLElement; shadow: ShadowRoot }
       padding: 3px 10px;
       font-size: 11px;
       background: #2563eb;
+    }
+
+    /* ── Include sources toggle ── */
+    .include-sources-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      margin-bottom: 6px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+    }
+
+    .include-sources-option.hidden {
+      display: none;
     }
 
     /* ── Folder picker panel ── */

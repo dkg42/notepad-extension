@@ -31,20 +31,102 @@ const ICON_TYPE_MAP: Record<string, SourceType> = {
 export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter {
   readonly hostnames = ['notebooklm.google.com'] as const;
 
-  // ── ChatSiteAdapter ─────────────────────────────────────────────────────────
-  // Chat export / prompt saving are not yet implemented for NotebookLM.
-  // Returning safe no-op values keeps the adapter registry working without errors.
+  // ── ChatSiteAdapter ──────────────────────────────────────────────────────────
+  //
+  // NOTE: NotebookLM uses Angular components whose exact tag names and class names
+  // may change with product updates. All selectors below are documented with their
+  // intent so they are easy to update if a feature stops working.
+  // Inspect: DevTools → Elements panel on notebooklm.google.com → search for the
+  // relevant component names listed in each comment.
 
   findHeaderAnchor(): Element | null {
-    return null;
+    // The chat panel header's right-side button group.
+    // DOM path: section.chat-panel > div.panel-header > span.chat-header-buttons
+    // This span already contains the "Configure notebook" (tune) and "Chat options"
+    // (more_vert) icon buttons — our buttons are appended alongside them.
+    //
+    // IMPORTANT: do NOT use document.querySelector('header') here — the emoji picker
+    // component on the page also renders a <header> element that appears earlier in the
+    // DOM and will capture the selector first.
+    return (
+      document.querySelector<Element>('section.chat-panel .chat-header-buttons') ??
+      document.querySelector<Element>('section.chat-panel .panel-header') ??
+      null
+    );
   }
 
   extractMessages(): ChatMessage[] {
-    return [];
+    const messages: ChatMessage[] = [];
+
+    // The chat panel shows an AI-generated summary of the notebook sources above
+    // the conversation. It lives in .chat-panel-empty-state > .notebook-summary > .summary-content
+    // and is visible even when chat messages exist.
+    const summaryEl = document.querySelector<HTMLElement>(
+      'section.chat-panel .summary-content',
+    );
+    if (summaryEl) {
+      const summaryText = summaryEl.textContent?.trim();
+      if (summaryText) {
+        messages.push({ role: 'system', content: `Notebook Summary\n\n${summaryText}` });
+      }
+    }
+
+    // Each message is rendered as a `chat-message` Angular component.
+    // User turns contain a .from-user-container child.
+    // Model turns contain a .to-user-container child.
+    // Both are siblings inside .chat-message-pair grouping divs, in DOM order.
+    const chatMessages = Array.from(
+      document.querySelectorAll<HTMLElement>('chat-message.individual-message'),
+    );
+
+    for (const msg of chatMessages) {
+      const isUser = msg.querySelector('.from-user-container') !== null;
+      const content = this.extractMessageText(msg, isUser);
+      if (content) messages.push({ role: isUser ? 'user' : 'assistant', content });
+    }
+
+    return messages;
   }
 
   extractPrompts(): string[] {
-    return [];
+    return this.extractMessages()
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content);
+  }
+
+  private extractMessageText(msg: HTMLElement, isUser: boolean): string {
+    if (isUser) {
+      // User text lives inside:
+      // .from-user-container > mat-card > mat-card-content > .message-text-content
+      // The text itself is in a .is-rich-chat-ui div > <p> element(s).
+      const container = msg.querySelector<HTMLElement>(
+        '.from-user-container .message-text-content',
+      );
+      return container?.textContent?.trim() ?? '';
+    }
+
+    // Model response text lives inside:
+    // .to-user-container > mat-card > mat-card-content > .message-text-content
+    //   > element-list-renderer > labs-tailwind-structural-element-view-v2
+    //   > div.paragraph
+    //
+    // Multiple .paragraph divs are used for multi-paragraph responses.
+    // Joining them with double newlines reconstructs the paragraph structure.
+    const container = msg.querySelector<HTMLElement>(
+      '.to-user-container .message-text-content',
+    );
+    if (!container) return '';
+
+    const paragraphs = Array.from(container.querySelectorAll<HTMLElement>('.paragraph'));
+    if (paragraphs.length > 0) {
+      return paragraphs
+        .map((p) => p.textContent?.trim())
+        .filter(Boolean)
+        .join('\n\n');
+    }
+
+    // Fallback: full text content of the container
+    return container.textContent?.trim() ?? '';
   }
 
   // ── SourcePanelAdapter ──────────────────────────────────────────────────────

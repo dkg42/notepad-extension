@@ -26,7 +26,10 @@ export class MarkdownExportStrategy implements ExportStrategy {
     ].join('\n');
 
     const body = messages
-      .map((m) => `## ${m.role === 'user' ? 'You' : 'Assistant'}\n\n${m.content}`)
+      .map((m) => {
+        if (m.role === 'system') return m.content;
+        return `## ${m.role === 'user' ? 'You' : 'Assistant'}\n\n${m.content}`;
+      })
       .join('\n\n---\n\n');
 
     return header + body;
