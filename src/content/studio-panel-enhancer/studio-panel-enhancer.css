@@ -1,0 +1,130 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Export notes button ────────────────────────────────────────────────────── */
+
+.export-notes-btn {
+  border: 1px solid #1a73e8;
+  background: #fff;
+  color: #1a73e8;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.export-notes-btn:hover:not(:disabled) {
+  background: #e8f0fe;
+}
+
+.export-notes-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Format picker panel (injected into this shadow DOM by showFormatPicker) ── */
+
+.format-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  padding: 12px;
+  min-width: 210px;
+  z-index: 10000;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.format-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.format-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.format-option:hover {
+  background: #f3f4f6;
+}
+
+.include-sources-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  margin-bottom: 6px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+}
+
+.include-sources-option.hidden {
+  display: none;
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.picker-btn-cancel {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  background: #6b7280;
+  cursor: pointer;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.picker-btn-cancel:hover {
+  opacity: 0.85;
+}
+
+.picker-btn-export {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  cursor: pointer;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.picker-btn-export:hover {
+  opacity: 0.85;
+}

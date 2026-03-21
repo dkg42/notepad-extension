@@ -33,3 +33,10 @@ export interface SourceRecord {
   title: string;
   type: string; // matches SourceType from source-panel-adapter.interface.ts
 }
+
+/** A single NotebookLM note entry used for notes exports. */
+export interface NoteRecord {
+  title: string;
+  /** Body text of the note. Empty string if the editor content could not be read. */
+  content: string;
+}

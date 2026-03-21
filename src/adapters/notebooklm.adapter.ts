@@ -1,6 +1,7 @@
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { SourcePanelAdapter, SourceType } from './source-panel-adapter.interface';
-import type { ChatMessage } from '@/types';
+import type { StudioPanelAdapter } from './studio-panel-adapter.interface';
+import type { ChatMessage, NoteRecord } from '@/types';
 
 /**
  * Maps NotebookLM's Material Symbols icon names (read from mat-icon.source-item-source-icon
@@ -28,7 +29,7 @@ const ICON_TYPE_MAP: Record<string, SourceType> = {
   note: 'text',
 };
 
-export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter {
+export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, StudioPanelAdapter {
   readonly hostnames = ['notebooklm.google.com'] as const;
 
   // ── ChatSiteAdapter ──────────────────────────────────────────────────────────
@@ -256,6 +257,102 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter {
       setTimeout(() => {
         observer.disconnect();
         resolve(findPanel());
+      }, timeout);
+    });
+  }
+
+  // ── StudioPanelAdapter ───────────────────────────────────────────────────────
+
+  findStudioPanelInjectionPoint(): Element | null {
+    // The <nav> inside the studio panel header.
+    // We insert the enhancer container immediately after the nav, placing our
+    // "Export notes" button between the "Studio" heading and the collapse toggle.
+    return (
+      document.querySelector<Element>('section.studio-panel .panel-header nav') ?? null
+    );
+  }
+
+  findNoteItems(): Element[] {
+    // artifact-library-note is the Angular component for each saved note.
+    // Confirmed selector from live DOM: section.studio-panel artifact-library-note
+    return Array.from(
+      document.querySelectorAll<Element>('section.studio-panel artifact-library-note'),
+    );
+  }
+
+  getNoteTitle(item: Element): string {
+    // Confirmed from live DOM: .artifact-title.mat-title-small holds the note name.
+    return (
+      item.querySelector<HTMLElement>('.artifact-title')?.textContent?.trim() ?? ''
+    );
+  }
+
+  async readNoteContent(item: Element): Promise<NoteRecord> {
+    const title = this.getNoteTitle(item);
+
+    // Click the note's primary button to open it in the studio editor.
+    // Confirmed selector: button.artifact-stretched-button inside the note item.
+    const openBtn = item.querySelector<HTMLElement>('.artifact-stretched-button');
+    if (!openBtn) return { title, content: '' };
+
+    openBtn.click();
+
+    // Wait for the note editor to render.
+    // NOTE: These selectors are best-effort — update once the note editor DOM
+    // is confirmed from DevTools on notebooklm.google.com.
+    await this.delay(800);
+    const editorContent = await this.waitForNoteEditor(1500);
+    const content = editorContent?.textContent?.trim() ?? '';
+
+    // Navigate back to the notes list.
+    // Try a dedicated back button first; fall back to Escape key.
+    const backBtn = document.querySelector<HTMLElement>(
+      'button[aria-label="Back"], button[aria-label="Close"], .note-editor-back, .note-back-button',
+    );
+    if (backBtn) {
+      backBtn.click();
+    } else {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    }
+    await this.delay(400);
+
+    return { title, content };
+  }
+
+  private waitForNoteEditor(timeout: number): Promise<Element | null> {
+    // NOTE: Update these selectors once the note editor DOM is known.
+    // Common Angular rich-text editor patterns used in Google products:
+    const SELECTORS = [
+      '.note-editor-content',
+      '.note-body',
+      'studio-panel [contenteditable="true"]',
+      '.studio-panel-content [contenteditable]',
+      '.ProseMirror',
+    ];
+
+    const findEditor = (): Element | null => {
+      for (const sel of SELECTORS) {
+        const el = document.querySelector(sel);
+        if (el) return el;
+      }
+      return null;
+    };
+
+    const existing = findEditor();
+    if (existing) return Promise.resolve(existing);
+
+    return new Promise((resolve) => {
+      const observer = new MutationObserver(() => {
+        const found = findEditor();
+        if (found) {
+          observer.disconnect();
+          resolve(found);
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(findEditor());
       }, timeout);
     });
   }

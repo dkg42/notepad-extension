@@ -1,9 +1,11 @@
 import { defineContentScript } from 'wxt/sandbox';
 import { getAdapter } from '@/adapters/adapter-registry';
 import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
+import { isStudioPanelAdapter } from '@/adapters/studio-panel-adapter.interface';
 import { setupSelectionSave } from '@/content/selection-save';
 import { setupHeaderButtons } from '@/content/header-injector';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
+import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
 
 export default defineContentScript({
   matches: [
@@ -28,6 +30,11 @@ export default defineContentScript({
     // Feature: source panel search + type filters (NotebookLM)
     if (isSourcePanelAdapter(adapter)) {
       setupSourcePanelEnhancer(adapter);
+    }
+
+    // Feature: "Export notes" button in the studio panel (NotebookLM)
+    if (isStudioPanelAdapter(adapter)) {
+      setupStudioPanelEnhancer(adapter);
     }
   },
 });
