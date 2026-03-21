@@ -29,6 +29,17 @@ export interface SourcePanelAdapter extends SiteAdapter {
 
   /** Determines the source type from a source item element. */
   getSourceType(item: Element): SourceType;
+
+  /**
+   * Triggers the site's native delete flow for a single source item element.
+   * Implementations should find the overflow menu, click "Remove source", and
+   * auto-confirm any confirmation dialog. Resolves when the deletion has been
+   * initiated (or silently fails if the UI cannot be found).
+   *
+   * NOTE: Relies on live DOM selectors — update notebooklm.adapter.ts if the
+   * site changes its UI structure.
+   */
+  triggerSourceDelete(item: Element): Promise<void>;
 }
 
 export function isSourcePanelAdapter(adapter: unknown): adapter is SourcePanelAdapter {

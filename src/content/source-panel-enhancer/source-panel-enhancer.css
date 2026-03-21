@@ -39,6 +39,25 @@
   background: #e8f0fe;
 }
 
+.delete-btn {
+  flex-shrink: 0;
+  border: 1px solid #d93025;
+  background: #fff;
+  color: #d93025;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.delete-btn:hover {
+  background: #fce8e6;
+}
+
 /* ── Search bar ─────────────────────────────────────────────────────────────── */
 
 .search-wrapper {

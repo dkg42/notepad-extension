@@ -82,4 +82,112 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter {
     const iconName = icon.textContent?.trim() ?? '';
     return ICON_TYPE_MAP[iconName] ?? 'unknown';
   }
+
+  async triggerSourceDelete(item: Element): Promise<void> {
+    // Dispatch hover events so Angular reveals the hidden overflow menu button.
+    item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    item.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    await this.delay(150);
+
+    const moreBtn = this.findSourceMoreButton(item);
+    if (!moreBtn) {
+      console.warn('[NLM Enhancer] Source overflow button not found — selectors may need updating');
+      return;
+    }
+
+    moreBtn.click();
+
+    const menuPanel = await this.waitForMenuPanel(2000);
+    if (!menuPanel) {
+      console.warn('[NLM Enhancer] Source menu panel did not appear');
+      return;
+    }
+
+    // Find the "Remove source" / "Delete" menu item.
+    const menuItems = Array.from(
+      menuPanel.querySelectorAll<HTMLElement>('button, [role="menuitem"]'),
+    );
+    const removeBtn = menuItems.find((el) =>
+      /remove|delete/i.test(el.textContent?.trim() ?? ''),
+    );
+
+    if (!removeBtn) {
+      // Close the open menu and bail.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      console.warn('[NLM Enhancer] Remove option not found in source menu');
+      return;
+    }
+
+    removeBtn.click();
+
+    // Auto-confirm any confirmation dialog (e.g. "Are you sure?").
+    await this.delay(400);
+    this.autoConfirmDeleteDialog();
+
+    // Allow NotebookLM time to animate and process the deletion.
+    await this.delay(400);
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────────
+
+  private findSourceMoreButton(item: Element): HTMLElement | null {
+    // Try aria-label patterns first (most reliable across UI versions).
+    const byLabel = (
+      item.querySelector<HTMLElement>('button[aria-label*="More" i]') ??
+      item.querySelector<HTMLElement>('button[aria-label*="options" i]') ??
+      item.querySelector<HTMLElement>('button[aria-label*="menu" i]')
+    );
+    if (byLabel) return byLabel;
+
+    // Fallback: any button whose mat-icon contains more_vert / more_horiz.
+    return (
+      Array.from(item.querySelectorAll<HTMLElement>('button')).find((btn) => {
+        const iconText = btn.querySelector('mat-icon')?.textContent?.trim();
+        return iconText === 'more_vert' || iconText === 'more_horiz';
+      }) ?? null
+    );
+  }
+
+  private waitForMenuPanel(timeout: number): Promise<Element | null> {
+    const SELECTORS = ['.mat-mdc-menu-panel', '.mat-menu-panel', '[role="menu"]'];
+
+    const findPanel = (): Element | null => {
+      for (const sel of SELECTORS) {
+        const el = document.querySelector(sel);
+        if (el) return el;
+      }
+      return null;
+    };
+
+    const existing = findPanel();
+    if (existing) return Promise.resolve(existing);
+
+    return new Promise((resolve) => {
+      const observer = new MutationObserver(() => {
+        const found = findPanel();
+        if (found) {
+          observer.disconnect();
+          resolve(found);
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(findPanel());
+      }, timeout);
+    });
+  }
+
+  private autoConfirmDeleteDialog(): void {
+    const overlay = document.querySelector('.cdk-overlay-container');
+    if (!overlay) return;
+    const confirmBtn = Array.from(overlay.querySelectorAll<HTMLElement>('button')).find((btn) =>
+      /remove|delete|confirm|yes/i.test(btn.textContent?.trim() ?? ''),
+    );
+    if (confirmBtn) confirmBtn.click();
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((r) => setTimeout(r, ms));
+  }
 }
