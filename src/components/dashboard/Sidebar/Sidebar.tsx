@@ -11,6 +11,7 @@ interface NavItem {
 const PRIMARY_NAV: NavItem[] = [
   { view: 'home', icon: '⌂', label: 'Home' },
   { view: 'prompts', icon: '≡', label: 'Prompts' },
+  { view: 'notebooks', icon: '◱', label: 'Notebooks' },
   { view: 'favorites', icon: '★', label: 'Favorites' },
   { view: 'folders', icon: '◫', label: 'Folders' },
   { view: 'tags', icon: '◈', label: 'Tags' },
@@ -26,6 +27,7 @@ interface SidebarProps {
   onNavigate: (view: DashboardView) => void;
   promptCount: number;
   favoritesCount: number;
+  notebooksCount: number;
 }
 
 export default function Sidebar({
@@ -33,15 +35,18 @@ export default function Sidebar({
   onNavigate,
   promptCount,
   favoritesCount,
+  notebooksCount,
 }: SidebarProps) {
   const renderNavItem = (item: NavItem) => {
     const isActive = currentView === item.view;
     const badge =
       item.view === 'prompts' && promptCount > 0
         ? promptCount
-        : item.view === 'favorites' && favoritesCount > 0
-          ? favoritesCount
-          : null;
+        : item.view === 'notebooks' && notebooksCount > 0
+          ? notebooksCount
+          : item.view === 'favorites' && favoritesCount > 0
+            ? favoritesCount
+            : null;
 
     return (
       <button

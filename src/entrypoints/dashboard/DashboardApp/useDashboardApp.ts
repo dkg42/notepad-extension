@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Folder, Snippet, TagMeta } from '@/types';
+import type { Folder, NotebookMeta, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';
+import { notebookSyncService } from '@/services/notebook-sync-service';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',
@@ -19,6 +20,7 @@ export function useDashboardApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [notebooksCount, setNotebooksCount] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -26,14 +28,28 @@ export function useDashboardApp() {
       storageService.getFolders(),
       storageService.getTagsMeta(),
       storageService.getSettings(),
+      notebookSyncService.getAll(),
     ])
-      .then(([loadedSnippets, loadedFolders, loadedTagsMeta, loadedSettings]) => {
+      .then(([loadedSnippets, loadedFolders, loadedTagsMeta, loadedSettings, loadedNotebooks]) => {
         setSnippets(loadedSnippets);
         setFolders(loadedFolders);
         setTagsMeta(loadedTagsMeta);
         setSettings(loadedSettings);
+        setNotebooksCount(loadedNotebooks.length);
       })
       .finally(() => setIsLoading(false));
+  }, []);
+
+  // Update notebooks count when sync storage changes
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('notebooksMeta' in changes) {
+        const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
+        setNotebooksCount(updated.length);
+      }
+    };
+    chrome.storage.sync.onChanged.addListener(listener);
+    return () => chrome.storage.sync.onChanged.removeListener(listener);
   }, []);
 
   const favoritesCount = useMemo(
@@ -178,6 +194,7 @@ export function useDashboardApp() {
     currentView,
     isLoading,
     favoritesCount,
+    notebooksCount,
     showShortcuts,
     setShowShortcuts,
     showCommandPalette,

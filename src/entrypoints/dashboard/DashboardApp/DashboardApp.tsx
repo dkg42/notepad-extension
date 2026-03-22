@@ -7,6 +7,7 @@ import TagManager from '@/components/dashboard/TagManager/TagManager';
 import AnalyticsPage from '@/components/dashboard/AnalyticsPage/AnalyticsPage';
 import SettingsPage from '@/components/dashboard/SettingsPage/SettingsPage';
 import ExportHistoryPage from '@/components/dashboard/ExportHistoryPage/ExportHistoryPage';
+import NotebooksPage from '@/components/dashboard/NotebooksPage/NotebooksPage';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
@@ -24,6 +25,7 @@ export default function DashboardApp() {
     currentView,
     isLoading,
     favoritesCount,
+    notebooksCount,
     showShortcuts,
     setShowShortcuts,
     setCurrentView,
@@ -140,6 +142,9 @@ export default function DashboardApp() {
       case 'export-history':
         return <ExportHistoryPage />;
 
+      case 'notebooks':
+        return <NotebooksPage />;
+
       case 'settings':
         return (
           <SettingsPage settings={settings} onSettingsChange={handleSettingsChange} />
@@ -163,6 +168,7 @@ export default function DashboardApp() {
           onNavigate={setCurrentView}
           promptCount={snippets.length}
           favoritesCount={favoritesCount}
+          notebooksCount={notebooksCount}
         />
         <div className="dashboard-app__content">
           <main className="dashboard-app__main">{renderContent()}</main>

@@ -51,3 +51,18 @@ export interface NoteRecord {
   /** Body text of the note. Empty string if the editor content could not be read. */
   content: string;
 }
+
+/** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */
+export interface NotebookMeta {
+  /** Notebook ID from the batchexecute API response. */
+  id: string;
+  title: string;
+  /** Canonical URL: https://notebooklm.google.com/notebook/<id> */
+  url: string;
+  /** Unix ms — creation timestamp from the API. */
+  createdAt: number;
+  /** Unix ms — when the extension last fetched this notebook's data. */
+  lastSyncedAt: number;
+  /** true = user owns this notebook; false = shared with user. */
+  isOwner: boolean;
+}
