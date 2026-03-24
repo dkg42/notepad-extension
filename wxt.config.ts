@@ -20,6 +20,8 @@ export default defineConfig({
       'https://www.perplexity.ai/*',
       'https://copilot.microsoft.com/*',
       'https://notebooklm.google.com/*',
+      'https://lh3.googleusercontent.com/*',
+      'https://lh3.google.com/*',
       // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
     ],
     // ── Future: Google Docs sync ──────────────────────────────────────────────

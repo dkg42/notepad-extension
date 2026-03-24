@@ -9,6 +9,7 @@ export type DashboardView =
   | 'analytics'
   | 'export-history'
   | 'notebooks'
+  | 'notebook-detail'
   | 'settings';
 
 export interface DashboardSettings {

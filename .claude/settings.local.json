@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -sL https://api.github.com/repos/teng-lin/notebooklm-py/git/trees/main?recursive=1)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(x[''''path'''']\\) for x in data.get\\(''''tree'''',[]\\)]\")",
+      "Bash(curl:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -45,11 +45,51 @@ export interface SourceRecord {
   type: string; // matches SourceType from source-panel-adapter.interface.ts
 }
 
+/** A source with an ID, needed for deletion and detail display. */
+export interface SourceDetailRecord extends SourceRecord {
+  /** Source ID from the API (src[0] in the response array). */
+  id: string;
+}
+
+/** An artifact (audio overview, etc.) from NotebookLM. */
+export interface ArtifactRecord {
+  id: string;
+  title: string;
+  /** Artifact type enum from the API. */
+  typeCode: number;
+  /** Direct media URL for audio playback, if available. */
+  mediaUrl?: string;
+  /** Unix ms creation timestamp. */
+  createdAt?: number;
+  /** Status: 1 = processing, 2 = pending, 3 = completed. */
+  status?: number;
+}
+
+/** A note with an ID for the detail page. */
+export interface NoteDetailRecord extends NoteRecord {
+  id: string;
+}
+
 /** A single NotebookLM note entry used for notes exports. */
 export interface NoteRecord {
   title: string;
   /** Body text of the note. Empty string if the editor content could not be read. */
   content: string;
+}
+
+/** A user-defined collection for grouping notebooks. */
+export interface NotebookCollection {
+  id: string;
+  name: string;
+  color?: string;
+  createdAt: number;
+}
+
+/** User annotations for a single notebook: tags and optional collection assignment. Stored separately from NotebookMeta so API syncs never clobber user data. */
+export interface NotebookAnnotation {
+  notebookId: string;
+  tags: string[];
+  collectionId?: string;
 }
 
 /** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */

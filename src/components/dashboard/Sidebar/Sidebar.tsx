@@ -38,7 +38,8 @@ export default function Sidebar({
   notebooksCount,
 }: SidebarProps) {
   const renderNavItem = (item: NavItem) => {
-    const isActive = currentView === item.view;
+    const isActive = currentView === item.view ||
+      (item.view === 'notebooks' && currentView === 'notebook-detail');
     const badge =
       item.view === 'prompts' && promptCount > 0
         ? promptCount

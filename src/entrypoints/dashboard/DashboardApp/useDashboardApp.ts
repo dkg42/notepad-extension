@@ -21,6 +21,7 @@ export function useDashboardApp() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [notebooksCount, setNotebooksCount] = useState(0);
+  const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -179,6 +180,18 @@ export function useDashboardApp() {
     });
   };
 
+  // ── Notebook detail navigation ───────────────────────────────────────────
+
+  const handleOpenNotebookDetail = (notebookId: string) => {
+    setSelectedNotebookId(notebookId);
+    setCurrentView('notebook-detail');
+  };
+
+  const handleBackToNotebooks = () => {
+    setCurrentView('notebooks');
+    setSelectedNotebookId(null);
+  };
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
   const handleSettingsChange = async (partial: Partial<DashboardSettings>) => {
@@ -200,6 +213,9 @@ export function useDashboardApp() {
     showCommandPalette,
     setShowCommandPalette,
     setCurrentView,
+    selectedNotebookId,
+    handleOpenNotebookDetail,
+    handleBackToNotebooks,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,

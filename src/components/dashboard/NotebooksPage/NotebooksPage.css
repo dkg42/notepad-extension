@@ -66,6 +66,10 @@
 /* ── Error banner ──────────────────────────────────────────────────────────── */
 
 .notebooks-page__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   background: rgba(229, 62, 62, 0.08);
   border: 1px solid var(--color-danger);
   color: var(--color-danger);
@@ -75,12 +79,33 @@
   margin-bottom: 12px;
 }
 
+.notebooks-page__error-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.12s;
+}
+
+.notebooks-page__error-dismiss:hover {
+  opacity: 1;
+}
+
 /* ── Sync bar ──────────────────────────────────────────────────────────────── */
 
 .notebooks-page__sync-bar {
   font-size: 12px;
   color: var(--color-text-secondary);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 /* ── Loading / Empty ───────────────────────────────────────────────────────── */
@@ -122,74 +147,251 @@
   line-height: 1.5;
 }
 
-/* ── Notebook grid ─────────────────────────────────────────────────────────── */
+/* ── Collection filter bar ─────────────────────────────────────────────────── */
 
-.notebooks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.notebooks-collections-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
-/* ── Notebook card ─────────────────────────────────────────────────────────── */
+.notebooks-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
 
-.notebook-card {
-  display: flex;
+.notebooks-filter-chip:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.notebooks-filter-chip--active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Collection chip — <span> wrapper with inner label + delete buttons */
+.notebooks-filter-chip--collection {
+  padding: 0;
+  overflow: hidden;
+}
+
+.notebooks-filter-chip__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.notebooks-filter-chip__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px 4px 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+
+.notebooks-filter-chip--collection:hover .notebooks-filter-chip__delete {
+  opacity: 1;
+}
+
+.notebooks-filter-chip__delete:hover {
+  color: var(--color-danger);
+}
+
+.notebooks-filter-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--color-border);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+
+.notebooks-filter-chip--active .notebooks-filter-chip__count {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.notebooks-filter-chip--new {
+  border-style: dashed;
+}
+
+.notebooks-filter-chip--new:hover {
+  border-style: solid;
+}
+
+.notebooks-collection-new-input {
+  padding: 4px 10px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  outline: none;
+  min-width: 140px;
+}
+
+/* ── Table wrapper ─────────────────────────────────────────────────────────── */
+
+.notebooks-table-wrapper {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
-  position: relative;
 }
 
-.notebook-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
+.notebooks-table__scroll {
+  overflow-x: auto;
 }
 
-.notebook-card__link {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  text-decoration: none;
-  color: inherit;
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+
+.notebooks-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.notebooks-table__col--notebook   { width: auto; min-width: 200px; }
+.notebooks-table__col--created    { width: 128px; }
+.notebooks-table__col--collection { width: 150px; }
+.notebooks-table__col--tags       { width: 260px; }
+.notebooks-table__col--sources    { width: 110px; }
+.notebooks-table__col--actions    { width: 48px; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.notebooks-table__head {
+  background: var(--color-bg);
+}
+
+.notebooks-table__th {
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ── Rows ──────────────────────────────────────────────────────────────────── */
+
+.notebooks-table__row {
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+
+.notebooks-table__row:last-child {
+  border-bottom: none;
+}
+
+.notebooks-table__row:hover {
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.notebooks-table__td {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+/* ── Notebook cell ─────────────────────────────────────────────────────────── */
+
+.notebooks-table__td--notebook {
   min-width: 0;
 }
 
-.notebook-card__icon {
-  font-size: 22px;
+.notebooks-table__notebook-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.notebooks-table__external-link {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  opacity: 0;
+  margin-left: 4px;
+  transition: opacity 0.12s, color 0.12s;
+}
+
+.notebooks-table__row:hover .notebooks-table__external-link {
+  opacity: 1;
+}
+
+.notebooks-table__external-link:hover {
+  color: var(--color-primary);
+}
+
+.notebooks-table__notebook-link:hover .notebooks-table__notebook-title {
+  color: var(--color-primary);
+}
+
+.notebooks-table__notebook-icon {
+  font-size: 18px;
   color: var(--color-primary);
   flex-shrink: 0;
   line-height: 1;
-  margin-top: 2px;
 }
 
-.notebook-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.notebook-card__title {
-  font-size: 14px;
+.notebooks-table__notebook-title {
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.12s;
 }
 
-.notebook-card__meta {
-  font-size: 11.5px;
-  color: var(--color-text-secondary);
-}
-
-.notebook-card__badge {
+.notebooks-table__badge {
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
@@ -199,33 +401,388 @@
   background: var(--color-primary-light);
   padding: 2px 6px;
   border-radius: 4px;
-  align-self: flex-start;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
-.notebook-card__remove {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
-  display: flex;
+/* ── Created cell ──────────────────────────────────────────────────────────── */
+
+.notebooks-table__td--created {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Collection cell ───────────────────────────────────────────────────────── */
+
+.notebooks-table__td--collection {
+  position: relative;
+}
+
+.notebooks-collection-selector {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: none;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: 12.5px;
   cursor: pointer;
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.notebook-card:hover .notebook-card__remove {
+.notebooks-collection-selector:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.notebooks-collection-selector--assigned {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.notebooks-collection-selector__caret {
+  font-size: 9px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.notebooks-collection-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 14px;
+  z-index: 100;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notebooks-collection-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.notebooks-collection-menu__item:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.notebooks-collection-menu__item--active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ── Tags cell ─────────────────────────────────────────────────────────────── */
+
+.notebooks-table__td--tags {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.notebooks-tags-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+}
+
+.notebook-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px 2px 7px;
+  background: var(--color-primary-light);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--color-primary);
+}
+
+.notebook-tag__label {
+  line-height: 1;
+}
+
+.notebook-tag__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+  opacity: 0.6;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.notebook-tag__remove:hover {
+  opacity: 1;
+  background: rgba(229, 62, 62, 0.15);
+  color: var(--color-danger);
+}
+
+.notebook-tag-input {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 11px;
+  outline: none;
+  min-width: 90px;
+}
+
+.notebooks-add-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px dashed var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.notebooks-table__row:hover .notebooks-add-tag-btn {
   opacity: 1;
 }
 
-.notebook-card__remove:hover {
+.notebooks-add-tag-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  border-style: solid;
+}
+
+/* ── Sources cell ──────────────────────────────────────────────────────────── */
+
+.notebooks-table__td--sources {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.notebooks-sources-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.notebooks-sources-count {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  min-width: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.notebooks-sources-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.notebooks-table__row:hover .notebooks-sources-download-btn {
+  opacity: 1;
+}
+
+.notebooks-sources-download-btn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.notebooks-table__sources-loading {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  animation: notebooks-spin 1.2s linear infinite;
+}
+
+/* Format picker menu */
+.notebooks-sources-format-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notebooks-sources-format-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.notebooks-sources-format-item:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* ── Actions cell ──────────────────────────────────────────────────────────── */
+
+.notebooks-table__td--actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Trash icon button — hidden until row hover */
+.notebooks-table__delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.12s, color 0.12s;
+}
+
+.notebooks-table__row:hover .notebooks-table__delete-btn {
+  opacity: 1;
+}
+
+.notebooks-table__delete-btn:hover {
   background: rgba(229, 62, 62, 0.1);
   color: var(--color-danger);
+}
+
+/* Inline confirmation: "Delete? ✓ ✗" */
+.notebooks-table__confirm-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.notebooks-table__confirm-label {
+  font-size: 11.5px;
+  color: var(--color-danger);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notebooks-table__confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.notebooks-table__confirm-btn--yes {
+  color: var(--color-danger);
+}
+
+.notebooks-table__confirm-btn--yes:hover {
+  background: rgba(229, 62, 62, 0.12);
+}
+
+.notebooks-table__confirm-btn--no {
+  color: var(--color-text-secondary);
+}
+
+.notebooks-table__confirm-btn--no:hover {
+  background: var(--color-border);
+}
+
+/* Hourglass while the RPC call is in flight */
+.notebooks-table__deleting {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  animation: notebooks-spin 1.2s linear infinite;
+}
+
+/* ── Table empty state ─────────────────────────────────────────────────────── */
+
+.notebooks-table__empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.notebooks-table__empty-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 10px;
+  opacity: 0.4;
+}
+
+/* ── Overlay to capture outside clicks on collection menu ──────────────────── */
+
+.notebooks-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
 }

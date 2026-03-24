@@ -8,6 +8,7 @@ import AnalyticsPage from '@/components/dashboard/AnalyticsPage/AnalyticsPage';
 import SettingsPage from '@/components/dashboard/SettingsPage/SettingsPage';
 import ExportHistoryPage from '@/components/dashboard/ExportHistoryPage/ExportHistoryPage';
 import NotebooksPage from '@/components/dashboard/NotebooksPage/NotebooksPage';
+import NotebookDetailPage from '@/components/dashboard/NotebookDetailPage/NotebookDetailPage';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
@@ -29,6 +30,9 @@ export default function DashboardApp() {
     showShortcuts,
     setShowShortcuts,
     setCurrentView,
+    selectedNotebookId,
+    handleOpenNotebookDetail,
+    handleBackToNotebooks,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,
@@ -143,7 +147,15 @@ export default function DashboardApp() {
         return <ExportHistoryPage />;
 
       case 'notebooks':
-        return <NotebooksPage />;
+        return <NotebooksPage onOpenNotebook={handleOpenNotebookDetail} />;
+
+      case 'notebook-detail':
+        return selectedNotebookId ? (
+          <NotebookDetailPage
+            notebookId={selectedNotebookId}
+            onBack={handleBackToNotebooks}
+          />
+        ) : null;
 
       case 'settings':
         return (
