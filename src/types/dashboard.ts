@@ -10,6 +10,8 @@ export type DashboardView =
   | 'export-history'
   | 'notebooks'
   | 'notebook-detail'
+  | 'all-sources'
+  | 'all-artifacts'
   | 'settings';
 
 export interface DashboardSettings {

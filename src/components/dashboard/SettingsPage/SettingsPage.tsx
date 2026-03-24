@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import type { DashboardSettings, SortColumn, SortDirection } from '@/types/dashboard';
 import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
 import { useSettingsPage } from './useSettingsPage';
+import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import './SettingsPage.css';
 
 interface SettingsPageProps {
@@ -192,6 +193,12 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
               </button>
             )}
           </div>
+        </section>
+
+        {/* Domain Router */}
+        <section className="settings-section">
+          <h2 className="settings-section__title">Source Import</h2>
+          <DomainRouterSettings />
         </section>
 
         {/* About */}

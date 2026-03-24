@@ -271,7 +271,31 @@ export async function summarizeNotebook(notebookId: string): Promise<string> {
 
 /** Adds a URL source to a notebook. */
 export async function addSourceUrl(notebookId: string, url: string): Promise<void> {
-  const payload = JSON.stringify([notebookId, null, null, [[null, null, url]]]);
+  const isYoutube = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+
+  let sourceEntry: unknown[];
+  if (isYoutube) {
+    // YouTube: URL at position [7], trailing 1 at position [10]
+    sourceEntry = [null, null, null, null, null, null, null, [url], null, null, 1];
+  } else {
+    // Website/article: URL at position [2] as a single-element array
+    sourceEntry = [null, null, [url], null, null, null, null, null];
+  }
+
+  const params: unknown[] = [
+    [sourceEntry],
+    notebookId,
+    [2],
+    null,
+    null,
+  ];
+
+  // YouTube sources include additional metadata
+  if (isYoutube) {
+    params[3] = [1, null, null, null, null, null, null, null, null, null, [1]];
+  }
+
+  const payload = JSON.stringify(params);
   await executeAuthenticatedRpc(
     ADD_SOURCE_URL_RPC_ID,
     payload,

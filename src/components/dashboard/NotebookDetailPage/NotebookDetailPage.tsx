@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
+import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
 import './NotebookDetailPage.css';
 
 interface NotebookDetailPageProps {
@@ -71,16 +72,12 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
     isGeneratingAudio,
     audioError,
     currentAudioUrl,
-    isAddingSource,
-    addSourceError,
-    setAddSourceError,
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
     isLoadingAudio,
     handleGenerateBrief,
     handleDeleteSource,
-    handleAddSourceUrl,
     handleGenerateAudio,
     handleDeleteNotebook,
     handlePlayAudio,
@@ -92,8 +89,7 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
   // ── Local UI state ──────────────────────────────────────────────────────────
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingSourceDelete, setConfirmingSourceDelete] = useState<string | null>(null);
-  const [showAddSource, setShowAddSource] = useState(false);
-  const [addSourceUrlValue, setAddSourceUrlValue] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
@@ -240,13 +236,9 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
           <div className="notebook-detail__section-actions">
             <button
               className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
-              onClick={() => {
-                setShowAddSource(true);
-                setAddSourceUrlValue('');
-                setAddSourceError(null);
-              }}
+              onClick={() => setShowImportModal(true)}
             >
-              + Add Source
+              + Import Sources
             </button>
             <div className="notebook-detail__export-wrapper">
               <button
@@ -286,58 +278,12 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
             </button>
           </div>
         )}
-        {showAddSource && (
-          <div className="notebook-detail__section-body">
-            <div className="notebook-detail__add-source-form">
-              <input
-                type="url"
-                className="notebook-detail__add-source-input"
-                placeholder="Enter URL to add as source…"
-                value={addSourceUrlValue}
-                onChange={(e) => setAddSourceUrlValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && addSourceUrlValue.trim()) {
-                    void handleAddSourceUrl(addSourceUrlValue.trim()).then((ok) => {
-                      if (ok) {
-                        setShowAddSource(false);
-                        setAddSourceUrlValue('');
-                      }
-                    });
-                  }
-                  if (e.key === 'Escape') {
-                    setShowAddSource(false);
-                  }
-                }}
-                disabled={isAddingSource}
-                autoFocus
-              />
-              <button
-                className="notebook-detail__action-btn"
-                onClick={() => {
-                  if (addSourceUrlValue.trim()) {
-                    void handleAddSourceUrl(addSourceUrlValue.trim()).then((ok) => {
-                      if (ok) {
-                        setShowAddSource(false);
-                        setAddSourceUrlValue('');
-                      }
-                    });
-                  }
-                }}
-                disabled={isAddingSource || !addSourceUrlValue.trim()}
-              >
-                {isAddingSource ? 'Adding…' : 'Add'}
-              </button>
-              <button
-                className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
-                onClick={() => setShowAddSource(false)}
-              >
-                Cancel
-              </button>
-            </div>
-            {addSourceError && (
-              <div className="notebook-detail__add-source-error">{addSourceError}</div>
-            )}
-          </div>
+        {showImportModal && (
+          <ImportSourcesModal
+            notebookId={notebookId}
+            onClose={() => setShowImportModal(false)}
+            onSourcesChanged={() => void handleRefreshAll()}
+          />
         )}
         {isLoadingSources ? (
           <div className="notebook-detail__loading">

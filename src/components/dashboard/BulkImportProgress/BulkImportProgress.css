@@ -1,0 +1,145 @@
+.bulk-progress {
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bulk-progress__bar-track {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bulk-progress__bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.bulk-progress__bar-fill--success {
+  background: #16a34a;
+}
+
+.bulk-progress__bar-fill--warning {
+  background: #d97706;
+}
+
+.bulk-progress__stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.bulk-progress__failed {
+  color: #dc2626;
+}
+
+.bulk-progress__pct {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.bulk-progress__current {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-progress__current-url {
+  color: var(--color-text-primary);
+}
+
+.bulk-progress__summary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.bulk-progress__errors {
+  font-size: 12px;
+}
+
+.bulk-progress__errors-toggle {
+  color: #dc2626;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bulk-progress__errors-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.bulk-progress__error-item {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bulk-progress__error-item:last-child {
+  border-bottom: none;
+}
+
+.bulk-progress__error-url {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.bulk-progress__error-msg {
+  color: #dc2626;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-progress__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.bulk-progress__cancel-btn {
+  padding: 5px 14px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.bulk-progress__cancel-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.bulk-progress__done-btn {
+  padding: 5px 14px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.bulk-progress__done-btn:hover {
+  filter: brightness(0.92);
+}

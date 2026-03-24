@@ -6,7 +6,9 @@
       "Bash(curl -sL https://api.github.com/repos/teng-lin/notebooklm-py/git/trees/main?recursive=1)",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(x[''''path'''']\\) for x in data.get\\(''''tree'''',[]\\)]\")",
       "Bash(curl:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch"
     ]
   }
 }

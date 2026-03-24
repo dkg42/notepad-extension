@@ -9,6 +9,8 @@ import SettingsPage from '@/components/dashboard/SettingsPage/SettingsPage';
 import ExportHistoryPage from '@/components/dashboard/ExportHistoryPage/ExportHistoryPage';
 import NotebooksPage from '@/components/dashboard/NotebooksPage/NotebooksPage';
 import NotebookDetailPage from '@/components/dashboard/NotebookDetailPage/NotebookDetailPage';
+import AllSourcesPage from '@/components/dashboard/AllSourcesPage/AllSourcesPage';
+import AllArtifactsPage from '@/components/dashboard/AllArtifactsPage/AllArtifactsPage';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
@@ -156,6 +158,12 @@ export default function DashboardApp() {
             onBack={handleBackToNotebooks}
           />
         ) : null;
+
+      case 'all-sources':
+        return <AllSourcesPage />;
+
+      case 'all-artifacts':
+        return <AllArtifactsPage />;
 
       case 'settings':
         return (

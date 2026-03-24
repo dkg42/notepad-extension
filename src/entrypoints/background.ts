@@ -14,6 +14,10 @@ import {
   fetchNotebookNotes,
 } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { importJobService } from '@/services/import-job-service';
+import { crawlUrls } from '@/services/web-crawler-service';
+import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
+import type { CrawlConfig } from '@/types';
 
 const ALARM_NAME = 'notebooklm-sync';
 const SYNC_INTERVAL_MINUTES = 30;
@@ -294,6 +298,135 @@ export default defineBackground(() => {
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
           );
+        return true;
+      }
+
+      // ── Aggregated sources/artifacts handlers ──────────────────────────────
+
+      if (message.type === 'FETCH_ALL_SOURCES') {
+        (async () => {
+          const notebooks = await notebookSyncService.getAll();
+          const allSources: Array<{
+            id: string; title: string; type: string; sourceUrl?: string;
+            notebookId: string; notebookTitle: string;
+          }> = [];
+
+          for (const nb of notebooks) {
+            try {
+              const data = await fetchNotebookFullData(nb.id);
+              for (const src of data.sources) {
+                allSources.push({
+                  id: src.id,
+                  title: src.title,
+                  type: src.type,
+                  notebookId: nb.id,
+                  notebookTitle: nb.title,
+                });
+              }
+            } catch {
+              // Skip notebooks that fail — partial results are fine
+            }
+          }
+
+          return allSources;
+        })()
+          .then((sources) => sendResponse({ ok: true, sources }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'FETCH_ALL_ARTIFACTS') {
+        (async () => {
+          const notebooks = await notebookSyncService.getAll();
+          const allArtifacts: Array<{
+            id: string; title: string; typeCode: number; mediaUrl?: string;
+            createdAt?: number; status?: number;
+            notebookId: string; notebookTitle: string;
+          }> = [];
+
+          for (const nb of notebooks) {
+            try {
+              const data = await fetchNotebookFullData(nb.id);
+              for (const art of data.artifacts) {
+                allArtifacts.push({
+                  ...art,
+                  notebookId: nb.id,
+                  notebookTitle: nb.title,
+                });
+              }
+            } catch {
+              // Skip notebooks that fail
+            }
+          }
+
+          return allArtifacts;
+        })()
+          .then((artifacts) => sendResponse({ ok: true, artifacts }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      // ── Source import handlers ─────────────────────────────────────────────
+
+      if (message.type === 'BULK_ADD_SOURCES') {
+        const { notebookId, urls } = message as { type: string; notebookId: string; urls: string[] };
+        const jobId = importJobService.createAndStart(notebookId, urls);
+        sendResponse({ ok: true, jobId });
+        return false; // sync response
+      }
+
+      if (message.type === 'GET_IMPORT_JOB_PROGRESS') {
+        const { jobId } = message as { type: string; jobId: string };
+        const progress = importJobService.getProgress(jobId);
+        sendResponse(progress ? { ok: true, progress } : { ok: false, error: 'Job not found' });
+        return false;
+      }
+
+      if (message.type === 'CANCEL_IMPORT_JOB') {
+        const { jobId } = message as { type: string; jobId: string };
+        importJobService.cancel(jobId);
+        sendResponse({ ok: true });
+        return false;
+      }
+
+      if (message.type === 'CRAWL_URL') {
+        const { config } = message as { type: string; config: CrawlConfig };
+        crawlUrls(config)
+          .then((urls) => sendResponse({ ok: true, urls }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'FETCH_RSS_FEED') {
+        const { feedUrl } = message as { type: string; feedUrl: string };
+        fetchAndParseRssFeed(feedUrl)
+          .then((entries) => sendResponse({ ok: true, entries }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'GET_BROWSER_TABS') {
+        chrome.tabs.query({}).then((allTabs) => {
+          const filtered = allTabs
+            .filter((t) => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')))
+            .map((t) => ({
+              id: t.id ?? 0,
+              title: t.title ?? '',
+              url: t.url!,
+              favIconUrl: t.favIconUrl,
+            }));
+          sendResponse({ ok: true, tabs: filtered });
+        }).catch((err: unknown) =>
+          sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+        );
         return true;
       }
 
