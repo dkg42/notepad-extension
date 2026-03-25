@@ -12,7 +12,9 @@ import {
   createAudioOverview,
   listArtifacts,
   fetchNotebookNotes,
+  fetchAudioBlob,
 } from '@/services/notebooklm-api';
+import { audioCacheService } from '@/services/audio-cache-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { importJobService } from '@/services/import-job-service';
@@ -22,6 +24,8 @@ import type { CrawlConfig } from '@/types';
 
 const ALARM_NAME = 'notebooklm-sync';
 const SYNC_INTERVAL_MINUTES = 30;
+const AUDIO_CLEANUP_ALARM = 'audio-cache-cleanup';
+const AUDIO_CLEANUP_INTERVAL_MINUTES = 60;
 
 async function syncNotebooks(): Promise<void> {
   try {
@@ -42,50 +46,6 @@ function isMessage(value: unknown): value is { type: string } {
   return typeof value === 'object' && value !== null && 'type' in value;
 }
 
-// In-memory audio data URL cache — survives service worker lifetime,
-// cleared on manual refresh or service worker restart.
-const audioCache = new Map<string, string>();
-
-/** Ensures a notebooklm.google.com tab is loaded and returns its tab ID. */
-async function ensureNotebookLmTab(): Promise<{ tabId: number; created: boolean }> {
-  const tabs = await chrome.tabs.query({ url: 'https://notebooklm.google.com/*' });
-  console.log('[NLM-EXT BG] tabs.query result:', tabs.map((t) => ({ id: t.id, url: t.url, status: t.status })));
-  if (tabs.length > 0 && tabs[0].id) {
-    console.log('[NLM-EXT BG] Reusing existing tab:', tabs[0].id, tabs[0].url);
-    return { tabId: tabs[0].id, created: false };
-  }
-  // Create a background tab — closes after audio fetch
-  console.log('[NLM-EXT BG] No existing tab found, creating new one');
-  const tab = await chrome.tabs.create({
-    url: 'https://notebooklm.google.com/',
-    active: false,
-  });
-  // Wait for page to finish loading and verify it stayed on notebooklm.google.com
-  // (may redirect to accounts.google.com if not authenticated)
-  await new Promise<void>((resolve, reject) => {
-    const listener = (updatedTabId: number, info: chrome.tabs.TabChangeInfo) => {
-      if (updatedTabId === tab.id && info.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(listener);
-        // Verify the tab URL is still on the expected origin
-        chrome.tabs.get(tab.id!).then((t) => {
-          if (t.url?.startsWith('https://notebooklm.google.com')) {
-            console.log('[NLM-EXT BG] New tab loaded successfully:', t.id, t.url);
-            resolve();
-          } else {
-            console.log('[NLM-EXT BG] Tab redirected away:', t.url);
-            // Tab redirected away (e.g. to login) — clean up and reject
-            chrome.tabs.remove(tab.id!).catch(() => {});
-            reject(new Error(
-              'NotebookLM requires authentication. Please open https://notebooklm.google.com in a browser tab and sign in first.',
-            ));
-          }
-        }).catch(reject);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(listener);
-  });
-  return { tabId: tab.id!, created: true };
-}
 
 /**
  * Sends a message to a tab's content script, retrying if the content script
@@ -122,17 +82,21 @@ export default defineBackground(() => {
   chrome.runtime.onInstalled.addListener(() => {
     void syncNotebooks();
     chrome.alarms.create(ALARM_NAME, { periodInMinutes: SYNC_INTERVAL_MINUTES });
+    chrome.alarms.create(AUDIO_CLEANUP_ALARM, { periodInMinutes: AUDIO_CLEANUP_INTERVAL_MINUTES });
   });
 
   // Sync on browser startup
   chrome.runtime.onStartup.addListener(() => {
     void syncNotebooks();
+    void audioCacheService.cleanup();
   });
 
   // Periodic sync via alarms
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === ALARM_NAME) {
       void syncNotebooks();
+    } else if (alarm.name === AUDIO_CLEANUP_ALARM) {
+      void audioCacheService.cleanup();
     }
   });
 
@@ -263,39 +227,22 @@ export default defineBackground(() => {
       if (message.type === 'FETCH_AUDIO_FOR_PLAYBACK') {
         const { url, artifactId } = message as { type: string; url: string; artifactId: string };
         (async () => {
-          // Return from in-memory cache if available
-          if (artifactId && audioCache.has(artifactId)) {
-            return audioCache.get(artifactId)!;
+          // Return early if already cached in IndexedDB
+          const cached = await audioCacheService.get(artifactId);
+          if (cached) {
+            console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cache hit for', artifactId);
+            return;
           }
 
-          // Fetch audio via the content script running on a notebooklm.google.com tab.
-          // The content script's fetch() runs with the page's origin, so Google CDN
-          // cookies are sent and CORS passes — unlike the service worker's fetch().
-          console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: finding NLM tab...');
-          const { tabId, created } = await ensureNotebookLmTab();
-          console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: tabId=', tabId, 'created=', created);
-          try {
-            const result = await sendMessageToTab<{ ok: boolean; dataUrl?: string; error?: string }>(
-              tabId,
-              { type: 'FETCH_AUDIO_IN_PAGE', url },
-            );
-
-            if (!result?.ok || !result.dataUrl) {
-              throw new Error(result?.error ?? 'Content script returned no audio data');
-            }
-
-            // Cache the data URL
-            if (artifactId) {
-              audioCache.set(artifactId, result.dataUrl);
-            }
-            return result.dataUrl;
-          } finally {
-            if (created) {
-              chrome.tabs.remove(tabId).catch(() => {});
-            }
-          }
+          // Fetch directly from the background service worker.
+          // host_permissions for the Google CDN domains allows cookies to be sent
+          // and CORS to be bypassed — no content script relay needed.
+          console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: fetching', url);
+          const { blob, mimeType } = await fetchAudioBlob(url);
+          await audioCacheService.put(artifactId, blob, mimeType);
+          console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cached', artifactId, blob.size, 'bytes');
         })()
-          .then((dataUrl) => sendResponse({ ok: true, dataUrl }))
+          .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
           );
@@ -583,9 +530,12 @@ export default defineBackground(() => {
       }
 
       if (message.type === 'CLEAR_AUDIO_CACHE') {
-        audioCache.clear();
-        sendResponse({ ok: true });
-        return false;
+        audioCacheService.clear()
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
       }
 
       return false;

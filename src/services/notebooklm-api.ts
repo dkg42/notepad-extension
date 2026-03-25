@@ -349,6 +349,44 @@ export async function createAudioOverview(
 }
 
 /**
+ * Allowed audio CDN domain suffixes — mirrors the notebooklm-py security validation.
+ * Reference: https://github.com/teng-lin/notebooklm-py
+ */
+const AUDIO_DOMAIN_ALLOWLIST = ['.google.com', '.googleusercontent.com', '.googleapis.com'];
+
+/**
+ * Downloads an audio artifact blob directly from the background service worker.
+ * Works because the extension has host_permissions for these Google domains,
+ * so CORS is bypassed and cookies are sent automatically via credentials: 'include'.
+ *
+ * Validates the URL domain against an allowlist before fetching.
+ */
+export async function fetchAudioBlob(mediaUrl: string): Promise<{ blob: Blob; mimeType: string }> {
+  const url = new URL(mediaUrl);
+  const isAllowed = AUDIO_DOMAIN_ALLOWLIST.some((suffix) => url.hostname.endsWith(suffix));
+  if (!isAllowed) {
+    throw new Error(`Audio URL domain not permitted: ${url.hostname}`);
+  }
+
+  const response = await fetch(mediaUrl, { credentials: 'include' });
+  if (!response.ok) {
+    throw new Error(`Audio fetch failed: HTTP ${response.status}`);
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.startsWith('text/html')) {
+    throw new Error('Authentication required — received HTML redirect instead of audio. Please open NotebookLM and sign in.');
+  }
+
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error('Empty audio response');
+  }
+
+  return { blob, mimeType: contentType || 'audio/mp4' };
+}
+
+/**
  * Lists artifacts (audio overviews, etc.) for a notebook.
  * Uses the dedicated LIST_ARTIFACTS RPC (`gArtLc`).
  *

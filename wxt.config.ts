@@ -23,6 +23,7 @@ export default defineConfig({
       'https://notebooklm.google.com/*',
       'https://lh3.googleusercontent.com/*',
       'https://lh3.google.com/*',
+      'https://*.usercontent.google.com/*', // Audio CDN redirect target (drum.usercontent.google.com)
       // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
     ],
     // ── Future: Google Docs sync ──────────────────────────────────────────────

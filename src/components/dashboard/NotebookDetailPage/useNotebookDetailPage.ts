@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord } from '@/types';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
+import { audioCacheService } from '@/services/audio-cache-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
@@ -43,6 +44,15 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+
+  // Revoke blob object URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (currentAudioUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(currentAudioUrl);
+      }
+    };
+  }, [currentAudioUrl]);
 
   // ── Source import ──────────────────────────────────────────────────────────
   const [isAddingSource, setIsAddingSource] = useState(false);
@@ -228,19 +238,27 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     setIsLoadingAudio(true);
     setAudioError(null);
     try {
-      // Audio is fetched via a content script injected into a notebooklm tab
-      // (same Google origin = same-site cookies, no CORS, CDN accepts the request).
-      // Results are cached in-memory in the background service worker.
+      // Ask background to fetch and store the audio in IndexedDB (cache hit skips fetch).
+      // Background and dashboard share the same extension origin, so they share IndexedDB.
       const result = await chrome.runtime.sendMessage({
         type: 'FETCH_AUDIO_FOR_PLAYBACK',
         url,
         artifactId,
-      }) as MessageResult & { dataUrl?: string };
-      if (result?.ok && result.dataUrl) {
-        setCurrentAudioUrl(result.dataUrl);
-      } else {
+      }) as MessageResult;
+      if (!result?.ok) {
         setAudioError(result?.error ?? 'Failed to load audio');
+        return;
       }
+
+      // Read the blob directly from shared IndexedDB and create an object URL.
+      // This avoids sending large data URLs through the message channel.
+      const cached = await audioCacheService.get(artifactId);
+      if (!cached) {
+        setAudioError('Audio was cached but could not be read back — please try again');
+        return;
+      }
+      const objectUrl = URL.createObjectURL(cached.blob);
+      setCurrentAudioUrl(objectUrl);
     } catch {
       setAudioError('Failed to reach the extension background.');
     } finally {
@@ -249,7 +267,10 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
   }, []);
 
   const handleStopAudio = useCallback(() => {
-    setCurrentAudioUrl(null);
+    setCurrentAudioUrl((prev) => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return null;
+    });
   }, []);
 
   const handleExportSources = useCallback(async (strategyType: string) => {
