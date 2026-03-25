@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Folder, NotebookMeta, Snippet, TagMeta } from '@/types';
+import type { ChatPlatform, Folder, NotebookMeta, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
@@ -22,6 +22,9 @@ export function useDashboardApp() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [notebooksCount, setNotebooksCount] = useState(0);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
+  const [chatHistoryCount, setChatHistoryCount] = useState(0);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [selectedChatPlatform, setSelectedChatPlatform] = useState<ChatPlatform | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +54,29 @@ export function useDashboardApp() {
     };
     chrome.storage.sync.onChanged.addListener(listener);
     return () => chrome.storage.sync.onChanged.removeListener(listener);
+  }, []);
+
+  // Load initial chat history count
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: 'GET_CHAT_CONVERSATIONS' })
+      .then((res: { ok: boolean; conversations?: Array<unknown> }) => {
+        if (res?.ok && res.conversations) {
+          setChatHistoryCount(res.conversations.length);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Update chat history count when local storage changes
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('chatConversations' in changes) {
+        const updated = (changes.chatConversations.newValue as Array<unknown>) ?? [];
+        setChatHistoryCount(updated.length);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
   }, []);
 
   const favoritesCount = useMemo(
@@ -192,6 +218,20 @@ export function useDashboardApp() {
     setSelectedNotebookId(null);
   };
 
+  // ── Chat history navigation ───────────────────────────────────────────────
+
+  const handleOpenChatDetail = (platform: ChatPlatform, id: string) => {
+    setSelectedChatPlatform(platform);
+    setSelectedChatId(id);
+    setCurrentView('chat-history-detail');
+  };
+
+  const handleBackToChatHistory = () => {
+    setCurrentView('chat-history');
+    setSelectedChatId(null);
+    setSelectedChatPlatform(null);
+  };
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
   const handleSettingsChange = async (partial: Partial<DashboardSettings>) => {
@@ -208,6 +248,9 @@ export function useDashboardApp() {
     isLoading,
     favoritesCount,
     notebooksCount,
+    chatHistoryCount,
+    selectedChatId,
+    selectedChatPlatform,
     showShortcuts,
     setShowShortcuts,
     showCommandPalette,
@@ -216,6 +259,8 @@ export function useDashboardApp() {
     selectedNotebookId,
     handleOpenNotebookDetail,
     handleBackToNotebooks,
+    handleOpenChatDetail,
+    handleBackToChatHistory,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,

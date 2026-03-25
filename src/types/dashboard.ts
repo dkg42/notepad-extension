@@ -12,6 +12,8 @@ export type DashboardView =
   | 'notebook-detail'
   | 'all-sources'
   | 'all-artifacts'
+  | 'chat-history'
+  | 'chat-history-detail'
   | 'settings';
 
 export interface DashboardSettings {

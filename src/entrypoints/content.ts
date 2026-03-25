@@ -6,6 +6,7 @@ import { setupSelectionSave } from '@/content/selection-save';
 import { setupHeaderButtons } from '@/content/header-injector';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
 import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
+import { setupChatHistorySync } from '@/content/chat-history-sync';
 
 export default defineContentScript({
   matches: [
@@ -78,5 +79,8 @@ export default defineContentScript({
     if (isStudioPanelAdapter(adapter)) {
       setupStudioPanelEnhancer(adapter);
     }
+
+    // Feature: sync chat history from ChatGPT, Claude, and Gemini
+    setupChatHistorySync();
   },
 });

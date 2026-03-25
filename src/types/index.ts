@@ -1,5 +1,6 @@
 export * from './dashboard';
 export * from './import';
+export * from './chat-history';
 
 export interface Folder {
   id: string;

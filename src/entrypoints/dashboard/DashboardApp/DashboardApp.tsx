@@ -11,6 +11,8 @@ import NotebooksPage from '@/components/dashboard/NotebooksPage/NotebooksPage';
 import NotebookDetailPage from '@/components/dashboard/NotebookDetailPage/NotebookDetailPage';
 import AllSourcesPage from '@/components/dashboard/AllSourcesPage/AllSourcesPage';
 import AllArtifactsPage from '@/components/dashboard/AllArtifactsPage/AllArtifactsPage';
+import ChatHistoryPage from '@/components/dashboard/ChatHistoryPage/ChatHistoryPage';
+import ChatHistoryDetailPage from '@/components/dashboard/ChatHistoryDetailPage/ChatHistoryDetailPage';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
@@ -29,12 +31,17 @@ export default function DashboardApp() {
     isLoading,
     favoritesCount,
     notebooksCount,
+    chatHistoryCount,
+    selectedChatId,
+    selectedChatPlatform,
     showShortcuts,
     setShowShortcuts,
     setCurrentView,
     selectedNotebookId,
     handleOpenNotebookDetail,
     handleBackToNotebooks,
+    handleOpenChatDetail,
+    handleBackToChatHistory,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,
@@ -165,6 +172,18 @@ export default function DashboardApp() {
       case 'all-artifacts':
         return <AllArtifactsPage />;
 
+      case 'chat-history':
+        return <ChatHistoryPage onOpenConversation={handleOpenChatDetail} />;
+
+      case 'chat-history-detail':
+        return selectedChatPlatform && selectedChatId ? (
+          <ChatHistoryDetailPage
+            platform={selectedChatPlatform}
+            conversationId={selectedChatId}
+            onBack={handleBackToChatHistory}
+          />
+        ) : null;
+
       case 'settings':
         return (
           <SettingsPage settings={settings} onSettingsChange={handleSettingsChange} />
@@ -189,6 +208,7 @@ export default function DashboardApp() {
           promptCount={snippets.length}
           favoritesCount={favoritesCount}
           notebooksCount={notebooksCount}
+          chatHistoryCount={chatHistoryCount}
         />
         <div className="dashboard-app__content">
           <main className="dashboard-app__main">{renderContent()}</main>

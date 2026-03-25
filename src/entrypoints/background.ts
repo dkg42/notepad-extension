@@ -14,6 +14,7 @@ import {
   fetchNotebookNotes,
 } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { importJobService } from '@/services/import-job-service';
 import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
@@ -295,6 +296,157 @@ export default defineBackground(() => {
           }
         })()
           .then((dataUrl) => sendResponse({ ok: true, dataUrl }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      // ── Chat history sync handlers ─────────────────────────────────────────
+
+      if (message.type === 'SYNC_CHAT_CONVERSATIONS') {
+        const { platform, conversations } = message as {
+          type: string;
+          platform: import('@/types').ChatPlatform;
+          conversations: import('@/types').ConversationMeta[];
+        };
+        chatHistoryStorage.upsertConversations(conversations)
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'SYNC_CHAT_CONVERSATION_CONTENT') {
+        const { conversation } = message as {
+          type: string;
+          conversation: import('@/types').ConversationFull;
+        };
+        chatHistoryStorage.saveConversationContent(conversation)
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'UPDATE_CHAT_SYNC_META') {
+        const { platform, ...meta } = message as {
+          type: string;
+          platform: import('@/types').ChatPlatform;
+          lastSyncedAt?: number;
+          conversationCount?: number;
+          error?: string;
+        };
+        chatHistoryStorage.setSyncMeta(platform, meta)
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'GET_CHAT_CONVERSATIONS') {
+        const { platform } = message as { type: string; platform?: import('@/types').ChatPlatform };
+        chatHistoryStorage.getConversations(platform)
+          .then((conversations) => sendResponse({ ok: true, conversations }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'GET_CHAT_CONVERSATION_CONTENT') {
+        const { platform, id } = message as {
+          type: string;
+          platform: import('@/types').ChatPlatform;
+          id: string;
+        };
+        (async () => {
+          // Return cached content if available
+          const cached = await chatHistoryStorage.getConversationContent(platform, id);
+          if (cached) return { ok: true, conversation: cached };
+
+          // For ChatGPT/Claude: any authenticated tab works (REST APIs, fetch by ID).
+          // For Gemini: no REST API exists — content must be extracted from the rendered DOM.
+          //   First check if the specific conversation is already open in a tab.
+          //   If not, open it in a background tab, extract, then close it.
+          if (platform === 'gemini') {
+            const conversationUrl = `https://gemini.google.com/app/${id}`;
+            const existingTabs = await chrome.tabs.query({ url: conversationUrl });
+            const { tabId, created } = existingTabs.length > 0 && existingTabs[0].id
+              ? { tabId: existingTabs[0].id, created: false }
+              : await (async () => {
+                  const tab = await chrome.tabs.create({ url: conversationUrl, active: false });
+                  await new Promise<void>((resolve, reject) => {
+                    const listener = (updatedId: number, info: chrome.tabs.TabChangeInfo) => {
+                      if (updatedId === tab.id && info.status === 'complete') {
+                        chrome.tabs.onUpdated.removeListener(listener);
+                        chrome.tabs.get(tab.id!).then((t) => {
+                          if (t.url?.startsWith('https://gemini.google.com')) {
+                            resolve();
+                          } else {
+                            chrome.tabs.remove(tab.id!).catch(() => {});
+                            reject(new Error('Gemini requires authentication. Please open Gemini and sign in.'));
+                          }
+                        }).catch(reject);
+                      }
+                    };
+                    chrome.tabs.onUpdated.addListener(listener);
+                  });
+                  return { tabId: tab.id!, created: true };
+                })();
+
+            try {
+              const result = await sendMessageToTab<{ ok: boolean; conversation?: import('@/types').ConversationFull; error?: string }>(
+                tabId,
+                { type: 'FETCH_CONVERSATION_FOR_SYNC', id },
+              );
+              if (result?.ok && result.conversation) {
+                await chatHistoryStorage.saveConversationContent(result.conversation);
+                return { ok: true, conversation: result.conversation };
+              }
+              return { ok: false, error: result?.error ?? 'Failed to extract Gemini conversation from DOM' };
+            } finally {
+              if (created) chrome.tabs.remove(tabId).catch(() => {});
+            }
+          }
+
+          // ChatGPT / Claude: find any authenticated tab and fetch via REST API
+          const urlPatterns: Record<string, string> = {
+            chatgpt: 'https://chatgpt.com/*',
+            claude: 'https://claude.ai/*',
+          };
+          const pattern = urlPatterns[platform];
+          if (!pattern) return { ok: false, error: 'Unknown platform' };
+
+          const tabs = await chrome.tabs.query({ url: pattern });
+          if (tabs.length === 0 || !tabs[0].id) {
+            return { ok: false, error: `Please open ${platform} in a tab to sync this conversation` };
+          }
+
+          const result = await sendMessageToTab<{ ok: boolean; conversation?: import('@/types').ConversationFull; error?: string }>(
+            tabs[0].id,
+            { type: 'FETCH_CONVERSATION_FOR_SYNC', id },
+          );
+
+          if (result?.ok && result.conversation) {
+            await chatHistoryStorage.saveConversationContent(result.conversation);
+            return { ok: true, conversation: result.conversation };
+          }
+          return { ok: false, error: result?.error ?? 'Failed to fetch conversation content' };
+        })()
+          .then((result) => sendResponse(result))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      if (message.type === 'GET_CHAT_SYNC_META') {
+        chatHistoryStorage.getSyncMeta()
+          .then((meta) => sendResponse({ ok: true, meta }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
           );

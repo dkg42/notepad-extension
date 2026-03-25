@@ -1,0 +1,210 @@
+/* ── ChatHistoryDetailPage ───────────────────────────────────────────────────── */
+
+.chat-history-detail {
+  padding: 28px 36px;
+  max-width: 900px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────────── */
+
+.chat-history-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chat-history-detail__back-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-history-detail__back-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.chat-history-detail__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-history-detail__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.chat-history-detail__info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.chat-history-detail__date {
+  color: var(--color-text-secondary);
+}
+
+.chat-history-detail__open-link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.chat-history-detail__open-link:hover {
+  text-decoration: underline;
+}
+
+.chat-history-detail__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-history-detail__export-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-history-detail__export-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── Platform badges ──────────────────────────────────────────────────────────── */
+
+.chat-history-detail__platform-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chat-history-detail__platform-badge--chatgpt {
+  background: rgba(16, 163, 127, 0.12);
+  color: #10a37f;
+}
+
+.chat-history-detail__platform-badge--claude {
+  background: rgba(204, 102, 51, 0.12);
+  color: #cc6633;
+}
+
+.chat-history-detail__platform-badge--gemini {
+  background: rgba(66, 133, 244, 0.12);
+  color: #4285f4;
+}
+
+/* ── States ───────────────────────────────────────────────────────────────────── */
+
+.chat-history-detail__loading {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.chat-history-detail__error {
+  padding: 32px;
+  text-align: center;
+  background: rgba(229, 62, 62, 0.06);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: 14px;
+}
+
+.chat-history-detail__error p {
+  margin: 0 0 12px;
+}
+
+.chat-history-detail__retry-btn {
+  padding: 7px 16px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-danger);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chat-history-detail__retry-btn:hover {
+  background: rgba(229, 62, 62, 0.1);
+}
+
+/* ── Message thread ───────────────────────────────────────────────────────────── */
+
+.chat-history-detail__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-history-detail__message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.chat-history-detail__message--user {
+  background: var(--color-primary-light, rgba(99, 102, 241, 0.05));
+  border-color: var(--color-primary-light, rgba(99, 102, 241, 0.15));
+  margin-left: 48px;
+}
+
+.chat-history-detail__message--assistant {
+  background: var(--color-surface-alt, var(--color-surface));
+  margin-right: 48px;
+}
+
+.chat-history-detail__message-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chat-history-detail__message--user .chat-history-detail__message-label {
+  color: var(--color-primary);
+}
+
+.chat-history-detail__message-content {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.chat-history-detail__message-time {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  align-self: flex-end;
+}

@@ -22,6 +22,15 @@ const NOTEBOOKS_NAV: NavItemWithSubs = {
   ],
 };
 
+const CHAT_HISTORY_NAV: NavItemWithSubs = {
+  view: 'chat-history',
+  icon: '▤',
+  label: 'Chat History',
+  subItems: [
+    { view: 'chat-history', icon: '◆', label: 'All Chats' },
+  ],
+};
+
 const PRIMARY_NAV: NavItem[] = [
   { view: 'home', icon: '⌂', label: 'Home' },
   { view: 'prompts', icon: '≡', label: 'Prompts' },
@@ -40,12 +49,18 @@ const NOTEBOOK_VIEWS: DashboardView[] = [
   'notebooks', 'notebook-detail', 'all-sources', 'all-artifacts',
 ];
 
+/** Views that belong to the Chat History group. */
+const CHAT_HISTORY_VIEWS: DashboardView[] = [
+  'chat-history', 'chat-history-detail',
+];
+
 interface SidebarProps {
   currentView: DashboardView;
   onNavigate: (view: DashboardView) => void;
   promptCount: number;
   favoritesCount: number;
   notebooksCount: number;
+  chatHistoryCount: number;
 }
 
 export default function Sidebar({
@@ -54,9 +69,13 @@ export default function Sidebar({
   promptCount,
   favoritesCount,
   notebooksCount,
+  chatHistoryCount,
 }: SidebarProps) {
   const [notebooksExpanded, setNotebooksExpanded] = useState(
     NOTEBOOK_VIEWS.includes(currentView),
+  );
+  const [chatHistoryExpanded, setChatHistoryExpanded] = useState(
+    CHAT_HISTORY_VIEWS.includes(currentView),
   );
 
   const renderNavItem = (item: NavItem) => {
@@ -85,6 +104,7 @@ export default function Sidebar({
   };
 
   const isNotebookGroupActive = NOTEBOOK_VIEWS.includes(currentView);
+  const isChatHistoryGroupActive = CHAT_HISTORY_VIEWS.includes(currentView);
 
   return (
     <aside className="sidebar">
@@ -128,6 +148,47 @@ export default function Sidebar({
               <button
                 key={sub.view}
                 className={`sidebar__nav-item sidebar__nav-item--sub${currentView === sub.view ? ' sidebar__nav-item--active' : ''}`}
+                onClick={() => onNavigate(sub.view)}
+                title={sub.label}
+              >
+                <span className="sidebar__nav-icon">{sub.icon}</span>
+                <span className="sidebar__nav-label">{sub.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Chat History group with sub-items */}
+        <button
+          className={`sidebar__nav-item${isChatHistoryGroupActive ? ' sidebar__nav-item--active' : ''}`}
+          onClick={() => {
+            if (!chatHistoryExpanded) {
+              setChatHistoryExpanded(true);
+              onNavigate('chat-history');
+            } else if (currentView !== 'chat-history') {
+              onNavigate('chat-history');
+            } else {
+              setChatHistoryExpanded(false);
+            }
+          }}
+          title="Chat History"
+        >
+          <span className="sidebar__nav-icon">{CHAT_HISTORY_NAV.icon}</span>
+          <span className="sidebar__nav-label">{CHAT_HISTORY_NAV.label}</span>
+          {chatHistoryCount > 0 && (
+            <span className="sidebar__nav-badge">{chatHistoryCount}</span>
+          )}
+          <span className={`sidebar__nav-caret${chatHistoryExpanded ? ' sidebar__nav-caret--open' : ''}`}>
+            &#x25B8;
+          </span>
+        </button>
+
+        {chatHistoryExpanded && CHAT_HISTORY_NAV.subItems && (
+          <div className="sidebar__sub-items">
+            {CHAT_HISTORY_NAV.subItems.map((sub) => (
+              <button
+                key={sub.view}
+                className={`sidebar__nav-item sidebar__nav-item--sub${currentView === sub.view || (sub.view === 'chat-history' && currentView === 'chat-history-detail') ? ' sidebar__nav-item--active' : ''}`}
                 onClick={() => onNavigate(sub.view)}
                 title={sub.label}
               >
