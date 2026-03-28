@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord } from '@/types';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
-import { audioCacheService } from '@/services/audio-cache-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
@@ -42,17 +41,7 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
-  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
-
-  // Revoke blob object URL on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      if (currentAudioUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(currentAudioUrl);
-      }
-    };
-  }, [currentAudioUrl]);
+  const [audioGenerationError, setAudioGenerationError] = useState<string | null>(null);
 
   // ── Source import ──────────────────────────────────────────────────────────
   const [isAddingSource, setIsAddingSource] = useState(false);
@@ -181,7 +170,7 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
 
   const handleGenerateAudio = useCallback(async (options?: AudioOverviewOptions) => {
     setIsGeneratingAudio(true);
-    setAudioError(null);
+    setAudioGenerationError(null);
     try {
       const result = await chrome.runtime.sendMessage({
         type: 'CREATE_AUDIO_OVERVIEW',
@@ -189,7 +178,7 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
         options,
       }) as MessageResult;
       if (!result?.ok) {
-        setAudioError(result?.error ?? 'Failed to generate audio');
+        setAudioGenerationError(result?.error ?? 'Failed to generate audio');
         return;
       }
       // Re-fetch all data after a short delay (audio generation is async on server)
@@ -209,7 +198,7 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
         }
       }, 3000);
     } catch {
-      setAudioError('Failed to reach the extension background.');
+      setAudioGenerationError('Failed to reach the extension background.');
       setIsGeneratingAudio(false);
     }
   }, [notebookId]);
@@ -231,47 +220,6 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
       setIsDeletingNotebook(false);
     }
   }, [notebookId, onBack]);
-
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-
-  const handlePlayAudio = useCallback(async (url: string, artifactId: string) => {
-    setIsLoadingAudio(true);
-    setAudioError(null);
-    try {
-      // Ask background to fetch and store the audio in IndexedDB (cache hit skips fetch).
-      // Background and dashboard share the same extension origin, so they share IndexedDB.
-      const result = await chrome.runtime.sendMessage({
-        type: 'FETCH_AUDIO_FOR_PLAYBACK',
-        url,
-        artifactId,
-      }) as MessageResult;
-      if (!result?.ok) {
-        setAudioError(result?.error ?? 'Failed to load audio');
-        return;
-      }
-
-      // Read the blob directly from shared IndexedDB and create an object URL.
-      // This avoids sending large data URLs through the message channel.
-      const cached = await audioCacheService.get(artifactId);
-      if (!cached) {
-        setAudioError('Audio was cached but could not be read back — please try again');
-        return;
-      }
-      const objectUrl = URL.createObjectURL(cached.blob);
-      setCurrentAudioUrl(objectUrl);
-    } catch {
-      setAudioError('Failed to reach the extension background.');
-    } finally {
-      setIsLoadingAudio(false);
-    }
-  }, []);
-
-  const handleStopAudio = useCallback(() => {
-    setCurrentAudioUrl((prev) => {
-      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-      return null;
-    });
-  }, []);
 
   const handleExportSources = useCallback(async (strategyType: string) => {
     if (!notebook) return;
@@ -343,22 +291,18 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     isGeneratingBrief,
     briefError,
     isGeneratingAudio,
-    audioError,
-    currentAudioUrl,
+    audioGenerationError,
     isAddingSource,
     addSourceError,
     setAddSourceError,
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
-    isLoadingAudio,
     handleGenerateBrief,
     handleDeleteSource,
     handleAddSourceUrl,
     handleGenerateAudio,
     handleDeleteNotebook,
-    handlePlayAudio,
-    handleStopAudio,
     handleExportSources,
     handleRefreshAll,
   };

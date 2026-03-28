@@ -3,6 +3,7 @@ import type { ChatPlatform, Folder, NotebookMeta, Snippet, TagMeta } from '@/typ
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { useGlobalAudio } from '@/hooks/useGlobalAudio';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',
@@ -12,6 +13,8 @@ const DEFAULT_SETTINGS: DashboardSettings = {
 };
 
 export function useDashboardApp() {
+  const globalAudio = useGlobalAudio();
+
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tagsMeta, setTagsMeta] = useState<TagMeta[]>([]);
@@ -25,6 +28,8 @@ export function useDashboardApp() {
   const [chatHistoryCount, setChatHistoryCount] = useState(0);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedChatPlatform, setSelectedChatPlatform] = useState<ChatPlatform | null>(null);
+  const [podcastsCount, setPodcastsCount] = useState(0);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -40,7 +45,9 @@ export function useDashboardApp() {
         setTagsMeta(loadedTagsMeta);
         setSettings(loadedSettings);
         setNotebooksCount(loadedNotebooks.length);
+        return storageService.getPodcastEpisodes();
       })
+      .then((episodes) => setPodcastsCount(episodes.length))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -73,6 +80,10 @@ export function useDashboardApp() {
       if ('chatConversations' in changes) {
         const updated = (changes.chatConversations.newValue as Array<unknown>) ?? [];
         setChatHistoryCount(updated.length);
+      }
+      if ('podcastEpisodes' in changes) {
+        const updated = (changes.podcastEpisodes.newValue as Array<unknown>) ?? [];
+        setPodcastsCount(updated.length);
       }
     };
     chrome.storage.local.onChanged.addListener(listener);
@@ -218,6 +229,18 @@ export function useDashboardApp() {
     setSelectedNotebookId(null);
   };
 
+  // ── Podcast navigation ────────────────────────────────────────────────────
+
+  const handleOpenPodcastDetail = (episodeId: string) => {
+    setSelectedEpisodeId(episodeId);
+    setCurrentView('podcast-detail');
+  };
+
+  const handleBackToPodcasts = () => {
+    setCurrentView('podcasts');
+    setSelectedEpisodeId(null);
+  };
+
   // ── Chat history navigation ───────────────────────────────────────────────
 
   const handleOpenChatDetail = (platform: ChatPlatform, id: string) => {
@@ -240,6 +263,7 @@ export function useDashboardApp() {
   };
 
   return {
+    ...globalAudio,
     snippets,
     folders,
     tagsMeta,
@@ -249,6 +273,8 @@ export function useDashboardApp() {
     favoritesCount,
     notebooksCount,
     chatHistoryCount,
+    podcastsCount,
+    selectedEpisodeId,
     selectedChatId,
     selectedChatPlatform,
     showShortcuts,
@@ -259,6 +285,8 @@ export function useDashboardApp() {
     selectedNotebookId,
     handleOpenNotebookDetail,
     handleBackToNotebooks,
+    handleOpenPodcastDetail,
+    handleBackToPodcasts,
     handleOpenChatDetail,
     handleBackToChatHistory,
     handleDelete,

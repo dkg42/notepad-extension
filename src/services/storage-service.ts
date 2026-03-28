@@ -1,4 +1,4 @@
-import type { Folder, Snippet, TagMeta } from '@/types';
+import type { Folder, PodcastEpisode, EpisodeTrack, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 
 const SNIPPETS_KEY = 'snippets';
@@ -6,6 +6,7 @@ const FOLDERS_KEY = 'folders';
 const SETTINGS_KEY = 'dashboardSettings';
 const TAGS_META_KEY = 'tagsMeta';
 const EXPORT_HISTORY_KEY = 'exportHistory';
+const PODCAST_EPISODES_KEY = 'podcastEpisodes';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',
@@ -298,6 +299,38 @@ export const storageService = {
       settings,
       exportHistory,
     };
+  },
+
+  // ── Podcast Episodes ────────────────────────────────────────────────────────
+
+  async getPodcastEpisodes(): Promise<PodcastEpisode[]> {
+    const result = await chrome.storage.local.get(PODCAST_EPISODES_KEY);
+    return (result[PODCAST_EPISODES_KEY] as PodcastEpisode[]) ?? [];
+  },
+
+  async savePodcastEpisode(episode: PodcastEpisode): Promise<void> {
+    const episodes = await this.getPodcastEpisodes();
+    const idx = episodes.findIndex((e) => e.id === episode.id);
+    if (idx >= 0) {
+      episodes[idx] = episode;
+    } else {
+      episodes.push(episode);
+    }
+    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
+  },
+
+  async deletePodcastEpisode(id: string): Promise<void> {
+    const episodes = await this.getPodcastEpisodes();
+    const filtered = episodes.filter((e) => e.id !== id);
+    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: filtered });
+  },
+
+  async updateEpisodeTracks(id: string, tracks: EpisodeTrack[]): Promise<void> {
+    const episodes = await this.getPodcastEpisodes();
+    const idx = episodes.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    episodes[idx] = { ...episodes[idx], tracks, updatedAt: Date.now() };
+    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
   },
 
   async importAllData(data: Record<string, unknown>): Promise<void> {

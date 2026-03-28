@@ -14,6 +14,9 @@ export type DashboardView =
   | 'all-artifacts'
   | 'chat-history'
   | 'chat-history-detail'
+  | 'podcasts'
+  | 'podcast-detail'
+  | 'all-audio'
   | 'settings';
 
 export interface DashboardSettings {

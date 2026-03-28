@@ -94,6 +94,44 @@ export interface NotebookAnnotation {
   collectionId?: string;
 }
 
+// ── Podcast types ─────────────────────────────────────────────────────────────
+
+/** Source of an episode track — either a NotebookLM artifact or a user-uploaded file. */
+export type EpisodeTrackSource =
+  | { kind: 'artifact'; artifactId: string; mediaUrl: string; notebookId: string; notebookTitle: string }
+  | { kind: 'custom'; customAudioId: string };
+
+/** A single audio track within a podcast episode. */
+export interface EpisodeTrack {
+  trackId: string;
+  title: string;
+  /** Populated after first play via audio element's loadedmetadata event. */
+  durationSeconds?: number;
+  source: EpisodeTrackSource;
+  addedAt: number;
+}
+
+/** A user-created podcast episode containing an ordered list of tracks. */
+export interface PodcastEpisode {
+  id: string;
+  title: string;
+  description?: string;
+  tracks: EpisodeTrack[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Custom audio blob entry stored in the podcast-audio-store IndexedDB. */
+export interface CustomAudioEntry {
+  id: string;
+  filename: string;
+  mimeType: string;
+  blob: Blob;
+  addedAt: number;
+}
+
+// ── Notebook types ─────────────────────────────────────────────────────────────
+
 /** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */
 export interface NotebookMeta {
   /** Notebook ID from the batchexecute API response. */

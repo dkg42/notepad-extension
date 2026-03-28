@@ -13,6 +13,10 @@ import AllSourcesPage from '@/components/dashboard/AllSourcesPage/AllSourcesPage
 import AllArtifactsPage from '@/components/dashboard/AllArtifactsPage/AllArtifactsPage';
 import ChatHistoryPage from '@/components/dashboard/ChatHistoryPage/ChatHistoryPage';
 import ChatHistoryDetailPage from '@/components/dashboard/ChatHistoryDetailPage/ChatHistoryDetailPage';
+import PodcastsPage from '@/components/dashboard/PodcastsPage/PodcastsPage';
+import PodcastDetailPage from '@/components/dashboard/PodcastDetailPage/PodcastDetailPage';
+import AllAudioPage from '@/components/dashboard/AllAudioPage/AllAudioPage';
+import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
@@ -23,6 +27,16 @@ import './DashboardApp.css';
 
 export default function DashboardApp() {
   const {
+    // Global audio
+    audioUrl,
+    audioTitle,
+    isLoadingAudio,
+    podcastContext,
+    playArtifact,
+    playTrack,
+    playNext,
+    stopAudio,
+    // Dashboard state
     snippets,
     folders,
     tagsMeta,
@@ -32,6 +46,8 @@ export default function DashboardApp() {
     favoritesCount,
     notebooksCount,
     chatHistoryCount,
+    podcastsCount,
+    selectedEpisodeId,
     selectedChatId,
     selectedChatPlatform,
     showShortcuts,
@@ -40,6 +56,8 @@ export default function DashboardApp() {
     selectedNotebookId,
     handleOpenNotebookDetail,
     handleBackToNotebooks,
+    handleOpenPodcastDetail,
+    handleBackToPodcasts,
     handleOpenChatDetail,
     handleBackToChatHistory,
     handleDelete,
@@ -163,6 +181,8 @@ export default function DashboardApp() {
           <NotebookDetailPage
             notebookId={selectedNotebookId}
             onBack={handleBackToNotebooks}
+            onPlayAudio={(mediaUrl, artifactId, title) => void playArtifact(mediaUrl, artifactId, title)}
+            isLoadingAudio={isLoadingAudio}
           />
         ) : null;
 
@@ -171,6 +191,28 @@ export default function DashboardApp() {
 
       case 'all-artifacts':
         return <AllArtifactsPage />;
+
+      case 'podcasts':
+        return <PodcastsPage onOpenEpisode={handleOpenPodcastDetail} />;
+
+      case 'podcast-detail':
+        return selectedEpisodeId ? (
+          <PodcastDetailPage
+            episodeId={selectedEpisodeId}
+            onBack={handleBackToPodcasts}
+            onPlayTrack={(track, playlist, idx) => void playTrack(track, playlist, idx)}
+            isLoadingAudio={isLoadingAudio}
+            activeTrackIndex={podcastContext?.currentIndex ?? -1}
+          />
+        ) : null;
+
+      case 'all-audio':
+        return (
+          <AllAudioPage
+            onPlayAudio={(mediaUrl, artifactId, title) => void playArtifact(mediaUrl, artifactId, title)}
+            isLoadingAudio={isLoadingAudio}
+          />
+        );
 
       case 'chat-history':
         return <ChatHistoryPage onOpenConversation={handleOpenChatDetail} />;
@@ -209,6 +251,7 @@ export default function DashboardApp() {
           favoritesCount={favoritesCount}
           notebooksCount={notebooksCount}
           chatHistoryCount={chatHistoryCount}
+          podcastsCount={podcastsCount}
         />
         <div className="dashboard-app__content">
           <main className="dashboard-app__main">{renderContent()}</main>
@@ -229,6 +272,16 @@ export default function DashboardApp() {
 
       {showShortcuts && (
         <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
+      )}
+
+      {audioUrl && (
+        <AudioPlayer
+          key={audioUrl}
+          audioUrl={audioUrl}
+          title={audioTitle}
+          onClose={stopAudio}
+          onEnded={() => void playNext()}
+        />
       )}
     </ThemeProvider>
   );

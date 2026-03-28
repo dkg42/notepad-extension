@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
@@ -8,6 +8,8 @@ import './NotebookDetailPage.css';
 interface NotebookDetailPageProps {
   notebookId: string;
   onBack: () => void;
+  onPlayAudio: (mediaUrl: string, artifactId: string, title: string) => void;
+  isLoadingAudio: boolean;
 }
 
 const AUDIO_FORMATS = [
@@ -46,13 +48,8 @@ function formatDate(timestamp: number): string {
   });
 }
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
-export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetailPageProps) {
+export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, isLoadingAudio }: NotebookDetailPageProps) {
   const {
     notebook,
     isLoadingMeta,
@@ -70,18 +67,14 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
     isGeneratingBrief,
     briefError,
     isGeneratingAudio,
-    audioError,
-    currentAudioUrl,
+    audioGenerationError,
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
-    isLoadingAudio,
     handleGenerateBrief,
     handleDeleteSource,
     handleGenerateAudio,
     handleDeleteNotebook,
-    handlePlayAudio,
-    handleStopAudio,
     handleExportSources,
     handleRefreshAll,
   } = useNotebookDetailPage(notebookId, onBack);
@@ -100,13 +93,7 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
   const [audioLength, setAudioLength] = useState(2);
   const [audioFocus, setAudioFocus] = useState('');
 
-  // Audio player state
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-
-  // ── Loading ─────────────────────────────────────────────────────────────────
+  //── Loading ─────────────────────────────────────────────────────────────────
   if (isLoadingMeta) {
     return (
       <div className="notebook-detail">
@@ -417,9 +404,9 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
             </button>
           </div>
         </div>
-        {audioError && (
+        {audioGenerationError && (
           <div className="notebook-detail__section-error">
-            {audioError}
+            {audioGenerationError}
           </div>
         )}
         {artifactsError && (
@@ -453,7 +440,7 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
                 {artifact.mediaUrl && artifact.status === 3 && (
                   <button
                     className="notebook-detail__play-btn"
-                    onClick={() => void handlePlayAudio(artifact.mediaUrl!, artifact.id)}
+                    onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
                     disabled={isLoadingAudio}
                   >
                     {isLoadingAudio ? 'Loading…' : '▶ Play'}
@@ -578,76 +565,6 @@ export default function NotebookDetailPage({ notebookId, onBack }: NotebookDetai
         </div>
       )}
 
-      {/* ── Audio player (fixed bar) ────────────────────────────────────────── */}
-      {currentAudioUrl && (
-        <div className="notebook-detail__audio-player">
-          <audio
-            ref={audioRef}
-            src={currentAudioUrl}
-            onTimeUpdate={() => {
-              if (audioRef.current) {
-                setAudioCurrentTime(audioRef.current.currentTime);
-              }
-            }}
-            onLoadedMetadata={() => {
-              if (audioRef.current) {
-                setAudioDuration(audioRef.current.duration);
-              }
-            }}
-            onEnded={() => setIsPlaying(false)}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onError={() => {
-              handleStopAudio();
-              setIsPlaying(false);
-            }}
-          />
-          <button
-            className="notebook-detail__audio-play-btn"
-            onClick={() => {
-              if (audioRef.current) {
-                if (isPlaying) {
-                  audioRef.current.pause();
-                } else {
-                  void audioRef.current.play();
-                }
-              }
-            }}
-          >
-            {isPlaying ? '❚❚' : '▶'}
-          </button>
-          <input
-            type="range"
-            className="notebook-detail__audio-seek"
-            min={0}
-            max={audioDuration || 0}
-            value={audioCurrentTime}
-            onChange={(e) => {
-              const time = Number(e.target.value);
-              if (audioRef.current) {
-                audioRef.current.currentTime = time;
-              }
-              setAudioCurrentTime(time);
-            }}
-          />
-          <span className="notebook-detail__audio-time">
-            {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
-          </span>
-          <button
-            className="notebook-detail__audio-close"
-            onClick={() => {
-              if (audioRef.current) {
-                audioRef.current.pause();
-              }
-              handleStopAudio();
-              setIsPlaying(false);
-            }}
-            title="Close player"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 }
