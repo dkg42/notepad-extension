@@ -32,6 +32,7 @@ export function useDashboardApp() {
   const [selectedChatPlatform, setSelectedChatPlatform] = useState<ChatPlatform | null>(null);
   const [podcastsCount, setPodcastsCount] = useState(0);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
+  const [pipelinesCount, setPipelinesCount] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -93,9 +94,23 @@ export function useDashboardApp() {
         const updated = (changes.podcastEpisodes.newValue as Array<unknown>) ?? [];
         setPodcastsCount(updated.length);
       }
+      if ('pipelines' in changes) {
+        const updated = (changes.pipelines.newValue as Array<{ enabled: boolean }>) ?? [];
+        setPipelinesCount(updated.filter((p) => p.enabled).length);
+      }
     };
     chrome.storage.local.onChanged.addListener(listener);
     return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, []);
+
+  // Load initial pipelines count
+  useEffect(() => {
+    chrome.storage.local.get('pipelines')
+      .then((result) => {
+        const loaded = (result.pipelines as Array<{ enabled: boolean }>) ?? [];
+        setPipelinesCount(loaded.filter((p) => p.enabled).length);
+      })
+      .catch(() => {});
   }, []);
 
   const favoritesCount = useMemo(
@@ -310,6 +325,7 @@ export function useDashboardApp() {
     notebooksCount,
     chatHistoryCount,
     podcastsCount,
+    pipelinesCount,
     selectedEpisodeId,
     selectedChatId,
     selectedChatPlatform,

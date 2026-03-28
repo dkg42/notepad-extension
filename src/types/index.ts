@@ -1,6 +1,7 @@
 export * from './dashboard';
 export * from './import';
 export * from './chat-history';
+export * from './pipeline';
 
 export interface Folder {
   id: string;
@@ -92,6 +93,8 @@ export interface NotebookAnnotation {
   notebookId: string;
   tags: string[];
   collectionId?: string;
+  /** Set by the 'archive-notebook' pipeline action. Hides the notebook from the default notebooks view. */
+  archived?: boolean;
 }
 
 // ── Podcast types ─────────────────────────────────────────────────────────────

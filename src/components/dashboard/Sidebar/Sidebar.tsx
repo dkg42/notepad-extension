@@ -18,6 +18,7 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardView } from '@/types/dashboard';
@@ -77,6 +78,7 @@ const PODCASTS_GROUP: NavGroup = {
 const SECONDARY_NAV: NavItem[] = [
   { view: 'analytics', icon: BarChart2, label: 'Analytics' },
   { view: 'export-history', icon: Clock, label: 'Export History' },
+  { view: 'pipelines', icon: Zap, label: 'Pipelines' },
 ];
 
 const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
@@ -91,6 +93,7 @@ interface SidebarProps {
   notebooksCount: number;
   chatHistoryCount: number;
   podcastsCount: number;
+  pipelinesCount: number;
 }
 
 interface CollapsibleGroupProps {
@@ -182,6 +185,7 @@ export default function Sidebar({
   notebooksCount,
   chatHistoryCount,
   podcastsCount,
+  pipelinesCount,
 }: SidebarProps) {
   const [notebooksExpanded, setNotebooksExpanded] = useState(
     NOTEBOOK_VIEWS.includes(currentView),
@@ -201,7 +205,9 @@ export default function Sidebar({
         ? promptCount
         : item.view === 'favorites' && favoritesCount > 0
           ? favoritesCount
-          : null;
+          : item.view === 'pipelines' && pipelinesCount > 0
+            ? pipelinesCount
+            : null;
 
     return (
       <button

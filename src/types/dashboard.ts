@@ -17,6 +17,7 @@ export type DashboardView =
   | 'podcasts'
   | 'podcast-detail'
   | 'all-audio'
+  | 'pipelines'
   | 'settings';
 
 export interface DashboardSettings {

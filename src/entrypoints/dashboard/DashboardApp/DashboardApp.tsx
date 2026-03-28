@@ -17,6 +17,7 @@ import ChatHistoryDetailPage from '@/components/dashboard/ChatHistoryDetailPage/
 import PodcastsPage from '@/components/dashboard/PodcastsPage/PodcastsPage';
 import PodcastDetailPage from '@/components/dashboard/PodcastDetailPage/PodcastDetailPage';
 import AllAudioPage from '@/components/dashboard/AllAudioPage/AllAudioPage';
+import PipelinesPage from '@/components/dashboard/PipelinesPage/PipelinesPage';
 import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
@@ -49,6 +50,7 @@ export default function DashboardApp() {
     notebooksCount,
     chatHistoryCount,
     podcastsCount,
+    pipelinesCount,
     selectedEpisodeId,
     selectedChatId,
     selectedChatPlatform,
@@ -229,6 +231,9 @@ export default function DashboardApp() {
           />
         ) : null;
 
+      case 'pipelines':
+        return <PipelinesPage />;
+
       case 'settings':
         return (
           <SettingsPage settings={settings} onSettingsChange={handleSettingsChange} />
@@ -255,6 +260,7 @@ export default function DashboardApp() {
           notebooksCount={notebooksCount}
           chatHistoryCount={chatHistoryCount}
           podcastsCount={podcastsCount}
+          pipelinesCount={pipelinesCount}
         />
         <div className="dashboard-app__content">
           <main className="dashboard-app__main">{renderContent()}</main>

@@ -52,6 +52,8 @@ function formatDate(timestamp: number): string {
 export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, isLoadingAudio }: NotebookDetailPageProps) {
   const {
     notebook,
+    annotation,
+    collections,
     isLoadingMeta,
     sources,
     isLoadingSources,
@@ -71,6 +73,10 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
+    handleAssignCollection,
+    handleCreateCollection,
+    handleAddTag,
+    handleRemoveTag,
     handleGenerateBrief,
     handleDeleteSource,
     handleGenerateAudio,
@@ -80,6 +86,10 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
   } = useNotebookDetailPage(notebookId, onBack);
 
   // ── Local UI state ──────────────────────────────────────────────────────────
+  const [showCollectionMenu, setShowCollectionMenu] = useState(false);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [isAddingTag, setIsAddingTag] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingSourceDelete, setConfirmingSourceDelete] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -167,6 +177,141 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Collection & Tags bar ───────────────────────────────────────────── */}
+      <div className="notebook-detail__meta-bar">
+        {/* Collection selector */}
+        <div className="notebook-detail__meta-item">
+          <span className="notebook-detail__meta-label">Collection</span>
+          <div className="notebook-detail__collection-wrapper">
+            <button
+              className={`notebook-detail__collection-btn${annotation.collectionId ? ' notebook-detail__collection-btn--assigned' : ''}`}
+              onClick={() => setShowCollectionMenu((v) => !v)}
+              title="Assign to collection"
+            >
+              {collections.find((c) => c.id === annotation.collectionId)?.name ?? 'None'}
+              <span className="notebook-detail__collection-caret">▾</span>
+            </button>
+            {showCollectionMenu && (
+              <>
+                <div
+                  className="notebook-detail__collection-overlay"
+                  onClick={() => setShowCollectionMenu(false)}
+                />
+                <div className="notebook-detail__collection-menu">
+                  <button
+                    className={`notebook-detail__collection-menu-item${!annotation.collectionId ? ' notebook-detail__collection-menu-item--active' : ''}`}
+                    onClick={() => {
+                      void handleAssignCollection(undefined);
+                      setShowCollectionMenu(false);
+                    }}
+                  >
+                    None
+                  </button>
+                  {collections.map((col) => (
+                    <button
+                      key={col.id}
+                      className={`notebook-detail__collection-menu-item${annotation.collectionId === col.id ? ' notebook-detail__collection-menu-item--active' : ''}`}
+                      onClick={() => {
+                        void handleAssignCollection(col.id);
+                        setShowCollectionMenu(false);
+                      }}
+                    >
+                      {col.name}
+                    </button>
+                  ))}
+                  <div className="notebook-detail__collection-menu-divider" />
+                  {isCreatingCollection ? (
+                    <div className="notebook-detail__collection-new">
+                      <input
+                        className="notebook-detail__collection-new-input"
+                        autoFocus
+                        placeholder="Collection name…"
+                        value={newCollectionName}
+                        onChange={(e) => setNewCollectionName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const name = newCollectionName.trim();
+                            if (name) {
+                              void handleCreateCollection(name).then((id) => {
+                                void handleAssignCollection(id);
+                              });
+                            }
+                            setNewCollectionName('');
+                            setIsCreatingCollection(false);
+                            setShowCollectionMenu(false);
+                          }
+                          if (e.key === 'Escape') {
+                            setNewCollectionName('');
+                            setIsCreatingCollection(false);
+                          }
+                        }}
+                        onBlur={() => {
+                          setNewCollectionName('');
+                          setIsCreatingCollection(false);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      className="notebook-detail__collection-menu-item notebook-detail__collection-menu-item--new"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setIsCreatingCollection(true)}
+                    >
+                      + New collection
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="notebook-detail__meta-item notebook-detail__meta-item--tags">
+          <span className="notebook-detail__meta-label">Tags</span>
+          <div className="notebook-detail__tags-row">
+            {annotation.tags.map((tag) => (
+              <span key={tag} className="notebook-detail__tag">
+                {tag}
+                <button
+                  className="notebook-detail__tag-remove"
+                  onClick={() => void handleRemoveTag(tag)}
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {isAddingTag ? (
+              <input
+                className="notebook-detail__tag-input"
+                autoFocus
+                placeholder="Tag name…"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    void handleAddTag(e.currentTarget.value.trim());
+                    setIsAddingTag(false);
+                  }
+                  if (e.key === 'Escape') setIsAddingTag(false);
+                }}
+                onBlur={(e) => {
+                  if (e.currentTarget.value.trim()) void handleAddTag(e.currentTarget.value.trim());
+                  setIsAddingTag(false);
+                }}
+              />
+            ) : (
+              <button
+                className="notebook-detail__add-tag-btn"
+                onClick={() => setIsAddingTag(true)}
+                title="Add tag"
+              >
+                + Add tag
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

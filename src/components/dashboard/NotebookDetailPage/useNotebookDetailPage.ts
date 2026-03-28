@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord } from '@/types';
+import type { ArtifactRecord, NoteDetailRecord, NotebookAnnotation, NotebookCollection, NotebookMeta, SourceDetailRecord } from '@/types';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
@@ -51,6 +51,10 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
   const [isDeletingNotebook, setIsDeletingNotebook] = useState(false);
   const [isDeletingSource, setIsDeletingSource] = useState<string | null>(null);
 
+  // ── Annotation & collections ───────────────────────────────────────────────
+  const [annotation, setAnnotation] = useState<NotebookAnnotation>({ notebookId, tags: [] });
+  const [collections, setCollections] = useState<NotebookCollection[]>([]);
+
   // ── Export ─────────────────────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
 
@@ -62,10 +66,15 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     if (hasFetched.current) return;
     hasFetched.current = true;
 
-    // Load notebook meta from sync storage (instant)
-    notebookSyncService.getAll().then((all) => {
-      const nb = all.find((n) => n.id === notebookId);
-      setNotebook(nb ?? null);
+    // Load notebook meta + annotation + collections from storage (instant)
+    Promise.all([
+      notebookSyncService.getAll(),
+      notebookAnnotationService.getAllAnnotations(),
+      notebookAnnotationService.getAllCollections(),
+    ]).then(([all, allAnnotations, allCollections]) => {
+      setNotebook(all.find((n) => n.id === notebookId) ?? null);
+      setAnnotation(allAnnotations.find((a) => a.notebookId === notebookId) ?? { notebookId, tags: [] });
+      setCollections(allCollections);
       setIsLoadingMeta(false);
     });
 
@@ -221,6 +230,48 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     }
   }, [notebookId, onBack]);
 
+  const handleAssignCollection = useCallback(
+    async (collectionId: string | undefined) => {
+      const updated = { ...annotation, collectionId };
+      await notebookAnnotationService.setAnnotation(updated);
+      setAnnotation(updated);
+    },
+    [annotation],
+  );
+
+  const handleCreateCollection = useCallback(
+    async (name: string): Promise<string> => {
+      const collection: NotebookCollection = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        createdAt: Date.now(),
+      };
+      await notebookAnnotationService.upsertCollection(collection);
+      setCollections((prev) => [...prev, collection]);
+      return collection.id;
+    },
+    [],
+  );
+
+  const handleAddTag = useCallback(
+    async (tag: string) => {
+      if (!tag || annotation.tags.includes(tag)) return;
+      const updated = { ...annotation, tags: [...annotation.tags, tag] };
+      await notebookAnnotationService.setAnnotation(updated);
+      setAnnotation(updated);
+    },
+    [annotation],
+  );
+
+  const handleRemoveTag = useCallback(
+    async (tag: string) => {
+      const updated = { ...annotation, tags: annotation.tags.filter((t) => t !== tag) };
+      await notebookAnnotationService.setAnnotation(updated);
+      setAnnotation(updated);
+    },
+    [annotation],
+  );
+
   const handleExportSources = useCallback(async (strategyType: string) => {
     if (!notebook) return;
     setIsExporting(true);
@@ -276,6 +327,8 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
 
   return {
     notebook,
+    annotation,
+    collections,
     isLoadingMeta,
     sources,
     isLoadingSources,
@@ -298,6 +351,10 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
+    handleAssignCollection,
+    handleCreateCollection,
+    handleAddTag,
+    handleRemoveTag,
     handleGenerateBrief,
     handleDeleteSource,
     handleAddSourceUrl,
