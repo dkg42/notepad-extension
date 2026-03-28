@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Snippet, TagMeta } from '@/types';
+import type { NotebookAnnotation, Snippet, TagMeta } from '@/types';
 import TagCard from '@/components/dashboard/TagCard/TagCard';
 import { useTagManager } from './useTagManager';
 import './TagManager.css';
@@ -7,6 +7,7 @@ import './TagManager.css';
 interface TagManagerProps {
   snippets: Snippet[];
   tagsMeta: TagMeta[];
+  notebookAnnotations: NotebookAnnotation[];
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
   onTagColorChange: (name: string, color: string | undefined) => void;
@@ -15,18 +16,19 @@ interface TagManagerProps {
 export default function TagManager({
   snippets,
   tagsMeta,
+  notebookAnnotations,
   onRenameTag,
   onDeleteTag,
   onTagColorChange,
 }: TagManagerProps) {
-  const { enrichedTags, usageCounts } = useTagManager(snippets, tagsMeta);
+  const { enrichedTags, usageCounts } = useTagManager(snippets, tagsMeta, notebookAnnotations);
 
   return (
     <div className="tag-manager">
       <div className="tag-manager__header">
         <h1 className="tag-manager__heading">Tags</h1>
         <p className="tag-manager__subheading">
-          Manage tag colours, rename, or remove tags across all prompts.
+          Manage tag colours, rename, or remove tags across all prompts and notebooks.
         </p>
       </div>
 

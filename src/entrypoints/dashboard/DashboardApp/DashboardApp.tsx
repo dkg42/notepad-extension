@@ -41,6 +41,7 @@ export default function DashboardApp() {
     snippets,
     folders,
     tagsMeta,
+    notebookAnnotations,
     settings,
     currentView,
     isLoading,
@@ -162,6 +163,7 @@ export default function DashboardApp() {
           <TagManager
             snippets={snippets}
             tagsMeta={tagsMeta}
+            notebookAnnotations={notebookAnnotations}
             onRenameTag={handleRenameTag}
             onDeleteTag={handleDeleteTag}
             onTagColorChange={handleTagColorChange}

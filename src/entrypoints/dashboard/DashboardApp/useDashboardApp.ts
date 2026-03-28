@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ChatPlatform, Folder, NotebookMeta, Snippet, TagMeta } from '@/types';
+import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { useGlobalAudio } from '@/hooks/useGlobalAudio';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
@@ -18,6 +19,7 @@ export function useDashboardApp() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tagsMeta, setTagsMeta] = useState<TagMeta[]>([]);
+  const [notebookAnnotations, setNotebookAnnotations] = useState<NotebookAnnotation[]>([]);
   const [settings, setSettings] = useState<DashboardSettings>(DEFAULT_SETTINGS);
   const [currentView, setCurrentView] = useState<DashboardView>('home');
   const [isLoading, setIsLoading] = useState(true);
@@ -38,11 +40,13 @@ export function useDashboardApp() {
       storageService.getTagsMeta(),
       storageService.getSettings(),
       notebookSyncService.getAll(),
+      notebookAnnotationService.getAllAnnotations(),
     ])
-      .then(([loadedSnippets, loadedFolders, loadedTagsMeta, loadedSettings, loadedNotebooks]) => {
+      .then(([loadedSnippets, loadedFolders, loadedTagsMeta, loadedSettings, loadedNotebooks, loadedAnnotations]) => {
         setSnippets(loadedSnippets);
         setFolders(loadedFolders);
         setTagsMeta(loadedTagsMeta);
+        setNotebookAnnotations(loadedAnnotations);
         setSettings(loadedSettings);
         setNotebooksCount(loadedNotebooks.length);
         return storageService.getPodcastEpisodes();
@@ -51,12 +55,16 @@ export function useDashboardApp() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Update notebooks count when sync storage changes
+  // Update notebooks count and annotations when sync storage changes
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if ('notebooksMeta' in changes) {
         const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
         setNotebooksCount(updated.length);
+      }
+      if ('notebookAnnotations' in changes) {
+        const updated = (changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? [];
+        setNotebookAnnotations(updated);
       }
     };
     chrome.storage.sync.onChanged.addListener(listener);
@@ -186,7 +194,16 @@ export function useDashboardApp() {
   // ── Tag operations ────────────────────────────────────────────────────────
 
   const handleRenameTag = async (oldName: string, newName: string) => {
-    await storageService.renameTag(oldName, newName);
+    const affectedAnnotations = notebookAnnotations.filter((a) => a.tags.includes(oldName));
+    await Promise.all([
+      storageService.renameTag(oldName, newName),
+      ...affectedAnnotations.map((a) =>
+        notebookAnnotationService.setAnnotation({
+          ...a,
+          tags: a.tags.map((t) => (t === oldName ? newName : t)),
+        }),
+      ),
+    ]);
     setSnippets((prev) =>
       prev.map((s) => ({
         ...s,
@@ -196,14 +213,32 @@ export function useDashboardApp() {
     setTagsMeta((prev) =>
       prev.map((t) => (t.name === oldName ? { ...t, name: newName } : t)),
     );
+    setNotebookAnnotations((prev) =>
+      prev.map((a) => ({
+        ...a,
+        tags: a.tags.map((t) => (t === oldName ? newName : t)),
+      })),
+    );
   };
 
   const handleDeleteTag = async (name: string) => {
-    await storageService.deleteTagMeta(name);
+    const affectedAnnotations = notebookAnnotations.filter((a) => a.tags.includes(name));
+    await Promise.all([
+      storageService.deleteTagMeta(name),
+      ...affectedAnnotations.map((a) =>
+        notebookAnnotationService.setAnnotation({
+          ...a,
+          tags: a.tags.filter((t) => t !== name),
+        }),
+      ),
+    ]);
     setSnippets((prev) =>
       prev.map((s) => ({ ...s, tags: s.tags?.filter((t) => t !== name) })),
     );
     setTagsMeta((prev) => prev.filter((t) => t.name !== name));
+    setNotebookAnnotations((prev) =>
+      prev.map((a) => ({ ...a, tags: a.tags.filter((t) => t !== name) })),
+    );
   };
 
   const handleTagColorChange = async (name: string, color: string | undefined) => {
@@ -267,6 +302,7 @@ export function useDashboardApp() {
     snippets,
     folders,
     tagsMeta,
+    notebookAnnotations,
     settings,
     currentView,
     isLoading,

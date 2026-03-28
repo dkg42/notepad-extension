@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Columns3, Check, FileText } from 'lucide-react';
+import { ChevronUp, ChevronDown, Columns3, Check, FileText, Tag } from 'lucide-react';
 import type { Folder, Snippet } from '@/types';
 import type { SortColumn } from '@/types/dashboard';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
@@ -54,6 +54,7 @@ export default function PromptsTable({
   onBulkDelete,
   onBulkMoveToFolder,
   onBulkAddTags,
+  onUpdateTags,
   hideToolbar = false,
   className = '',
   initialHiddenColumns = [],
@@ -104,6 +105,31 @@ export default function PromptsTable({
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [columnsMenuOpen]);
+
+  // ── Tag multi-select filter ─────────────────────────────────────────────────
+  const [tagMenuOpen, setTagMenuOpen] = useState(false);
+  const tagMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tagMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (tagMenuRef.current && !tagMenuRef.current.contains(e.target as Node)) {
+        setTagMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [tagMenuOpen]);
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+    setCurrentPage(1);
+  };
 
   const visibleColumns = useMemo(
     () => COLUMNS.filter((col) => !hiddenColumns.has(col.key)),
@@ -213,23 +239,55 @@ export default function PromptsTable({
           </select>
         )}
 
-        {allTags.length > 0 && (
-          <select
-            className="prompts-table__filter-select"
-            value={selectedTags.size === 1 ? [...selectedTags][0] : ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedTags(val ? new Set([val]) : new Set());
-            }}
+        <div className="prompts-table__col-toggle" ref={tagMenuRef}>
+          <button
+            className={`prompts-table__col-btn${tagMenuOpen ? ' prompts-table__col-btn--open' : ''}${selectedTags.size > 0 ? ' prompts-table__col-btn--active' : ''}`}
+            onClick={() => setTagMenuOpen((v) => !v)}
+            disabled={allTags.length === 0}
+            title={allTags.length === 0 ? 'No tags yet' : 'Filter by tags'}
           >
-            <option value="">All tags</option>
-            {allTags.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        )}
+            <Tag size={13} strokeWidth={1.75} />
+            {selectedTags.size > 0
+              ? `${selectedTags.size} tag${selectedTags.size > 1 ? 's' : ''}`
+              : 'Tags'}
+          </button>
+
+          <AnimatePresence>
+            {tagMenuOpen && (
+              <motion.div
+                className="prompts-table__col-menu"
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {selectedTags.size > 0 && (
+                  <button
+                    className="prompts-table__tag-clear"
+                    onClick={() => { setSelectedTags(new Set()); setCurrentPage(1); }}
+                  >
+                    Clear filter
+                  </button>
+                )}
+                {allTags.map((tag) => {
+                  const isSelected = selectedTags.has(tag);
+                  return (
+                    <button
+                      key={tag}
+                      className="prompts-table__col-item"
+                      onClick={() => handleTagToggle(tag)}
+                    >
+                      <span className={`prompts-table__col-check${isSelected ? ' prompts-table__col-check--on' : ''}`}>
+                        {isSelected && <Check size={11} strokeWidth={2.5} />}
+                      </span>
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <span className="prompts-table__count">
           {filteredCount !== totalCount
@@ -351,6 +409,7 @@ export default function PromptsTable({
                   onToggleSelect={toggleSelect}
                   onDelete={onDelete}
                   onToggleFavorite={onToggleFavorite}
+                  onUpdateTags={onUpdateTags}
                 />
               ))
             )}

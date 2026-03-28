@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { ChevronRight, Folder as FolderIcon, Hash } from 'lucide-react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { ChevronRight, Folder as FolderIcon, Hash, Tag, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -38,7 +39,20 @@ export default function PromptsPage({
   onBulkAddTags,
 }: PromptsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTag, setSelectedTag] = useState('');
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [tagMenuOpen, setTagMenuOpen] = useState(false);
+  const tagMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tagMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (tagMenuRef.current && !tagMenuRef.current.contains(e.target as Node)) {
+        setTagMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [tagMenuOpen]);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -46,10 +60,19 @@ export default function PromptsPage({
     return Array.from(tagSet).sort();
   }, [snippets]);
 
-  const filtered = useMemo(() => {
-    const tagFilter = selectedTag ? new Set([selectedTag]) : new Set<string>();
-    return filterSnippets(snippets, searchQuery, new Set(), tagFilter);
-  }, [snippets, searchQuery, selectedTag]);
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
+
+  const filtered = useMemo(
+    () => filterSnippets(snippets, searchQuery, new Set(), selectedTags),
+    [snippets, searchQuery, selectedTags],
+  );
 
   // Group filtered snippets by folderId
   const groupedByFolder = useMemo(() => {
@@ -100,20 +123,55 @@ export default function PromptsPage({
           />
         </div>
 
-        {allTags.length > 0 && (
-          <select
-            className="prompts-page__filter-select"
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
+        <div className="prompts-page__tag-filter" ref={tagMenuRef}>
+          <button
+            className={`prompts-page__tag-btn${tagMenuOpen ? ' prompts-page__tag-btn--open' : ''}${selectedTags.size > 0 ? ' prompts-page__tag-btn--active' : ''}`}
+            onClick={() => setTagMenuOpen((v) => !v)}
+            disabled={allTags.length === 0}
+            title={allTags.length === 0 ? 'No tags yet' : 'Filter by tags'}
           >
-            <option value="">All tags</option>
-            {allTags.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        )}
+            <Tag size={13} strokeWidth={1.75} />
+            {selectedTags.size > 0
+              ? `${selectedTags.size} tag${selectedTags.size > 1 ? 's' : ''}`
+              : 'Tags'}
+          </button>
+
+          <AnimatePresence>
+            {tagMenuOpen && (
+              <motion.div
+                className="prompts-page__tag-menu"
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {selectedTags.size > 0 && (
+                  <button
+                    className="prompts-page__tag-clear"
+                    onClick={() => setSelectedTags(new Set())}
+                  >
+                    Clear filter
+                  </button>
+                )}
+                {allTags.map((tag) => {
+                  const isSelected = selectedTags.has(tag);
+                  return (
+                    <button
+                      key={tag}
+                      className="prompts-page__tag-item"
+                      onClick={() => handleTagToggle(tag)}
+                    >
+                      <span className={`prompts-page__tag-check${isSelected ? ' prompts-page__tag-check--on' : ''}`}>
+                        {isSelected && <Check size={11} strokeWidth={2.5} />}
+                      </span>
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <span className="prompts-page__count">
           {filtered.length !== snippets.length

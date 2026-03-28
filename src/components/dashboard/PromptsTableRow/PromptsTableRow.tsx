@@ -1,8 +1,9 @@
 import React from 'react';
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder, Trash2, Plus, X } from 'lucide-react';
 import type { Snippet } from '@/types';
 import type { SortColumn } from '@/types/dashboard';
 import FavoriteButton from '@/components/dashboard/FavoriteButton/FavoriteButton';
+import { usePromptsTableRow } from './usePromptsTableRow';
 import './PromptsTableRow.css';
 
 interface PromptsTableRowProps {
@@ -14,6 +15,7 @@ interface PromptsTableRowProps {
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  onUpdateTags?: (id: string, tags: string[]) => void;
 }
 
 function formatDate(ts: number): string {
@@ -41,10 +43,22 @@ export default function PromptsTableRow({
   onToggleSelect,
   onDelete,
   onToggleFavorite,
+  onUpdateTags,
 }: PromptsTableRowProps) {
   const preview =
     snippet.text.length > 100 ? `${snippet.text.slice(0, 100)}…` : snippet.text;
   const hostname = extractHostname(snippet.source);
+
+  const {
+    tagInputVisible,
+    tagInputValue,
+    setTagInputValue,
+    inputRef,
+    handleShowInput,
+    handleTagInputKeyDown,
+    handleRemoveTag,
+    handleTagInputBlur,
+  } = usePromptsTableRow(snippet, onUpdateTags);
 
   return (
     <tr
@@ -99,15 +113,47 @@ export default function PromptsTableRow({
 
       {/* Tags */}
       {!hiddenColumns.has('tags') && (
-        <td className="prompts-table-row__cell">
+        <td className="prompts-table-row__cell prompts-table-row__cell--tags">
           <div className="prompts-table-row__tags">
-            {snippet.tags?.length ? (
-              snippet.tags.map((tag) => (
-                <span key={tag} className="prompts-table-row__tag">
-                  {tag}
-                </span>
-              ))
-            ) : (
+            {snippet.tags?.map((tag) => (
+              <span key={tag} className="prompts-table-row__tag">
+                {tag}
+                {onUpdateTags && (
+                  <button
+                    className="prompts-table-row__tag-remove"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }}
+                    title={`Remove tag "${tag}"`}
+                  >
+                    <X size={9} strokeWidth={2.5} />
+                  </button>
+                )}
+              </span>
+            ))}
+
+            {onUpdateTags && (
+              tagInputVisible ? (
+                <input
+                  ref={inputRef}
+                  className="prompts-table-row__tag-input"
+                  value={tagInputValue}
+                  onChange={(e) => setTagInputValue(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  onBlur={handleTagInputBlur}
+                  placeholder="tag name…"
+                />
+              ) : (
+                <button
+                  className="prompts-table-row__tag-add"
+                  onClick={(e) => { e.stopPropagation(); handleShowInput(); }}
+                  title="Add tag"
+                >
+                  <Plus size={10} strokeWidth={2.5} />
+                  tag
+                </button>
+              )
+            )}
+
+            {!snippet.tags?.length && !onUpdateTags && (
               <span className="prompts-table-row__empty-value">—</span>
             )}
           </div>
