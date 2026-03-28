@@ -1,35 +1,8 @@
 import React, { useRef, useState } from 'react';
+import { Trash2, Download, BookOpen, ExternalLink, Loader2, ChevronDown } from 'lucide-react';
 import { useNotebooksPage, UNCOLLECTED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import './NotebooksPage.css';
-
-function TrashIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path
-        d="M1.5 3h10M4.5 3V2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1m2 0-.667 8a1 1 0 0 1-1 .917H4.167A1 1 0 0 1 3.167 11L2.5 3M5.5 5.5v4m2-4v4"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path
-        d="M6.5 1v8m0 0L3.5 6m3 3 3-3M1.5 10.5v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function formatRelativeTime(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -275,7 +248,9 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
       {!isLoading && notebooks.length === 0 && (
         <div className="notebooks-page__empty">
-          <span className="notebooks-page__empty-icon">&#x25F1;</span>
+          <span className="notebooks-page__empty-icon">
+            <BookOpen size={48} strokeWidth={1.5} />
+          </span>
           <p className="notebooks-page__empty-text">No notebooks found</p>
           <p className="notebooks-page__empty-hint">
             Sign into Google and your NotebookLM notebooks will appear here
@@ -324,7 +299,9 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                   {filteredNotebooks.length === 0 ? (
                     <tr>
                       <td className="notebooks-table__empty" colSpan={6}>
-                        <span className="notebooks-table__empty-icon">&#x25F1;</span>
+                        <span className="notebooks-table__empty-icon">
+                          <BookOpen size={28} strokeWidth={1.5} />
+                        </span>
                         No notebooks in this view
                       </td>
                     </tr>
@@ -345,8 +322,8 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                               onClick={() => onOpenNotebook(notebook.id)}
                               title="Open notebook details"
                             >
-                              <span className="notebooks-table__notebook-icon">
-                                &#x25F1;
+                              <span className="notebooks-table__notebook-icon" style={{ display: 'inline-flex' }}>
+                                <BookOpen size={16} strokeWidth={1.75} />
                               </span>
                               <span className="notebooks-table__notebook-title">
                                 {notebook.title}
@@ -359,7 +336,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                               rel="noopener noreferrer"
                               title="Open in NotebookLM"
                             >
-                              ↗
+                              <ExternalLink size={12} strokeWidth={1.75} />
                             </a>
                             {!notebook.isOwner && (
                               <span className="notebooks-table__badge">Shared</span>
@@ -383,7 +360,9 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                               title="Assign to collection"
                             >
                               {assignedCollection ? assignedCollection.name : '—'}
-                              <span className="notebooks-collection-selector__caret">▾</span>
+                              <span className="notebooks-collection-selector__caret">
+                                <ChevronDown size={10} strokeWidth={2} />
+                              </span>
                             </button>
 
                             {movingNotebookId === notebook.id && (
@@ -458,7 +437,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                                 aria-label="Fetching sources…"
                                 title="Loading source count…"
                               >
-                                &#x231B;
+                                <Loader2 size={14} strokeWidth={1.75} />
                               </span>
                             ) : (
                               <div className="notebooks-sources-cell">
@@ -477,7 +456,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                                   title="Export sources"
                                   aria-label="Export sources"
                                 >
-                                  <DownloadIcon />
+                                  <Download size={13} strokeWidth={1.75} />
                                 </button>
 
                                 {exportingNotebookId === notebook.id && (
@@ -538,7 +517,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                                 aria-label="Delete notebook from NotebookLM"
                                 title="Delete from NotebookLM"
                               >
-                                <TrashIcon />
+                                <Trash2 size={13} strokeWidth={1.75} />
                               </button>
                             )}
                           </td>

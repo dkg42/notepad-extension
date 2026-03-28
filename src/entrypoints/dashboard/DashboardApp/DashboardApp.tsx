@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
 import DashboardHome from '@/components/dashboard/DashboardHome/DashboardHome';
 import PromptsTable from '@/components/dashboard/PromptsTable/PromptsTable';
+import PromptsPage from '@/components/dashboard/PromptsPage/PromptsPage';
 import FolderExplorer from '@/components/dashboard/FolderExplorer/FolderExplorer';
 import TagManager from '@/components/dashboard/TagManager/TagManager';
 import AnalyticsPage from '@/components/dashboard/AnalyticsPage/AnalyticsPage';
@@ -116,7 +117,7 @@ export default function DashboardApp() {
 
       case 'prompts':
         return (
-          <PromptsTable
+          <PromptsPage
             snippets={snippets}
             folders={folders}
             onDelete={handleDelete}

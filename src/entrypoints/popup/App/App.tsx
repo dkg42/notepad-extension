@@ -1,4 +1,6 @@
 import React from 'react';
+import { Search, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import FolderFilterDropdown from '@/components/FolderFilterDropdown/FolderFilterDropdown';
 import FolderManager from '@/components/FolderManager/FolderManager';
 import SnippetList from '@/components/SnippetList/SnippetList';
@@ -50,7 +52,6 @@ export default function App() {
       </div>
 
       <div className="app-search">
-        <span className="app-search__icon">🔍</span>
         <input
           type="text"
           value={searchQuery}
@@ -58,15 +59,35 @@ export default function App() {
           placeholder="Search prompts..."
           className="app-search__input"
         />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="app-search__clear-btn"
-            title="Clear search"
-          >
-            ✕
-          </button>
-        )}
+        <div className="app-search__icon-wrap">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {searchQuery.length > 0 ? (
+              <motion.button
+                key="clear"
+                className="app-search__icon-btn"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+                initial={{ y: -8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 8, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <X size={12} strokeWidth={2.5} />
+              </motion.button>
+            ) : (
+              <motion.span
+                key="search"
+                className="app-search__icon-indicator"
+                initial={{ y: -8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 8, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Search size={12} strokeWidth={1.75} />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className="app-folder-filter">

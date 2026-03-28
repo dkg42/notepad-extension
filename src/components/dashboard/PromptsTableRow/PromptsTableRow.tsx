@@ -1,5 +1,7 @@
 import React from 'react';
+import { Folder, Trash2 } from 'lucide-react';
 import type { Snippet } from '@/types';
+import type { SortColumn } from '@/types/dashboard';
 import FavoriteButton from '@/components/dashboard/FavoriteButton/FavoriteButton';
 import './PromptsTableRow.css';
 
@@ -8,6 +10,7 @@ interface PromptsTableRowProps {
   folderName?: string;
   isSelected: boolean;
   isFocused: boolean;
+  hiddenColumns: Set<SortColumn>;
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
@@ -34,6 +37,7 @@ export default function PromptsTableRow({
   folderName,
   isSelected,
   isFocused,
+  hiddenColumns,
   onToggleSelect,
   onDelete,
   onToggleFavorite,
@@ -52,6 +56,7 @@ export default function PromptsTableRow({
         .filter(Boolean)
         .join(' ')}
     >
+      {/* Checkbox */}
       <td className="prompts-table-row__cell prompts-table-row__cell--checkbox">
         <input
           type="checkbox"
@@ -59,39 +64,64 @@ export default function PromptsTableRow({
           onChange={() => onToggleSelect(snippet.id)}
         />
       </td>
-      <td className="prompts-table-row__cell">
-        <span className="prompts-table-row__text" title={snippet.text}>
-          {preview}
-        </span>
-      </td>
-      <td className="prompts-table-row__cell">
-        <span className="prompts-table-row__source" title={snippet.source}>
-          {hostname}
-        </span>
-      </td>
-      <td className="prompts-table-row__cell">
-        {folderName ? (
-          <span className="prompts-table-row__folder">◫ {folderName}</span>
-        ) : (
-          <span className="prompts-table-row__folder prompts-table-row__folder--empty">—</span>
-        )}
-      </td>
-      <td className="prompts-table-row__cell">
-        <div className="prompts-table-row__tags">
-          {snippet.tags?.length ? (
-            snippet.tags.map((tag) => (
-              <span key={tag} className="prompts-table-row__tag">
-                {tag}
-              </span>
-            ))
+
+      {/* Prompt text */}
+      {!hiddenColumns.has('text') && (
+        <td className="prompts-table-row__cell">
+          <span className="prompts-table-row__text" title={snippet.text}>
+            {preview}
+          </span>
+        </td>
+      )}
+
+      {/* Source badge */}
+      {!hiddenColumns.has('source') && (
+        <td className="prompts-table-row__cell">
+          <span className="prompts-table-row__source" title={snippet.source}>
+            {hostname}
+          </span>
+        </td>
+      )}
+
+      {/* Folder */}
+      {!hiddenColumns.has('folder') && (
+        <td className="prompts-table-row__cell">
+          {folderName ? (
+            <span className="prompts-table-row__folder">
+              <Folder size={12} strokeWidth={1.75} />
+              {folderName}
+            </span>
           ) : (
-            <span className="prompts-table-row__empty-value">—</span>
+            <span className="prompts-table-row__folder prompts-table-row__folder--empty">—</span>
           )}
-        </div>
-      </td>
-      <td className="prompts-table-row__cell">
-        <span className="prompts-table-row__date">{formatDate(snippet.savedAt)}</span>
-      </td>
+        </td>
+      )}
+
+      {/* Tags */}
+      {!hiddenColumns.has('tags') && (
+        <td className="prompts-table-row__cell">
+          <div className="prompts-table-row__tags">
+            {snippet.tags?.length ? (
+              snippet.tags.map((tag) => (
+                <span key={tag} className="prompts-table-row__tag">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              <span className="prompts-table-row__empty-value">—</span>
+            )}
+          </div>
+        </td>
+      )}
+
+      {/* Date */}
+      {!hiddenColumns.has('savedAt') && (
+        <td className="prompts-table-row__cell">
+          <span className="prompts-table-row__date">{formatDate(snippet.savedAt)}</span>
+        </td>
+      )}
+
+      {/* Actions */}
       <td className="prompts-table-row__cell">
         <div className="prompts-table-row__actions">
           <FavoriteButton
@@ -106,7 +136,7 @@ export default function PromptsTableRow({
             onClick={() => onDelete(snippet.id)}
             title="Delete prompt"
           >
-            Delete
+            <Trash2 size={13} strokeWidth={1.75} />
           </button>
         </div>
       </td>

@@ -125,7 +125,8 @@
 }
 
 .notebooks-page__empty-icon {
-  font-size: 48px;
+  display: flex;
+  justify-content: center;
   color: var(--color-text-secondary);
   opacity: 0.4;
   margin-bottom: 16px;
@@ -376,7 +377,6 @@
 }
 
 .notebooks-table__notebook-icon {
-  font-size: 18px;
   color: var(--color-primary);
   flex-shrink: 0;
   line-height: 1;
@@ -635,7 +635,6 @@
 .notebooks-table__sources-loading {
   display: inline-flex;
   align-items: center;
-  font-size: 14px;
   color: var(--color-text-secondary);
   animation: notebooks-spin 1.2s linear infinite;
 }
@@ -773,10 +772,11 @@
 }
 
 .notebooks-table__empty-icon {
-  font-size: 32px;
-  display: block;
+  display: flex;
+  justify-content: center;
   margin-bottom: 10px;
   opacity: 0.4;
+  color: var(--color-text-secondary);
 }
 
 /* ── Overlay to capture outside clicks on collection menu ──────────────────── */

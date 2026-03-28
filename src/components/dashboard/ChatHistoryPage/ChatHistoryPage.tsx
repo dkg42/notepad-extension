@@ -1,6 +1,8 @@
 import React from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { ChatPlatform, ChatSyncMeta } from '@/types';
 import { useChatHistoryPage } from './useChatHistoryPage';
+import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import './ChatHistoryPage.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -125,12 +127,11 @@ export default function ChatHistoryPage({ onOpenConversation }: ChatHistoryPageP
           ))}
         </div>
 
-        <input
-          type="search"
+        <SearchBar
           className="chat-history-page__search"
-          placeholder="Search conversations..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={setSearchQuery}
+          placeholder="Search conversations…"
         />
       </div>
 
@@ -143,6 +144,8 @@ export default function ChatHistoryPage({ onOpenConversation }: ChatHistoryPageP
             : 'No conversations match your search.'}
         </div>
       ) : (
+        <div className="chat-history-page__table-wrapper">
+          <div className="chat-history-page__table-scroll">
         <table className="chat-history-page__table">
           <thead>
             <tr>
@@ -150,24 +153,24 @@ export default function ChatHistoryPage({ onOpenConversation }: ChatHistoryPageP
                 className="chat-history-page__th chat-history-page__th--sortable"
                 onClick={() => handleSort('title')}
               >
-                Title
-                {sortField === 'title' && (
-                  <span className="chat-history-page__sort-icon">
-                    {sortDir === 'asc' ? ' ▲' : ' ▼'}
-                  </span>
-                )}
+                <span className="chat-history-page__th-content">
+                  Title
+                  {sortField === 'title'
+                    ? (sortDir === 'asc' ? <ChevronUp size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" /> : <ChevronDown size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />)
+                    : null}
+                </span>
               </th>
               <th className="chat-history-page__th">Platform</th>
               <th
                 className="chat-history-page__th chat-history-page__th--sortable"
                 onClick={() => handleSort('updatedAt')}
               >
-                Updated
-                {sortField === 'updatedAt' && (
-                  <span className="chat-history-page__sort-icon">
-                    {sortDir === 'asc' ? ' ▲' : ' ▼'}
-                  </span>
-                )}
+                <span className="chat-history-page__th-content">
+                  Updated
+                  {sortField === 'updatedAt'
+                    ? (sortDir === 'asc' ? <ChevronUp size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" /> : <ChevronDown size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />)
+                    : null}
+                </span>
               </th>
               <th className="chat-history-page__th">Messages</th>
             </tr>
@@ -195,6 +198,8 @@ export default function ChatHistoryPage({ onOpenConversation }: ChatHistoryPageP
             ))}
           </tbody>
         </table>
+          </div>
+        </div>
       )}
     </div>
   );

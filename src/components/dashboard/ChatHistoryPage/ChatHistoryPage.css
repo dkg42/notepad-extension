@@ -183,18 +183,6 @@
 .chat-history-page__search {
   flex: 1;
   max-width: 320px;
-  padding: 7px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.chat-history-page__search:focus {
-  border-color: var(--color-primary);
 }
 
 /* ── States ───────────────────────────────────────────────────────────────────── */
@@ -207,25 +195,40 @@
   font-size: 14px;
 }
 
+/* ── Table wrapper ────────────────────────────────────────────────────────────── */
+
+.chat-history-page__table-wrapper {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-history-page__table-scroll {
+  overflow-x: auto;
+}
+
 /* ── Table ────────────────────────────────────────────────────────────────────── */
 
 .chat-history-page__table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 .chat-history-page__th {
-  padding: 10px 14px;
+  padding: 9px 14px;
   text-align: left;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 2px solid var(--color-border);
-  background: var(--color-surface-alt, var(--color-surface));
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
   white-space: nowrap;
+  user-select: none;
 }
 
 .chat-history-page__th--sortable {
@@ -237,23 +240,40 @@
   color: var(--color-primary);
 }
 
+.chat-history-page__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .chat-history-page__sort-icon {
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.25;
+}
+
+.chat-history-page__sort-icon--active {
+  opacity: 0.85;
   color: var(--color-primary);
 }
 
 .chat-history-page__row {
   cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
   transition: background 0.1s;
 }
 
+.chat-history-page__row:last-child {
+  border-bottom: none;
+}
+
 .chat-history-page__row:hover {
-  background: var(--color-primary-light);
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 .chat-history-page__td {
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 10px 14px;
   color: var(--color-text-primary);
   vertical-align: middle;
 }

@@ -1,0 +1,126 @@
+/* ── PromptsPage ─────────────────────────────────────────────────────────────── */
+
+.prompts-page {
+  padding: 32px 36px;
+  max-width: 1200px;
+}
+
+.prompts-page__header {
+  margin-bottom: 16px;
+}
+
+.prompts-page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 4px;
+}
+
+.prompts-page__subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────────── */
+
+.prompts-page__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.prompts-page__toolbar-search {
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.prompts-page__filter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  outline: none;
+  min-width: 130px;
+  transition: border-color 0.12s;
+}
+
+.prompts-page__filter-select:focus {
+  border-color: var(--color-primary);
+}
+
+.prompts-page__count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Accordion layout ────────────────────────────────────────────────────────── */
+
+.prompts-page__accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Accordion trigger content ───────────────────────────────────────────────── */
+
+.prompts-page__trigger-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.prompts-page__folder-icon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.prompts-page__folder-icon--muted {
+  color: var(--color-text-secondary);
+}
+
+.prompts-page__folder-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompts-page__folder-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  background: var(--color-primary-light);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Inner table — strip outer chrome since accordion provides it ─────────────── */
+
+.prompts-page__inner-table {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Clock } from 'lucide-react';
 import { useExportHistoryPage } from './useExportHistoryPage';
 import './ExportHistoryPage.css';
 
@@ -35,7 +36,9 @@ export default function ExportHistoryPage() {
         <div className="export-history-page__loading">Loading…</div>
       ) : history.length === 0 ? (
         <div className="export-history-page__empty">
-          <span className="export-history-page__empty-icon">◎</span>
+          <span className="export-history-page__empty-icon">
+            <Clock size={36} strokeWidth={1.5} />
+          </span>
           <p>No exports recorded yet.</p>
         </div>
       ) : (

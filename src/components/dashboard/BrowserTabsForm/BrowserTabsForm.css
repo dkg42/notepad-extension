@@ -23,18 +23,6 @@
 
 .tabs-form__search {
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--color-text-primary);
-  background: var(--color-bg);
-  outline: none;
-  transition: border-color 0.12s;
-}
-
-.tabs-form__search:focus {
-  border-color: var(--color-primary);
 }
 
 .tabs-form__refresh-btn {

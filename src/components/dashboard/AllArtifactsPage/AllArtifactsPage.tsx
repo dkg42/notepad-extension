@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Package } from 'lucide-react';
 import { useAllArtifactsPage } from './useAllArtifactsPage';
+import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import './AllArtifactsPage.css';
 
 const ARTIFACT_TYPE_LABELS: Record<number, string> = {
@@ -22,12 +24,10 @@ function formatDate(timestamp?: number): string {
 }
 
 function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  if (!active) return <span className="all-artifacts__sort-icon">&#x21C5;</span>;
-  return (
-    <span className="all-artifacts__sort-icon all-artifacts__sort-icon--active">
-      {dir === 'asc' ? '&#x25B2;' : '&#x25BC;'}
-    </span>
-  );
+  if (!active) return <ChevronsUpDown size={11} className="all-artifacts__sort-icon" />;
+  return dir === 'asc'
+    ? <ChevronUp size={11} className="all-artifacts__sort-icon all-artifacts__sort-icon--active" />
+    : <ChevronDown size={11} className="all-artifacts__sort-icon all-artifacts__sort-icon--active" />;
 }
 
 export default function AllArtifactsPage() {
@@ -87,12 +87,11 @@ export default function AllArtifactsPage() {
       {/* Toolbar */}
       {!isLoading && totalCount > 0 && (
         <div className="all-artifacts-toolbar">
-          <input
+          <SearchBar
             className="all-artifacts-toolbar__search"
-            type="text"
-            placeholder="Search artifacts..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
+            placeholder="Search artifacts…"
           />
 
           <select
@@ -157,7 +156,9 @@ export default function AllArtifactsPage() {
       {/* Empty */}
       {!isLoading && totalCount === 0 && (
         <div className="all-artifacts-page__empty">
-          <span className="all-artifacts-page__empty-icon">&#x266B;</span>
+          <span className="all-artifacts-page__empty-icon">
+            <Package size={40} strokeWidth={1.5} />
+          </span>
           <p className="all-artifacts-page__empty-text">No artifacts found</p>
           <p className="all-artifacts-page__empty-hint">
             Sync your notebooks first, then artifacts will appear here.
@@ -183,21 +184,27 @@ export default function AllArtifactsPage() {
                     className="all-artifacts-table__th all-artifacts-table__th--sortable"
                     onClick={() => handleSort('title')}
                   >
-                    Title <SortIndicator active={sortField === 'title'} dir={sortDir} />
+                    <span className="all-artifacts-table__th-content">
+                      Title <SortIndicator active={sortField === 'title'} dir={sortDir} />
+                    </span>
                   </th>
                   <th className="all-artifacts-table__th">Type</th>
                   <th
                     className="all-artifacts-table__th all-artifacts-table__th--sortable"
                     onClick={() => handleSort('notebookTitle')}
                   >
-                    Notebook <SortIndicator active={sortField === 'notebookTitle'} dir={sortDir} />
+                    <span className="all-artifacts-table__th-content">
+                      Notebook <SortIndicator active={sortField === 'notebookTitle'} dir={sortDir} />
+                    </span>
                   </th>
                   <th className="all-artifacts-table__th">Status</th>
                   <th
                     className="all-artifacts-table__th all-artifacts-table__th--sortable"
                     onClick={() => handleSort('createdAt')}
                   >
-                    Created <SortIndicator active={sortField === 'createdAt'} dir={sortDir} />
+                    <span className="all-artifacts-table__th-content">
+                      Created <SortIndicator active={sortField === 'createdAt'} dir={sortDir} />
+                    </span>
                   </th>
                 </tr>
               </thead>

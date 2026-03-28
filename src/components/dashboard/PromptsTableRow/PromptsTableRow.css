@@ -23,6 +23,16 @@
   outline-color: var(--color-primary-hover);
 }
 
+/* ── Cells ───────────────────────────────────────────────────────────────── */
+
+.prompts-table-row__cell {
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
 .prompts-table-row__cell--checkbox {
   width: 40px;
   text-align: center;
@@ -35,40 +45,36 @@
   height: 14px;
 }
 
-.prompts-table-row__folder--empty {
-  opacity: 0.4;
-}
-
-.prompts-table-row__empty-value {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  opacity: 0.5;
-}
-
-.prompts-table-row__cell {
-  padding: 11px 14px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
+/* ── Prompt text ─────────────────────────────────────────────────────────── */
 
 .prompts-table-row__text {
+  display: block;
   max-width: 320px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--color-text-primary);
+  font-weight: 500;
 }
 
+/* ── Source badge ────────────────────────────────────────────────────────── */
+
 .prompts-table-row__source {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 500;
   color: var(--color-text-secondary);
-  font-size: 12.5px;
   white-space: nowrap;
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Folder ──────────────────────────────────────────────────────────────── */
 
 .prompts-table-row__folder {
   display: inline-flex;
@@ -78,6 +84,12 @@
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
+
+.prompts-table-row__folder--empty {
+  opacity: 0.4;
+}
+
+/* ── Tags ────────────────────────────────────────────────────────────────── */
 
 .prompts-table-row__tags {
   display: flex;
@@ -97,14 +109,25 @@
   white-space: nowrap;
 }
 
+.prompts-table-row__empty-value {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+/* ── Date ────────────────────────────────────────────────────────────────── */
+
 .prompts-table-row__date {
   color: var(--color-text-secondary);
   font-size: 12.5px;
   white-space: nowrap;
 }
 
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
 .prompts-table-row__actions {
   display: flex;
+  align-items: center;
   gap: 4px;
   opacity: 0;
   transition: opacity 0.15s;
@@ -115,14 +138,17 @@
 }
 
 .prompts-table-row__action-btn {
-  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  font-size: 12px;
   cursor: pointer;
   color: var(--color-text-secondary);
-  transition: border-color 0.12s, color 0.12s;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 
 .prompts-table-row__action-btn--danger:hover {

@@ -45,10 +45,11 @@
 }
 
 .export-history-page__empty-icon {
-  font-size: 36px;
-  display: block;
+  display: flex;
+  justify-content: center;
   margin-bottom: 10px;
   opacity: 0.35;
+  color: var(--color-text-secondary);
 }
 
 .export-history-page__table-wrap {

@@ -1,73 +1,87 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Home,
+  FileText,
+  Star,
+  Tag,
+  BookOpen,
+  Database,
+  Package,
+  MessageSquare,
+  MessagesSquare,
+  Headphones,
+  Play,
+  Music,
+  BarChart2,
+  Clock,
+  Settings,
+  ChevronRight,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import type { DashboardView } from '@/types/dashboard';
 import './Sidebar.css';
 
+type IconComponent = LucideIcon;
+
 interface NavItem {
   view: DashboardView;
-  icon: string;
+  icon: IconComponent;
   label: string;
 }
 
-interface NavItemWithSubs extends NavItem {
-  subItems?: NavItem[];
+interface NavGroup {
+  view: DashboardView;
+  icon: IconComponent;
+  label: string;
+  subItems: NavItem[];
 }
 
-const NOTEBOOKS_NAV: NavItemWithSubs = {
+const PRIMARY_NAV: NavItem[] = [
+  { view: 'home', icon: Home, label: 'Home' },
+  { view: 'prompts', icon: FileText, label: 'Prompts' },
+  { view: 'favorites', icon: Star, label: 'Favorites' },
+  { view: 'tags', icon: Tag, label: 'Tags' },
+];
+
+const NOTEBOOKS_GROUP: NavGroup = {
   view: 'notebooks',
-  icon: '◱',
+  icon: BookOpen,
   label: 'Notebooks',
   subItems: [
-    { view: 'all-sources', icon: '◇', label: 'All Sources' },
-    { view: 'all-artifacts', icon: '♫', label: 'All Artifacts' },
+    { view: 'all-sources', icon: Database, label: 'All Sources' },
+    { view: 'all-artifacts', icon: Package, label: 'All Artifacts' },
   ],
 };
 
-const CHAT_HISTORY_NAV: NavItemWithSubs = {
+const CHAT_HISTORY_GROUP: NavGroup = {
   view: 'chat-history',
-  icon: '▤',
+  icon: MessageSquare,
   label: 'Chat History',
   subItems: [
-    { view: 'chat-history', icon: '◆', label: 'All Chats' },
+    { view: 'chat-history', icon: MessagesSquare, label: 'All Chats' },
   ],
 };
 
-const PODCASTS_NAV: NavItemWithSubs = {
+const PODCASTS_GROUP: NavGroup = {
   view: 'podcasts',
-  icon: '⏺',
+  icon: Headphones,
   label: 'Podcasts',
   subItems: [
-    { view: 'podcasts', icon: '◈', label: 'Episodes' },
-    { view: 'all-audio', icon: '♫', label: 'All Audio' },
+    { view: 'podcasts', icon: Play, label: 'Episodes' },
+    { view: 'all-audio', icon: Music, label: 'All Audio' },
   ],
 };
 
-const PRIMARY_NAV: NavItem[] = [
-  { view: 'home', icon: '⌂', label: 'Home' },
-  { view: 'prompts', icon: '≡', label: 'Prompts' },
-  { view: 'favorites', icon: '★', label: 'Favorites' },
-  { view: 'folders', icon: '◫', label: 'Folders' },
-  { view: 'tags', icon: '◈', label: 'Tags' },
-];
-
 const SECONDARY_NAV: NavItem[] = [
-  { view: 'analytics', icon: '◉', label: 'Analytics' },
-  { view: 'export-history', icon: '◎', label: 'Export History' },
+  { view: 'analytics', icon: BarChart2, label: 'Analytics' },
+  { view: 'export-history', icon: Clock, label: 'Export History' },
 ];
 
-/** Views that belong to the Notebooks group (parent + detail + sub-items). */
-const NOTEBOOK_VIEWS: DashboardView[] = [
-  'notebooks', 'notebook-detail', 'all-sources', 'all-artifacts',
-];
-
-/** Views that belong to the Chat History group. */
-const CHAT_HISTORY_VIEWS: DashboardView[] = [
-  'chat-history', 'chat-history-detail',
-];
-
-/** Views that belong to the Podcasts group. */
-const PODCASTS_VIEWS: DashboardView[] = [
-  'podcasts', 'podcast-detail', 'all-audio',
-];
+const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
+const CHAT_HISTORY_VIEWS: DashboardView[] = ['chat-history', 'chat-history-detail'];
+const PODCASTS_VIEWS: DashboardView[] = ['podcasts', 'podcast-detail', 'all-audio'];
 
 interface SidebarProps {
   currentView: DashboardView;
@@ -77,6 +91,87 @@ interface SidebarProps {
   notebooksCount: number;
   chatHistoryCount: number;
   podcastsCount: number;
+}
+
+interface CollapsibleGroupProps {
+  group: NavGroup;
+  isExpanded: boolean;
+  isGroupActive: boolean;
+  currentView: DashboardView;
+  badge: number;
+  onToggle: () => void;
+  onNavigate: (view: DashboardView) => void;
+}
+
+function CollapsibleGroup({
+  group,
+  isExpanded,
+  isGroupActive,
+  currentView,
+  badge,
+  onToggle,
+  onNavigate,
+}: CollapsibleGroupProps) {
+  const Icon = group.icon;
+
+  return (
+    <div className="sidebar__group">
+      <button
+        className={`sidebar__nav-item${isGroupActive ? ' sidebar__nav-item--active' : ''}`}
+        onClick={onToggle}
+        title={group.label}
+      >
+        <Icon size={16} strokeWidth={1.75} />
+        <span className="sidebar__nav-label">{group.label}</span>
+        {badge > 0 && <span className="sidebar__nav-badge">{badge}</span>}
+        <motion.span
+          className="sidebar__nav-caret"
+          animate={{ rotate: isExpanded ? 90 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronRight size={12} strokeWidth={2} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="sidebar__sub-items">
+              {group.subItems.map((sub) => {
+                const SubIcon = sub.icon;
+                const isSubActive =
+                  currentView === sub.view ||
+                  (group.view === 'chat-history' &&
+                    sub.view === 'chat-history' &&
+                    currentView === 'chat-history-detail') ||
+                  (group.view === 'podcasts' &&
+                    sub.view === 'podcasts' &&
+                    currentView === 'podcast-detail');
+
+                return (
+                  <button
+                    key={sub.view}
+                    className={`sidebar__nav-item sidebar__nav-item--sub${isSubActive ? ' sidebar__nav-item--active' : ''}`}
+                    onClick={() => onNavigate(sub.view)}
+                    title={sub.label}
+                  >
+                    <SubIcon size={14} strokeWidth={1.75} />
+                    <span className="sidebar__nav-label">{sub.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export default function Sidebar({
@@ -99,6 +194,7 @@ export default function Sidebar({
   );
 
   const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
     const isActive = currentView === item.view;
     const badge =
       item.view === 'prompts' && promptCount > 0
@@ -114,164 +210,104 @@ export default function Sidebar({
         onClick={() => onNavigate(item.view)}
         title={item.label}
       >
-        <span className="sidebar__nav-icon">{item.icon}</span>
+        <Icon size={16} strokeWidth={1.75} />
         <span className="sidebar__nav-label">{item.label}</span>
-        {badge !== null && (
-          <span className="sidebar__nav-badge">{badge}</span>
-        )}
+        {badge !== null && <span className="sidebar__nav-badge">{badge}</span>}
       </button>
     );
   };
 
-  const isNotebookGroupActive = NOTEBOOK_VIEWS.includes(currentView);
-  const isChatHistoryGroupActive = CHAT_HISTORY_VIEWS.includes(currentView);
-  const isPodcastsGroupActive = PODCASTS_VIEWS.includes(currentView);
+  const handleNotebooksToggle = () => {
+    if (!notebooksExpanded) {
+      setNotebooksExpanded(true);
+      onNavigate('notebooks');
+    } else if (currentView !== 'notebooks') {
+      onNavigate('notebooks');
+    } else {
+      setNotebooksExpanded(false);
+    }
+  };
+
+  const handleChatHistoryToggle = () => {
+    if (!chatHistoryExpanded) {
+      setChatHistoryExpanded(true);
+      onNavigate('chat-history');
+    } else if (currentView !== 'chat-history') {
+      onNavigate('chat-history');
+    } else {
+      setChatHistoryExpanded(false);
+    }
+  };
+
+  const handlePodcastsToggle = () => {
+    if (!podcastsExpanded) {
+      setPodcastsExpanded(true);
+      onNavigate('podcasts');
+    } else if (currentView !== 'podcasts') {
+      onNavigate('podcasts');
+    } else {
+      setPodcastsExpanded(false);
+    }
+  };
 
   return (
     <aside className="sidebar">
+      {/* Brand section */}
       <div className="sidebar__brand">
-        <span className="sidebar__brand-icon">✦</span>
-        <span className="sidebar__brand-name">LLM Enhancer</span>
+        <div className="sidebar__brand-avatar">
+          <Sparkles size={18} strokeWidth={2} />
+        </div>
+        <div className="sidebar__brand-info">
+          <span className="sidebar__brand-name">LLM Enhancer</span>
+          <span className="sidebar__brand-version">v1.0.0</span>
+        </div>
       </div>
 
+      {/* Primary navigation */}
       <nav className="sidebar__nav">
         <div className="sidebar__section-label">Menu</div>
         {PRIMARY_NAV.map(renderNavItem)}
 
-        {/* Notebooks group with sub-items */}
-        <button
-          className={`sidebar__nav-item${isNotebookGroupActive ? ' sidebar__nav-item--active' : ''}`}
-          onClick={() => {
-            if (!notebooksExpanded) {
-              setNotebooksExpanded(true);
-              onNavigate('notebooks');
-            } else if (currentView !== 'notebooks') {
-              onNavigate('notebooks');
-            } else {
-              setNotebooksExpanded(false);
-            }
-          }}
-          title="Notebooks"
-        >
-          <span className="sidebar__nav-icon">{NOTEBOOKS_NAV.icon}</span>
-          <span className="sidebar__nav-label">{NOTEBOOKS_NAV.label}</span>
-          {notebooksCount > 0 && (
-            <span className="sidebar__nav-badge">{notebooksCount}</span>
-          )}
-          <span className={`sidebar__nav-caret${notebooksExpanded ? ' sidebar__nav-caret--open' : ''}`}>
-            &#x25B8;
-          </span>
-        </button>
-
-        {notebooksExpanded && NOTEBOOKS_NAV.subItems && (
-          <div className="sidebar__sub-items">
-            {NOTEBOOKS_NAV.subItems.map((sub) => (
-              <button
-                key={sub.view}
-                className={`sidebar__nav-item sidebar__nav-item--sub${currentView === sub.view ? ' sidebar__nav-item--active' : ''}`}
-                onClick={() => onNavigate(sub.view)}
-                title={sub.label}
-              >
-                <span className="sidebar__nav-icon">{sub.icon}</span>
-                <span className="sidebar__nav-label">{sub.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Chat History group with sub-items */}
-        <button
-          className={`sidebar__nav-item${isChatHistoryGroupActive ? ' sidebar__nav-item--active' : ''}`}
-          onClick={() => {
-            if (!chatHistoryExpanded) {
-              setChatHistoryExpanded(true);
-              onNavigate('chat-history');
-            } else if (currentView !== 'chat-history') {
-              onNavigate('chat-history');
-            } else {
-              setChatHistoryExpanded(false);
-            }
-          }}
-          title="Chat History"
-        >
-          <span className="sidebar__nav-icon">{CHAT_HISTORY_NAV.icon}</span>
-          <span className="sidebar__nav-label">{CHAT_HISTORY_NAV.label}</span>
-          {chatHistoryCount > 0 && (
-            <span className="sidebar__nav-badge">{chatHistoryCount}</span>
-          )}
-          <span className={`sidebar__nav-caret${chatHistoryExpanded ? ' sidebar__nav-caret--open' : ''}`}>
-            &#x25B8;
-          </span>
-        </button>
-
-        {chatHistoryExpanded && CHAT_HISTORY_NAV.subItems && (
-          <div className="sidebar__sub-items">
-            {CHAT_HISTORY_NAV.subItems.map((sub) => (
-              <button
-                key={sub.view}
-                className={`sidebar__nav-item sidebar__nav-item--sub${currentView === sub.view || (sub.view === 'chat-history' && currentView === 'chat-history-detail') ? ' sidebar__nav-item--active' : ''}`}
-                onClick={() => onNavigate(sub.view)}
-                title={sub.label}
-              >
-                <span className="sidebar__nav-icon">{sub.icon}</span>
-                <span className="sidebar__nav-label">{sub.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Podcasts group with sub-items */}
-        <button
-          className={`sidebar__nav-item${isPodcastsGroupActive ? ' sidebar__nav-item--active' : ''}`}
-          onClick={() => {
-            if (!podcastsExpanded) {
-              setPodcastsExpanded(true);
-              onNavigate('podcasts');
-            } else if (currentView !== 'podcasts') {
-              onNavigate('podcasts');
-            } else {
-              setPodcastsExpanded(false);
-            }
-          }}
-          title="Podcasts"
-        >
-          <span className="sidebar__nav-icon">{PODCASTS_NAV.icon}</span>
-          <span className="sidebar__nav-label">{PODCASTS_NAV.label}</span>
-          {podcastsCount > 0 && (
-            <span className="sidebar__nav-badge">{podcastsCount}</span>
-          )}
-          <span className={`sidebar__nav-caret${podcastsExpanded ? ' sidebar__nav-caret--open' : ''}`}>
-            &#x25B8;
-          </span>
-        </button>
-
-        {podcastsExpanded && PODCASTS_NAV.subItems && (
-          <div className="sidebar__sub-items">
-            {PODCASTS_NAV.subItems.map((sub) => (
-              <button
-                key={sub.view}
-                className={`sidebar__nav-item sidebar__nav-item--sub${currentView === sub.view || (sub.view === 'podcasts' && currentView === 'podcast-detail') ? ' sidebar__nav-item--active' : ''}`}
-                onClick={() => onNavigate(sub.view)}
-                title={sub.label}
-              >
-                <span className="sidebar__nav-icon">{sub.icon}</span>
-                <span className="sidebar__nav-label">{sub.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <CollapsibleGroup
+          group={NOTEBOOKS_GROUP}
+          isExpanded={notebooksExpanded}
+          isGroupActive={NOTEBOOK_VIEWS.includes(currentView)}
+          currentView={currentView}
+          badge={notebooksCount}
+          onToggle={handleNotebooksToggle}
+          onNavigate={onNavigate}
+        />
+        <CollapsibleGroup
+          group={CHAT_HISTORY_GROUP}
+          isExpanded={chatHistoryExpanded}
+          isGroupActive={CHAT_HISTORY_VIEWS.includes(currentView)}
+          currentView={currentView}
+          badge={chatHistoryCount}
+          onToggle={handleChatHistoryToggle}
+          onNavigate={onNavigate}
+        />
+        <CollapsibleGroup
+          group={PODCASTS_GROUP}
+          isExpanded={podcastsExpanded}
+          isGroupActive={PODCASTS_VIEWS.includes(currentView)}
+          currentView={currentView}
+          badge={podcastsCount}
+          onToggle={handlePodcastsToggle}
+          onNavigate={onNavigate}
+        />
 
         <div className="sidebar__section-label">More</div>
         {SECONDARY_NAV.map(renderNavItem)}
       </nav>
 
+      {/* Footer */}
       <div className="sidebar__footer">
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
           onClick={() => onNavigate('settings')}
           title="Settings"
         >
-          <span className="sidebar__nav-icon">⚙</span>
+          <Settings size={16} strokeWidth={1.75} />
           <span className="sidebar__nav-label">Settings</span>
         </button>
       </div>

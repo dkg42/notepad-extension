@@ -6,23 +6,25 @@
   overflow: hidden;
 }
 
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
 .prompts-table__toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
 }
 
 .prompts-table__toolbar-search {
   flex: 1;
-  min-width: 200px;
-  max-width: 340px;
+  min-width: 180px;
+  max-width: 320px;
 }
 
 .prompts-table__filter-select {
-  padding: 7px 10px;
+  padding: 6px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 13px;
@@ -31,6 +33,7 @@
   cursor: pointer;
   outline: none;
   min-width: 130px;
+  transition: border-color 0.12s;
 }
 
 .prompts-table__filter-select:focus {
@@ -44,6 +47,92 @@
   white-space: nowrap;
 }
 
+/* ── Column toggle ───────────────────────────────────────────────────────── */
+
+.prompts-table__col-toggle {
+  position: relative;
+}
+
+.prompts-table__col-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.prompts-table__col-btn:hover,
+.prompts-table__col-btn--open {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.prompts-table__col-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 100;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prompts-table__col-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.prompts-table__col-item:hover {
+  background: var(--color-bg);
+}
+
+.prompts-table__col-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.prompts-table__col-check--on {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+/* ── Table scroll wrapper ────────────────────────────────────────────────── */
+
 .prompts-table__scroll {
   overflow-x: auto;
 }
@@ -54,6 +143,8 @@
   table-layout: fixed;
 }
 
+/* ── Table header ────────────────────────────────────────────────────────── */
+
 .prompts-table__head {
   background: var(--color-bg);
 }
@@ -61,7 +152,7 @@
 .prompts-table__th--checkbox {
   width: 40px;
   text-align: center;
-  padding: 9px 8px;
+  padding: 10px 8px;
 }
 
 .prompts-table__th--checkbox input[type='checkbox'] {
@@ -71,7 +162,7 @@
 }
 
 .prompts-table__th {
-  padding: 9px 14px;
+  padding: 10px 14px;
   text-align: left;
   font-size: 11.5px;
   font-weight: 600;
@@ -81,6 +172,12 @@
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
   user-select: none;
+}
+
+.prompts-table__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .prompts-table__th--sortable {
@@ -97,9 +194,15 @@
 }
 
 .prompts-table__sort-icon {
-  margin-left: 4px;
-  opacity: 0.6;
-  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.prompts-table__sort-icon--inactive {
+  opacity: 0.25;
+}
+
+.prompts-table__sort-icon--active {
+  opacity: 0.85;
 }
 
 .prompts-table__resize-handle {
@@ -119,16 +222,19 @@
   opacity: 0.35;
 }
 
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
 .prompts-table__empty {
   text-align: center;
-  padding: 48px 20px;
+  padding: 56px 20px;
   color: var(--color-text-secondary);
   font-size: 14px;
 }
 
 .prompts-table__empty-icon {
-  font-size: 32px;
-  display: block;
-  margin-bottom: 10px;
-  opacity: 0.4;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  opacity: 0.3;
+  color: var(--color-text-secondary);
 }

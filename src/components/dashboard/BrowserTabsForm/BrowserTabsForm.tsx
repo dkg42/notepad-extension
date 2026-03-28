@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBrowserTabsForm } from './useBrowserTabsForm';
+import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import './BrowserTabsForm.css';
 
 interface BrowserTabsFormProps {
@@ -37,12 +38,11 @@ export default function BrowserTabsForm({ onImport, disabled }: BrowserTabsFormP
       {error && <div className="tabs-form__error">{error}</div>}
 
       <div className="tabs-form__controls">
-        <input
-          type="text"
+        <SearchBar
           className="tabs-form__search"
-          placeholder="Search tabs…"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={setSearchQuery}
+          placeholder="Search tabs…"
         />
         <button className="tabs-form__refresh-btn" onClick={() => void refresh()} title="Refresh tab list">
           Refresh

@@ -87,17 +87,6 @@
 .all-audio-toolbar__search {
   flex: 1;
   min-width: 160px;
-  padding: 7px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 13px;
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  outline: none;
-}
-
-.all-audio-toolbar__search:focus {
-  border-color: var(--color-primary);
 }
 
 .all-audio-toolbar__filter {
@@ -189,14 +178,21 @@
   color: var(--color-text-primary);
 }
 
+.all-audio-table__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .all-audio-sort-icon {
-  font-size: 11px;
-  margin-left: 4px;
-  opacity: 0.5;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.25;
 }
 
 .all-audio-sort-icon--active {
-  opacity: 1;
+  opacity: 0.85;
   color: var(--color-primary);
 }
 

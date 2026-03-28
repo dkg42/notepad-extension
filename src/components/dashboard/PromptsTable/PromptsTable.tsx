@@ -1,4 +1,6 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronUp, ChevronDown, Columns3, Check, FileText } from 'lucide-react';
 import type { Folder, Snippet } from '@/types';
 import type { SortColumn } from '@/types/dashboard';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
@@ -36,6 +38,12 @@ interface PromptsTableProps {
   onBulkDelete: (ids: string[]) => Promise<void>;
   onBulkMoveToFolder: (ids: string[], folderId: string | undefined) => Promise<void>;
   onBulkAddTags: (ids: string[], tags: string[]) => Promise<void>;
+  /** Hide the search/filter toolbar — used when parent controls filtering (e.g. accordion view) */
+  hideToolbar?: boolean;
+  /** Extra class applied to the outermost wrapper div */
+  className?: string;
+  /** Columns hidden on initial render (keys from SortColumn) */
+  initialHiddenColumns?: SortColumn[];
 }
 
 export default function PromptsTable({
@@ -46,6 +54,9 @@ export default function PromptsTable({
   onBulkDelete,
   onBulkMoveToFolder,
   onBulkAddTags,
+  hideToolbar = false,
+  className = '',
+  initialHiddenColumns = [],
 }: PromptsTableProps) {
   const {
     searchQuery,
@@ -78,16 +89,54 @@ export default function PromptsTable({
 
   const { startResize, getWidth } = useColumnResize(RESIZE_STORAGE_KEY);
 
+  // ── Column visibility ───────────────────────────────────────────────────────
+  const [hiddenColumns, setHiddenColumns] = useState<Set<SortColumn>>(new Set(initialHiddenColumns));
+  const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const columnsMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!columnsMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (columnsMenuRef.current && !columnsMenuRef.current.contains(e.target as Node)) {
+        setColumnsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [columnsMenuOpen]);
+
+  const visibleColumns = useMemo(
+    () => COLUMNS.filter((col) => !hiddenColumns.has(col.key)),
+    [hiddenColumns],
+  );
+
+  const toggleColumn = (key: SortColumn) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // ── Sort icons ──────────────────────────────────────────────────────────────
+  const getSortIcon = (col: Column) => {
+    if (!col.sortable) return null;
+    if (col.key !== sortColumn) {
+      return <ChevronUp size={11} className="prompts-table__sort-icon prompts-table__sort-icon--inactive" />;
+    }
+    return sortDirection === 'asc'
+      ? <ChevronUp size={11} className="prompts-table__sort-icon prompts-table__sort-icon--active" />
+      : <ChevronDown size={11} className="prompts-table__sort-icon prompts-table__sort-icon--active" />;
+  };
+
+  // ── Derived data ────────────────────────────────────────────────────────────
   const folderMap = useMemo(
     () => new Map(folders.map((f) => [f.id, f.name])),
     [folders],
   );
 
-  const getSortIcon = (col: SortColumn) => {
-    if (col !== sortColumn) return '';
-    return sortDirection === 'asc' ? ' ↑' : ' ↓';
-  };
-
+  // ── Bulk handlers ───────────────────────────────────────────────────────────
   const handleBulkDelete = useCallback(async () => {
     await onBulkDelete(Array.from(selectedIds));
     clearSelection();
@@ -103,12 +152,12 @@ export default function PromptsTable({
     clearSelection();
   };
 
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   const shortcuts = useMemo(
     () => [
-      { key: 'j', description: 'Next row',              handler: moveFocusDown },
-      { key: 'k', description: 'Previous row',           handler: moveFocusUp },
-      { key: 'x', description: 'Toggle row selection',   handler: toggleFocusedSelect },
+      { key: 'j', description: 'Next row',            handler: moveFocusDown },
+      { key: 'k', description: 'Previous row',         handler: moveFocusUp },
+      { key: 'x', description: 'Toggle row selection', handler: toggleFocusedSelect },
       {
         key: 'Delete',
         description: 'Delete selected rows',
@@ -116,11 +165,7 @@ export default function PromptsTable({
           if (selectedIds.size > 0) void handleBulkDelete();
         },
       },
-      {
-        key: 'Escape',
-        description: 'Clear selection',
-        handler: clearSelection,
-      },
+      { key: 'Escape', description: 'Clear selection', handler: clearSelection },
     ],
     [moveFocusDown, moveFocusUp, toggleFocusedSelect, selectedIds, handleBulkDelete, clearSelection],
   );
@@ -128,7 +173,7 @@ export default function PromptsTable({
   useKeyboardShortcuts(shortcuts);
 
   return (
-    <div className="prompts-table-wrapper">
+    <div className={`prompts-table-wrapper${className ? ` ${className}` : ''}`}>
       {selectedIds.size > 0 && (
         <BulkActionsBar
           selectedCount={selectedIds.size}
@@ -140,7 +185,8 @@ export default function PromptsTable({
         />
       )}
 
-      <div className="prompts-table__toolbar">
+      {/* ── Toolbar ── */}
+      {!hideToolbar && <div className="prompts-table__toolbar">
         <div className="prompts-table__toolbar-search">
           <SearchBar
             value={searchQuery}
@@ -190,16 +236,57 @@ export default function PromptsTable({
             ? `${filteredCount} of ${totalCount} prompts`
             : `${totalCount} prompt${totalCount !== 1 ? 's' : ''}`}
         </span>
-      </div>
 
+        {/* Columns visibility toggle */}
+        <div className="prompts-table__col-toggle" ref={columnsMenuRef}>
+          <button
+            className={`prompts-table__col-btn${columnsMenuOpen ? ' prompts-table__col-btn--open' : ''}`}
+            onClick={() => setColumnsMenuOpen((v) => !v)}
+            title="Toggle columns"
+          >
+            <Columns3 size={13} strokeWidth={1.75} />
+            Columns
+          </button>
+
+          <AnimatePresence>
+            {columnsMenuOpen && (
+              <motion.div
+                className="prompts-table__col-menu"
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {COLUMNS.map((col) => {
+                  const isVisible = !hiddenColumns.has(col.key);
+                  return (
+                    <button
+                      key={col.key}
+                      className="prompts-table__col-item"
+                      onClick={() => toggleColumn(col.key)}
+                    >
+                      <span className={`prompts-table__col-check${isVisible ? ' prompts-table__col-check--on' : ''}`}>
+                        {isVisible && <Check size={11} strokeWidth={2.5} />}
+                      </span>
+                      {col.label}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>}
+
+      {/* ── Table ── */}
       <div className="prompts-table__scroll">
         <table className="prompts-table">
           <colgroup>
             <col style={{ width: 40 }} />
-            {COLUMNS.map((col) => (
+            {visibleColumns.map((col) => (
               <col key={col.key} style={{ width: getWidth(col.key, col.defaultWidth) }} />
             ))}
-            <col style={{ width: 120 }} />
+            <col style={{ width: 80 }} />
           </colgroup>
 
           <thead className="prompts-table__head">
@@ -212,7 +299,7 @@ export default function PromptsTable({
                   title="Select all on this page"
                 />
               </th>
-              {COLUMNS.map((col) => (
+              {visibleColumns.map((col) => (
                 <th
                   key={col.key}
                   className={[
@@ -225,10 +312,10 @@ export default function PromptsTable({
                   style={{ position: 'relative' }}
                   onClick={col.sortable ? () => handleSortChange(col.key) : undefined}
                 >
-                  {col.label}
-                  {col.sortable && (
-                    <span className="prompts-table__sort-icon">{getSortIcon(col.key)}</span>
-                  )}
+                  <span className="prompts-table__th-content">
+                    {col.label}
+                    {getSortIcon(col)}
+                  </span>
                   <div
                     className="prompts-table__resize-handle"
                     onMouseDown={startResize(col.key, getWidth(col.key, col.defaultWidth))}
@@ -239,11 +326,14 @@ export default function PromptsTable({
               <th className="prompts-table__th">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td className="prompts-table__empty" colSpan={COLUMNS.length + 2}>
-                  <span className="prompts-table__empty-icon">≡</span>
+                <td className="prompts-table__empty" colSpan={visibleColumns.length + 2}>
+                  <span className="prompts-table__empty-icon">
+                    <FileText size={32} strokeWidth={1.5} />
+                  </span>
                   {snippets.length === 0
                     ? 'No prompts saved yet. Use the extension on any LLM site to save prompts.'
                     : 'No prompts match your search or filters.'}
@@ -257,6 +347,7 @@ export default function PromptsTable({
                   folderName={snippet.folderId ? folderMap.get(snippet.folderId) : undefined}
                   isSelected={selectedIds.has(snippet.id)}
                   isFocused={index === focusedRowIndex}
+                  hiddenColumns={hiddenColumns}
                   onToggleSelect={toggleSelect}
                   onDelete={onDelete}
                   onToggleFavorite={onToggleFavorite}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Database } from 'lucide-react';
 import { useAllSourcesPage } from './useAllSourcesPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
+import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import './AllSourcesPage.css';
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
@@ -13,12 +15,10 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 };
 
 function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  if (!active) return <span className="all-sources__sort-icon">&#x21C5;</span>;
-  return (
-    <span className="all-sources__sort-icon all-sources__sort-icon--active">
-      {dir === 'asc' ? '&#x25B2;' : '&#x25BC;'}
-    </span>
-  );
+  if (!active) return <ChevronsUpDown size={11} className="all-sources__sort-icon" />;
+  return dir === 'asc'
+    ? <ChevronUp size={11} className="all-sources__sort-icon all-sources__sort-icon--active" />
+    : <ChevronDown size={11} className="all-sources__sort-icon all-sources__sort-icon--active" />;
 }
 
 export default function AllSourcesPage() {
@@ -94,15 +94,14 @@ export default function AllSourcesPage() {
         </div>
       )}
 
-      {/* Toolbar: search + filters + actions */}
+      {/* Toolbar */}
       {!isLoading && totalCount > 0 && (
         <div className="all-sources-toolbar">
-          <input
+          <SearchBar
             className="all-sources-toolbar__search"
-            type="text"
-            placeholder="Search sources..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
+            placeholder="Search sources…"
           />
 
           <select
@@ -153,7 +152,7 @@ export default function AllSourcesPage() {
             )}
           </div>
 
-          {/* Add to notebook button */}
+          {/* Add to notebook */}
           {selectedIds.size > 0 && (
             <div className="all-sources-toolbar__action-wrapper">
               <button
@@ -190,7 +189,7 @@ export default function AllSourcesPage() {
         </div>
       )}
 
-      {/* Overlay for menus */}
+      {/* Overlay */}
       {(showExportMenu || showNotebookPicker) && (
         <div
           className="all-sources-overlay"
@@ -206,7 +205,9 @@ export default function AllSourcesPage() {
       {/* Empty state */}
       {!isLoading && totalCount === 0 && (
         <div className="all-sources-page__empty">
-          <span className="all-sources-page__empty-icon">&#x25A3;</span>
+          <span className="all-sources-page__empty-icon">
+            <Database size={40} strokeWidth={1.5} />
+          </span>
           <p className="all-sources-page__empty-text">No sources found</p>
           <p className="all-sources-page__empty-hint">
             Sync your notebooks first, then sources will appear here.
@@ -239,19 +240,25 @@ export default function AllSourcesPage() {
                     className="all-sources-table__th all-sources-table__th--sortable"
                     onClick={() => handleSort('title')}
                   >
-                    Title <SortIndicator active={sortField === 'title'} dir={sortDir} />
+                    <span className="all-sources-table__th-content">
+                      Title <SortIndicator active={sortField === 'title'} dir={sortDir} />
+                    </span>
                   </th>
                   <th
                     className="all-sources-table__th all-sources-table__th--sortable"
                     onClick={() => handleSort('type')}
                   >
-                    Type <SortIndicator active={sortField === 'type'} dir={sortDir} />
+                    <span className="all-sources-table__th-content">
+                      Type <SortIndicator active={sortField === 'type'} dir={sortDir} />
+                    </span>
                   </th>
                   <th
                     className="all-sources-table__th all-sources-table__th--sortable"
                     onClick={() => handleSort('notebookTitle')}
                   >
-                    Notebook <SortIndicator active={sortField === 'notebookTitle'} dir={sortDir} />
+                    <span className="all-sources-table__th-content">
+                      Notebook <SortIndicator active={sortField === 'notebookTitle'} dir={sortDir} />
+                    </span>
                   </th>
                 </tr>
               </thead>

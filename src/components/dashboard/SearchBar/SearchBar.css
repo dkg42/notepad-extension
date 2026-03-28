@@ -1,21 +1,14 @@
+/* ── SearchBar ─────────────────────────────────────────────────────────────── */
+
 .search-bar {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.search-bar__icon {
-  position: absolute;
-  left: 11px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  pointer-events: none;
-  line-height: 1;
-}
-
 .search-bar__input {
   width: 100%;
-  padding: 8px 32px 8px 34px;
+  padding: 7px 36px 7px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 13.5px;
@@ -23,6 +16,7 @@
   background: var(--color-surface);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
 }
 
 .search-bar__input:focus {
@@ -34,20 +28,41 @@
   color: var(--color-text-secondary);
 }
 
-.search-bar__clear {
+/* ── Right-side animated icon ─────────────────────────────────────────────── */
+
+.search-bar__icon-wrap {
   position: absolute;
-  right: 8px;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-bar__icon-indicator {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.search-bar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
   color: var(--color-text-secondary);
-  padding: 2px 4px;
+  padding: 0;
   border-radius: 3px;
   line-height: 1;
   transition: color 0.12s;
 }
 
-.search-bar__clear:hover {
+.search-bar__icon-btn:hover {
   color: var(--color-text-primary);
 }
