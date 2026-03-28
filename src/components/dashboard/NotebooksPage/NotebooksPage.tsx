@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { Trash2, Download, BookOpen, ExternalLink, Loader2, ChevronDown } from 'lucide-react';
+import { Trash2, Download, BookOpen, ExternalLink, Loader2 } from 'lucide-react';
 import { useNotebooksPage, UNCOLLECTED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
+import AssignCollectionModal from '@/components/dashboard/AssignCollectionModal/AssignCollectionModal';
 import './NotebooksPage.css';
 
 function formatRelativeTime(timestamp: number): string {
@@ -46,6 +47,10 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
     collections,
     activeCollectionId,
     setActiveCollectionId,
+    selectedIds,
+    toggleSelectNotebook,
+    toggleSelectAll,
+    clearSelection,
     getAnnotation,
     handleRefresh,
     handleDelete,
@@ -53,16 +58,16 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
     handleRemoveTag,
     handleCreateCollection,
     handleDeleteCollection,
-    handleAssignCollection,
+    handleBulkAssignCollection,
   } = useNotebooksPage();
 
   // ── Local UI state ──────────────────────────────────────────────────────────
   const [taggingNotebookId, setTaggingNotebookId] = useState<string | null>(null);
-  const [movingNotebookId, setMovingNotebookId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [exportingNotebookId, setExportingNotebookId] = useState<string | null>(null);
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const newCollectionInputRef = useRef<HTMLInputElement>(null);
 
   const uncollectedCount = notebooks.filter((n) => !getAnnotation(n.id).collectionId).length;
@@ -262,13 +267,32 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       {!isLoading && notebooks.length > 0 && (
         <>
-          {(movingNotebookId || exportingNotebookId) && (
+          {/* Selection action bar */}
+          {selectedIds.size > 0 && (
+            <div className="notebooks-selection-bar">
+              <span className="notebooks-selection-bar__count">
+                {selectedIds.size} notebook{selectedIds.size !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                className="notebooks-selection-bar__btn"
+                onClick={() => setShowAssignModal(true)}
+              >
+                Assign to collection
+              </button>
+              <button
+                className="notebooks-selection-bar__clear"
+                onClick={clearSelection}
+                title="Clear selection"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {exportingNotebookId && (
             <div
               className="notebooks-overlay"
-              onClick={() => {
-                setMovingNotebookId(null);
-                setExportingNotebookId(null);
-              }}
+              onClick={() => setExportingNotebookId(null)}
             />
           )}
 
@@ -276,6 +300,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
             <div className="notebooks-table__scroll">
               <table className="notebooks-table">
                 <colgroup>
+                  <col className="notebooks-table__col--select" />
                   <col className="notebooks-table__col--notebook" />
                   <col className="notebooks-table__col--created" />
                   <col className="notebooks-table__col--collection" />
@@ -286,6 +311,15 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
 
                 <thead className="notebooks-table__head">
                   <tr>
+                    <th className="notebooks-table__th notebooks-table__th--select">
+                      <input
+                        type="checkbox"
+                        className="notebooks-checkbox"
+                        checked={filteredNotebooks.length > 0 && filteredNotebooks.every((n) => selectedIds.has(n.id))}
+                        onChange={() => toggleSelectAll(filteredNotebooks.map((n) => n.id))}
+                        title="Select all"
+                      />
+                    </th>
                     <th className="notebooks-table__th">Notebook</th>
                     <th className="notebooks-table__th">Created</th>
                     <th className="notebooks-table__th">Collection</th>
@@ -298,7 +332,7 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                 <tbody>
                   {filteredNotebooks.length === 0 ? (
                     <tr>
-                      <td className="notebooks-table__empty" colSpan={6}>
+                      <td className="notebooks-table__empty" colSpan={7}>
                         <span className="notebooks-table__empty-icon">
                           <BookOpen size={28} strokeWidth={1.5} />
                         </span>
@@ -313,7 +347,20 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                       );
 
                       return (
-                        <tr key={notebook.id} className="notebooks-table__row">
+                        <tr
+                          key={notebook.id}
+                          className={`notebooks-table__row${selectedIds.has(notebook.id) ? ' notebooks-table__row--selected' : ''}`}
+                        >
+
+                          {/* ── Select cell ───────────────────────────────── */}
+                          <td className="notebooks-table__td notebooks-table__td--select">
+                            <input
+                              type="checkbox"
+                              className="notebooks-checkbox"
+                              checked={selectedIds.has(notebook.id)}
+                              onChange={() => toggleSelectNotebook(notebook.id)}
+                            />
+                          </td>
 
                           {/* ── Notebook cell ─────────────────────────────── */}
                           <td className="notebooks-table__td notebooks-table__td--notebook">
@@ -348,47 +395,12 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
                             {formatDate(notebook.createdAt)}
                           </td>
 
-                          {/* ── Collection cell ───────────────────────────── */}
+                          {/* ── Collection cell (read-only) ────────────────── */}
                           <td className="notebooks-table__td notebooks-table__td--collection">
-                            <button
-                              className={`notebooks-collection-selector${assignedCollection ? ' notebooks-collection-selector--assigned' : ''}`}
-                              onClick={() =>
-                                setMovingNotebookId((prev) =>
-                                  prev === notebook.id ? null : notebook.id,
-                                )
-                              }
-                              title="Assign to collection"
-                            >
-                              {assignedCollection ? assignedCollection.name : '—'}
-                              <span className="notebooks-collection-selector__caret">
-                                <ChevronDown size={10} strokeWidth={2} />
-                              </span>
-                            </button>
-
-                            {movingNotebookId === notebook.id && (
-                              <div className="notebooks-collection-menu">
-                                <button
-                                  className={`notebooks-collection-menu__item${!annotation.collectionId ? ' notebooks-collection-menu__item--active' : ''}`}
-                                  onClick={() => {
-                                    handleAssignCollection(notebook.id, undefined);
-                                    setMovingNotebookId(null);
-                                  }}
-                                >
-                                  None
-                                </button>
-                                {collections.map((col) => (
-                                  <button
-                                    key={col.id}
-                                    className={`notebooks-collection-menu__item${annotation.collectionId === col.id ? ' notebooks-collection-menu__item--active' : ''}`}
-                                    onClick={() => {
-                                      handleAssignCollection(notebook.id, col.id);
-                                      setMovingNotebookId(null);
-                                    }}
-                                  >
-                                    {col.name}
-                                  </button>
-                                ))}
-                              </div>
+                            {assignedCollection ? (
+                              <span className="notebooks-collection-badge">{assignedCollection.name}</span>
+                            ) : (
+                              <span className="notebooks-collection-empty">—</span>
                             )}
                           </td>
 
@@ -531,6 +543,24 @@ export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Assign Collection Modal ──────────────────────────────────────────── */}
+      {showAssignModal && (
+        <AssignCollectionModal
+          collections={collections}
+          currentCollectionId={undefined}
+          subjectLabel={
+            selectedIds.size === 1
+              ? (notebooks.find((n) => n.id === [...selectedIds][0])?.title ?? '1 notebook')
+              : `${selectedIds.size} notebooks`
+          }
+          onConfirm={(collectionId) =>
+            void handleBulkAssignCollection([...selectedIds], collectionId)
+          }
+          onCreateCollection={handleCreateCollection}
+          onClose={() => setShowAssignModal(false)}
+        />
       )}
     </div>
   );

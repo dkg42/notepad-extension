@@ -3,6 +3,7 @@ import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
+import AssignCollectionModal from '@/components/dashboard/AssignCollectionModal/AssignCollectionModal';
 import './NotebookDetailPage.css';
 
 interface NotebookDetailPageProps {
@@ -86,9 +87,7 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
   } = useNotebookDetailPage(notebookId, onBack);
 
   // ── Local UI state ──────────────────────────────────────────────────────────
-  const [showCollectionMenu, setShowCollectionMenu] = useState(false);
-  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState('');
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingSourceDelete, setConfirmingSourceDelete] = useState<string | null>(null);
@@ -182,91 +181,19 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
 
       {/* ── Collection & Tags bar ───────────────────────────────────────────── */}
       <div className="notebook-detail__meta-bar">
-        {/* Collection selector */}
+        {/* Collection */}
         <div className="notebook-detail__meta-item">
           <span className="notebook-detail__meta-label">Collection</span>
-          <div className="notebook-detail__collection-wrapper">
-            <button
-              className={`notebook-detail__collection-btn${annotation.collectionId ? ' notebook-detail__collection-btn--assigned' : ''}`}
-              onClick={() => setShowCollectionMenu((v) => !v)}
-              title="Assign to collection"
-            >
-              {collections.find((c) => c.id === annotation.collectionId)?.name ?? 'None'}
-              <span className="notebook-detail__collection-caret">▾</span>
-            </button>
-            {showCollectionMenu && (
-              <>
-                <div
-                  className="notebook-detail__collection-overlay"
-                  onClick={() => setShowCollectionMenu(false)}
-                />
-                <div className="notebook-detail__collection-menu">
-                  <button
-                    className={`notebook-detail__collection-menu-item${!annotation.collectionId ? ' notebook-detail__collection-menu-item--active' : ''}`}
-                    onClick={() => {
-                      void handleAssignCollection(undefined);
-                      setShowCollectionMenu(false);
-                    }}
-                  >
-                    None
-                  </button>
-                  {collections.map((col) => (
-                    <button
-                      key={col.id}
-                      className={`notebook-detail__collection-menu-item${annotation.collectionId === col.id ? ' notebook-detail__collection-menu-item--active' : ''}`}
-                      onClick={() => {
-                        void handleAssignCollection(col.id);
-                        setShowCollectionMenu(false);
-                      }}
-                    >
-                      {col.name}
-                    </button>
-                  ))}
-                  <div className="notebook-detail__collection-menu-divider" />
-                  {isCreatingCollection ? (
-                    <div className="notebook-detail__collection-new">
-                      <input
-                        className="notebook-detail__collection-new-input"
-                        autoFocus
-                        placeholder="Collection name…"
-                        value={newCollectionName}
-                        onChange={(e) => setNewCollectionName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const name = newCollectionName.trim();
-                            if (name) {
-                              void handleCreateCollection(name).then((id) => {
-                                void handleAssignCollection(id);
-                              });
-                            }
-                            setNewCollectionName('');
-                            setIsCreatingCollection(false);
-                            setShowCollectionMenu(false);
-                          }
-                          if (e.key === 'Escape') {
-                            setNewCollectionName('');
-                            setIsCreatingCollection(false);
-                          }
-                        }}
-                        onBlur={() => {
-                          setNewCollectionName('');
-                          setIsCreatingCollection(false);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      className="notebook-detail__collection-menu-item notebook-detail__collection-menu-item--new"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setIsCreatingCollection(true)}
-                    >
-                      + New collection
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          <span className={`notebook-detail__collection-value${annotation.collectionId ? ' notebook-detail__collection-value--assigned' : ''}`}>
+            {collections.find((c) => c.id === annotation.collectionId)?.name ?? 'None'}
+          </span>
+          <button
+            className="notebook-detail__collection-change-btn"
+            onClick={() => setShowCollectionModal(true)}
+            title="Change collection"
+          >
+            Change
+          </button>
         </div>
 
         {/* Tags */}
@@ -601,6 +528,17 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
       </div>
 
       {/* ── Audio customization dialog ──────────────────────────────────────── */}
+      {showCollectionModal && (
+        <AssignCollectionModal
+          collections={collections}
+          currentCollectionId={annotation.collectionId}
+          subjectLabel={notebook.title}
+          onConfirm={(collectionId) => void handleAssignCollection(collectionId)}
+          onCreateCollection={handleCreateCollection}
+          onClose={() => setShowCollectionModal(false)}
+        />
+      )}
+
       {showAudioDialog && (
         <div
           className="audio-dialog__overlay"

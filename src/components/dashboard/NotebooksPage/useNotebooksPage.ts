@@ -27,6 +27,7 @@ export function useNotebooksPage() {
   const [annotations, setAnnotations] = useState<NotebookAnnotation[]>([]);
   const [collections, setCollections] = useState<NotebookCollection[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [sourceCounts, setSourceCounts] = useState<Record<string, number>>({});
@@ -232,6 +233,54 @@ export function useNotebooksPage() {
     [getAnnotation],
   );
 
+  // ── Selection helpers ───────────────────────────────────────────────────────
+
+  const toggleSelectNotebook = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(
+    (visibleIds: string[]) => {
+      setSelectedIds((prev) => {
+        const allSelected = visibleIds.every((id) => prev.has(id));
+        if (allSelected) return new Set();
+        return new Set(visibleIds);
+      });
+    },
+    [],
+  );
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const handleBulkAssignCollection = useCallback(
+    async (ids: string[], collectionId: string | undefined) => {
+      await Promise.all(
+        ids.map((notebookId) => {
+          const annotation = annotations.find((a) => a.notebookId === notebookId) ?? { notebookId, tags: [] };
+          return notebookAnnotationService.setAnnotation({ ...annotation, collectionId });
+        }),
+      );
+      setAnnotations((prev) => {
+        const idSet = new Set(ids);
+        const updated = prev.map((a) =>
+          idSet.has(a.notebookId) ? { ...a, collectionId } : a,
+        );
+        // Add annotations for notebooks that didn't have one yet
+        const existing = new Set(updated.map((a) => a.notebookId));
+        const fresh = ids
+          .filter((id) => !existing.has(id))
+          .map((notebookId) => ({ notebookId, tags: [], collectionId }));
+        return [...updated, ...fresh];
+      });
+      setSelectedIds(new Set());
+    },
+    [annotations],
+  );
+
   const handleExportSources = useCallback(
     async (notebookId: string, notebookTitle: string, strategyType: string) => {
       setFetchingSourcesId(notebookId);
@@ -283,6 +332,10 @@ export function useNotebooksPage() {
     collections,
     activeCollectionId,
     setActiveCollectionId,
+    selectedIds,
+    toggleSelectNotebook,
+    toggleSelectAll,
+    clearSelection,
     getAnnotation,
     handleRefresh,
     handleDelete,
@@ -291,5 +344,6 @@ export function useNotebooksPage() {
     handleCreateCollection,
     handleDeleteCollection,
     handleAssignCollection,
+    handleBulkAssignCollection,
   };
 }
