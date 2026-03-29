@@ -1,14 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FolderFilterDropdown from '@/components/FolderFilterDropdown/FolderFilterDropdown';
 import FolderManager from '@/components/FolderManager/FolderManager';
 import SnippetList from '@/components/SnippetList/SnippetList';
 import TagFilter from '@/components/TagFilter/TagFilter';
+import AccountSwitcher from '@/components/AccountSwitcher/AccountSwitcher';
+import type { AuthUser } from '@/types';
+import { authService } from '@/services/auth-service';
 import { useApp } from './useApp';
 import './App.css';
 
+/**
+ * Root popup component. Auth is optional — the full snippet UI is always
+ * accessible. The AccountSwitcher in the header handles sign-in/sign-out.
+ */
 export default function App() {
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    authService.getCurrentUser().then((user) => {
+      setAuthUser(user);
+      setIsLoadingAuth(false);
+    });
+
+    const unsubscribe = authService.onAuthStateChange((user) => {
+      setAuthUser(user);
+      setIsLoadingAuth(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (isLoadingAuth) {
+    return (
+      <div className="app-container app-loading">
+        <span className="app-loading-spinner" aria-label="Loading..." />
+      </div>
+    );
+  }
+
+  return <AppContent user={authUser} />;
+}
+
+// ── App content (always rendered regardless of auth state) ───────────────────
+
+interface AppContentProps {
+  user: AuthUser | null;
+}
+
+function AppContent({ user }: AppContentProps) {
   const {
     snippets,
     folders,
@@ -36,6 +78,7 @@ export default function App() {
       <div className="app-header">
         <h2 className="app-header__title">Saved Prompts</h2>
         <div className="app-header__actions">
+          <AccountSwitcher user={user} />
           <button
             onClick={() => chrome.runtime.openOptionsPage()}
             className="app-header__dashboard-btn"

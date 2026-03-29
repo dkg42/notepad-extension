@@ -1,0 +1,92 @@
+.account-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-switcher__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-switcher__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-switcher__avatar-initials {
+  font-size: 9px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+.account-switcher__name {
+  font-size: 11px;
+  color: #374151;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher__signout-btn {
+  font-size: 11px;
+  color: #6b7280;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.account-switcher__signout-btn:hover:not(:disabled) {
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.account-switcher__signout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-switcher--guest {
+  display: flex;
+  align-items: center;
+}
+
+.account-switcher__signin-btn {
+  font-size: 11px;
+  color: #4f46e5;
+  background: none;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.account-switcher__signin-btn:hover:not(:disabled) {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.account-switcher__signin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

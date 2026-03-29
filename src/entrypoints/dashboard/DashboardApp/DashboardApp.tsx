@@ -18,6 +18,7 @@ import PodcastsPage from '@/components/dashboard/PodcastsPage/PodcastsPage';
 import PodcastDetailPage from '@/components/dashboard/PodcastDetailPage/PodcastDetailPage';
 import AllAudioPage from '@/components/dashboard/AllAudioPage/AllAudioPage';
 import PipelinesPage from '@/components/dashboard/PipelinesPage/PipelinesPage';
+import AccountPage from '@/components/dashboard/AccountPage/AccountPage';
 import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
@@ -238,6 +239,9 @@ export default function DashboardApp() {
         return (
           <SettingsPage settings={settings} onSettingsChange={handleSettingsChange} />
         );
+
+      case 'account':
+        return <AccountPage />;
 
       default:
         return (

@@ -10,7 +10,10 @@
       "WebFetch(domain:github.com)",
       "WebSearch",
       "WebFetch(domain:api.github.com)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebFetch(domain:firebase.google.com)",
+      "Bash(find /f/Work/git_clones/extension/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.json \\\\\\))",
+      "Bash(xargs grep:*)"
     ]
   }
 }

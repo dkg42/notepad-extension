@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Sparkles,
   Zap,
+  User,
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardView } from '@/types/dashboard';
@@ -308,6 +309,14 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="sidebar__footer">
+        <button
+          className={`sidebar__nav-item${currentView === 'account' ? ' sidebar__nav-item--active' : ''}`}
+          onClick={() => onNavigate('account')}
+          title="Account"
+        >
+          <User size={16} strokeWidth={1.75} />
+          <span className="sidebar__nav-label">Account</span>
+        </button>
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
           onClick={() => onNavigate('settings')}
