@@ -1,4 +1,5 @@
 import { defineBackground } from 'wxt/sandbox';
+import type { AuthUser } from '@/types';
 import {
   fetchNotebooks,
   deleteNotebook,
@@ -23,9 +24,14 @@ import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
+import { getAuth, signOut } from 'firebase/auth/web-extension';
+import type { UserCredential, AuthError } from 'firebase/auth';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 
 const ALARM_NAME = 'notebooklm-sync';
+const AUTH_USER_KEY = 'authUser';
+const MIGRATION_KEY = 'preSignInDataMigratedToUid';
+const OFFSCREEN_DOCUMENT_PATH = '/offscreen.html';
 const SYNC_INTERVAL_MINUTES = 30;
 const AUDIO_CLEANUP_ALARM = 'audio-cache-cleanup';
 const AUDIO_CLEANUP_INTERVAL_MINUTES = 60;
@@ -226,6 +232,117 @@ async function sendMessageToTab<T = unknown>(
     }
   }
   throw new Error('Failed to reach content script');
+}
+
+// ── Offscreen document helpers (following official Chrome extension auth guide) ──
+
+// Global promise guards against concurrent createDocument calls
+let creatingOffscreenDocument: Promise<void> | null = null;
+
+async function hasDocument(): Promise<boolean> {
+  // Use clients.matchAll() with an exact URL match — the pattern from the
+  // official Firebase Chrome extension authentication guide.
+  type ClientsAPI = { matchAll(): Promise<Array<{ url: string }>> };
+  const clientsAPI = (self as unknown as { clients: ClientsAPI }).clients;
+  const matchedClients = await clientsAPI.matchAll();
+  return matchedClients.some(
+    (c) => c.url === chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH),
+  );
+}
+
+async function setupOffscreenDocument(path: string): Promise<void> {
+  // Reuse the existing document if it's already running — the iframe inside it
+  // will already be loaded, avoiding the race condition where postMessage to
+  // the iframe arrives before the external page's listener is registered.
+  if (!(await hasDocument())) {
+    if (creatingOffscreenDocument) {
+      console.log('[AUTH][BG] Waiting for in-progress offscreen document creation');
+      await creatingOffscreenDocument;
+    } else {
+      console.log('[AUTH][BG] Creating offscreen document:', path);
+      creatingOffscreenDocument = chrome.offscreen.createDocument({
+        url: path,
+        reasons: [chrome.offscreen.Reason.DOM_SCRAPING],
+        justification: 'authentication',
+      });
+      await creatingOffscreenDocument;
+      creatingOffscreenDocument = null;
+      console.log('[AUTH][BG] Offscreen document created');
+    }
+  } else {
+    console.log('[AUTH][BG] Reusing existing offscreen document');
+  }
+}
+
+async function closeOffscreenDocument(): Promise<void> {
+  if (!(await hasDocument())) {
+    return;
+  }
+  console.log('[AUTH][BG] Closing offscreen document');
+  await chrome.offscreen.closeDocument();
+  console.log('[AUTH][BG] Offscreen document closed');
+}
+
+/**
+ * Initiates Firebase auth via the offscreen document and returns a Promise that
+ * resolves with the UserCredential once the Google sign-in popup completes.
+ *
+ * The offscreen document ACKs the initial `firebase-auth` message immediately
+ * (so Chrome never sees an unclosed channel), then sends a separate `AUTH_RESULT`
+ * message when the iframe finishes the auth flow. This listener captures that
+ * second message to resolve/reject the Promise.
+ */
+function requestFirebaseAuth(): Promise<UserCredential> {
+  return new Promise<UserCredential>((resolve, reject) => {
+    // Register the AUTH_RESULT listener BEFORE sending the initiation message
+    // to guarantee we never miss the response.
+    const authResultListener = (message: unknown): void => {
+      if (!isMessage(message)) return;
+      const msg = message as { type: string; ok?: boolean; result?: UserCredential; error?: string };
+      if (msg.type !== 'AUTH_RESULT') return;
+
+      chrome.runtime.onMessage.removeListener(authResultListener);
+
+      if (msg.ok && msg.result) {
+        resolve(msg.result);
+      } else {
+        reject(new Error(msg.error ?? 'Authentication failed'));
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(authResultListener);
+
+    // Send the initiation message. The offscreen document ACKs this synchronously,
+    // so the Promise returned by sendMessage resolves quickly (no channel timeout).
+    chrome.runtime.sendMessage({ type: 'firebase-auth', target: 'offscreen' })
+      .catch((err: unknown) => {
+        chrome.runtime.onMessage.removeListener(authResultListener);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      });
+  });
+}
+
+async function firebaseAuth(): Promise<UserCredential | undefined> {
+  await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
+
+  try {
+    const credential = await requestFirebaseAuth();
+    console.log('[AUTH][BG] User authenticated:', credential.user?.email);
+    return credential;
+  } catch (err) {
+    const authErr = err as AuthError;
+    if (authErr.code === 'auth/operation-not-allowed') {
+      console.error(
+        '[AUTH][BG] You must enable an OAuth provider in the Firebase console' +
+          ' in order to use signInWithPopup.',
+      );
+    } else {
+      console.error('[AUTH][BG] Authentication error:', err);
+    }
+    return undefined;
+  } finally {
+    await closeOffscreenDocument();
+  }
 }
 
 export default defineBackground(() => {
@@ -800,6 +917,43 @@ export default defineBackground(() => {
           return runs;
         })()
           .then((runs) => sendResponse({ ok: true, runs }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
+      // ── Firebase auth handlers ─────────────────────────────────────────────
+
+      if (message.type === 'firebase-auth') {
+        console.log('[AUTH][BG] Received firebase-auth message from popup');
+        firebaseAuth()
+          .then(async (authUser) => {
+            console.log('[AUTH][BG] Storing authUser in chrome.storage.local:', authUser);
+            await chrome.storage.local.set({ [AUTH_USER_KEY]: authUser });
+            // Attribute any pre-sign-in local data to this user on first sign-in
+            const stored = await chrome.storage.local.get(MIGRATION_KEY);
+            const existing = stored[MIGRATION_KEY] as { uid: string } | undefined;
+            if (!existing || existing.uid !== authUser?.user?.uid) {
+              await chrome.storage.local.set({
+                [MIGRATION_KEY]: { uid: authUser?.user?.uid, migratedAt: Date.now() },
+              });
+              chrome.runtime.sendMessage({ type: 'local-data-migrated', uid: authUser?.user?.uid }).catch(() => {});
+            }
+            console.log('[AUTH][BG] Auth complete, sending ok to popup');
+            sendResponse({ ok: true });
+          })
+          .catch((err: unknown) => {
+            console.error('[AUTH][BG] Auth flow error:', err);
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) });
+          });
+        return true;
+      }
+
+      if (message.type === 'firebase-sign-out') {
+        signOut(getAuth())
+          .then(() => chrome.storage.local.remove(AUTH_USER_KEY))
+          .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
           );

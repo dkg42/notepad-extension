@@ -18,7 +18,8 @@ export type DashboardView =
   | 'podcast-detail'
   | 'all-audio'
   | 'pipelines'
-  | 'settings';
+  | 'settings'
+  | 'account';
 
 export interface DashboardSettings {
   theme: 'light' | 'dark';

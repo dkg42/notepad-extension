@@ -7,11 +7,17 @@ export default defineConfig({
     name: 'LLM Chat Enhancer',
     description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
     version: '1.0.0',
-    permissions: ['storage', 'alarms', 'tabs'],
+    permissions: ['storage', 'alarms', 'tabs', 'offscreen'],
     optional_host_permissions: ['<all_urls>'],
     options_ui: {
       page: 'dashboard.html',
       open_in_tab: true,
+    },
+    content_security_policy: {
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://notebooklm.google.com;",
+    },
+    background: {
+      service_worker: "background.js"
     },
     host_permissions: [
       'https://chatgpt.com/*',
@@ -25,6 +31,9 @@ export default defineConfig({
       'https://lh3.google.com/*',
       'https://*.usercontent.google.com/*', // Audio CDN redirect target (drum.usercontent.google.com)
       // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
+      'https://securetoken.googleapis.com/*', // Firebase token refresh
+      'https://identitytoolkit.googleapis.com/*',
+      'https://localhost:3000/*'
     ],
     // ── Future: Google Docs sync ──────────────────────────────────────────────
     // Uncomment and fill in client_id when enabling direct Google Drive sync.
