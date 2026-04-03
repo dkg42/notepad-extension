@@ -1,27 +1,41 @@
-import React, { useState } from 'react';
-import type { AuthUser } from '@/types';
+import React, { useEffect, useRef, useState } from 'react';
+import type { UserCredential } from 'firebase/auth/web-extension';
 import { authService } from '@/services/auth-service';
 import './AccountSwitcher.css';
 
 interface Props {
-  user: AuthUser | null;
+  user: UserCredential | null;
   onSignOut?: () => void;
 }
 
 /**
  * Compact user identity widget for the popup header.
- * - Signed in: shows avatar, display name, and a sign-out button.
- * - Signed out: shows a compact "Sign in" button that triggers the auth flow.
+ * - Signed in: avatar + name trigger opens a dropdown profile card with sign-out.
+ * - Signed out: compact "Sign in" button that triggers the auth flow.
  */
 export default function AccountSwitcher({ user, onSignOut }: Props) {
   const [signingOut, setSigningOut] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isOpen]);
 
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
       await authService.signOut();
+      setIsOpen(false);
       onSignOut?.();
     } finally {
       setSigningOut(false);
@@ -58,36 +72,67 @@ export default function AccountSwitcher({ user, onSignOut }: Props) {
     );
   }
 
-  const initials = getInitials(user.displayName ?? user.email ?? '?');
+  const { displayName, email, photoURL } = user.user;
+  const initials = getInitials(displayName ?? email ?? '?');
 
   return (
-    <div className="account-switcher">
-      <div
-        className="account-switcher__avatar"
-        title={user.displayName ?? user.email ?? ''}
-      >
-        {user.photoURL ? (
-          <img
-            src={user.photoURL}
-            alt={user.displayName ?? 'User avatar'}
-            className="account-switcher__avatar-img"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <span className="account-switcher__avatar-initials">{initials}</span>
-        )}
-      </div>
-      <span className="account-switcher__name" title={user.email ?? ''}>
-        {user.displayName ?? user.email ?? 'Signed in'}
-      </span>
+    <div className="account-switcher" ref={containerRef}>
       <button
-        className="account-switcher__signout-btn"
-        onClick={handleSignOut}
-        disabled={signingOut}
-        title="Sign out"
+        className="account-switcher__trigger"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        title={displayName ?? email ?? ''}
       >
-        {signingOut ? '...' : 'Sign out'}
+        <div className="account-switcher__avatar">
+          {photoURL ? (
+            <img
+              src={photoURL}
+              alt={displayName ?? 'User avatar'}
+              className="account-switcher__avatar-img"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="account-switcher__avatar-initials">{initials}</span>
+          )}
+        </div>
+        <span className="account-switcher__name">{displayName ?? email ?? 'Signed in'}</span>
       </button>
+
+      {isOpen && (
+        <div className="account-switcher__dropdown" role="dialog" aria-label="Account">
+          <div className="account-switcher__dropdown-profile">
+            <div className="account-switcher__dropdown-avatar">
+              {photoURL ? (
+                <img
+                  src={photoURL}
+                  alt={displayName ?? 'User avatar'}
+                  className="account-switcher__avatar-img"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="account-switcher__dropdown-initials">{initials}</span>
+              )}
+            </div>
+            {displayName && (
+              <span className="account-switcher__dropdown-name">{displayName}</span>
+            )}
+            {email && (
+              <span className="account-switcher__dropdown-email">{email}</span>
+            )}
+          </div>
+
+          <div className="account-switcher__dropdown-actions">
+            <button
+              className="account-switcher__signout-btn"
+              onClick={handleSignOut}
+              disabled={signingOut}
+            >
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

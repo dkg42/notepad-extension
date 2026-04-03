@@ -1,5 +1,4 @@
 import { defineBackground } from 'wxt/sandbox';
-import type { AuthUser } from '@/types';
 import {
   fetchNotebooks,
   deleteNotebook,
@@ -24,7 +23,7 @@ import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
-import type { UserCredential, AuthError } from 'firebase/auth';
+import type { UserCredential, AuthError } from 'firebase/auth/web-extension';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 
 const ALARM_NAME = 'notebooklm-sync';

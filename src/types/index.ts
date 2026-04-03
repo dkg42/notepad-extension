@@ -150,15 +150,3 @@ export interface NotebookMeta {
   isOwner: boolean;
 }
 
-// ── Firebase Auth ─────────────────────────────────────────────────────────────
-
-/**
- * Serializable subset of a Firebase User stored in chrome.storage.local.
- * Populated by the background service worker after successful sign-in.
- */
-export interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-}

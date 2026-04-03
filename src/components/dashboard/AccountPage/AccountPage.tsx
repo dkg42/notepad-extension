@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { AuthUser } from '@/types';
+import type { UserCredential } from 'firebase/auth/web-extension';
 import { authService } from '@/services/auth-service';
 import './AccountPage.css';
 
@@ -44,7 +44,7 @@ function getInitials(name: string): string {
  *   migration confirmation banner when pre-sign-in data has been attributed.
  */
 export default function AccountPage() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<UserCredential | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -160,25 +160,25 @@ export default function AccountPage() {
 
           <div className="account-page__profile">
             <div className="account-page__avatar">
-              {user.photoURL ? (
+              {user.user.photoURL ? (
                 <img
-                  src={user.photoURL}
-                  alt={user.displayName ?? 'User avatar'}
+                  src={user.user.photoURL}
+                  alt={user.user.displayName ?? 'User avatar'}
                   className="account-page__avatar-img"
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <span className="account-page__avatar-initials">
-                  {getInitials(user.displayName ?? user.email ?? '?')}
+                  {getInitials(user.user.displayName ?? user.user.email ?? '?')}
                 </span>
               )}
             </div>
             <div className="account-page__profile-info">
-              {user.displayName && (
-                <span className="account-page__display-name">{user.displayName}</span>
+              {user.user.displayName && (
+                <span className="account-page__display-name">{user.user.displayName}</span>
               )}
-              {user.email && (
-                <span className="account-page__email">{user.email}</span>
+              {user.user.email && (
+                <span className="account-page__email">{user.user.email}</span>
               )}
             </div>
           </div>

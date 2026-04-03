@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/types';
+import type { UserCredential } from 'firebase/auth/web-extension';
 
 const AUTH_USER_KEY = 'authUser';
 
@@ -12,12 +12,12 @@ const AUTH_USER_KEY = 'authUser';
  */
 export const authService = {
   /**
-   * Returns the currently signed-in user from chrome.storage.local,
+   * Returns the currently signed-in UserCredential from chrome.storage.local,
    * or null if no user is authenticated.
    */
-  async getCurrentUser(): Promise<AuthUser | null> {
+  async getCurrentUser(): Promise<UserCredential | null> {
     const result = await chrome.storage.local.get(AUTH_USER_KEY);
-    return (result[AUTH_USER_KEY] as AuthUser) ?? null;
+    return (result[AUTH_USER_KEY] as UserCredential) ?? null;
   },
 
   /**
@@ -67,13 +67,13 @@ export const authService = {
    * Fires immediately-on-change when the background writes or removes authUser.
    * Returns an unsubscribe function — call it in React's cleanup effect.
    */
-  onAuthStateChange(callback: (user: AuthUser | null) => void): () => void {
+  onAuthStateChange(callback: (user: UserCredential | null) => void): () => void {
     const listener = (
       changes: Record<string, chrome.storage.StorageChange>,
       area: string,
     ) => {
       if (area !== 'local' || !(AUTH_USER_KEY in changes)) return;
-      const user = (changes[AUTH_USER_KEY].newValue as AuthUser) ?? null;
+      const user = (changes[AUTH_USER_KEY].newValue as UserCredential) ?? null;
       callback(user);
     };
 

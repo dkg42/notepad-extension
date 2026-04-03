@@ -1,7 +1,28 @@
+/* ── Container ───────────────────────────────────────────────────────────── */
+
 .account-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Trigger (avatar + name row) ─────────────────────────────────────────── */
+
+.account-switcher__trigger {
   display: flex;
   align-items: center;
   gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 5px;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.account-switcher__trigger:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .account-switcher__avatar {
@@ -38,18 +59,87 @@
   white-space: nowrap;
 }
 
-.account-switcher__signout-btn {
+/* ── Dropdown card ───────────────────────────────────────────────────────── */
+
+.account-switcher__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  width: 200px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.account-switcher__dropdown-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.account-switcher__dropdown-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.account-switcher__dropdown-initials {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+.account-switcher__dropdown-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.account-switcher__dropdown-email {
   font-size: 11px;
+  color: #6b7280;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+/* ── Dropdown actions ────────────────────────────────────────────────────── */
+
+.account-switcher__dropdown-actions {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.account-switcher__signout-btn {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 500;
   color: #6b7280;
   background: none;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
-  padding: 2px 6px;
+  border-radius: 5px;
+  padding: 5px 10px;
   cursor: pointer;
   font-family: inherit;
   transition: color 0.12s, border-color 0.12s;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .account-switcher__signout-btn:hover:not(:disabled) {
@@ -61,6 +151,8 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Guest (signed-out) state ────────────────────────────────────────────── */
 
 .account-switcher--guest {
   display: flex;

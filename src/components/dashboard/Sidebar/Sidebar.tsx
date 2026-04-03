@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -22,7 +22,9 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react';
+import type { UserCredential } from 'firebase/auth/web-extension';
 import type { DashboardView } from '@/types/dashboard';
+import { authService } from '@/services/auth-service';
 import './Sidebar.css';
 
 type IconComponent = LucideIcon;
@@ -178,6 +180,12 @@ function CollapsibleGroup({
   );
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 export default function Sidebar({
   currentView,
   onNavigate,
@@ -188,6 +196,13 @@ export default function Sidebar({
   podcastsCount,
   pipelinesCount,
 }: SidebarProps) {
+  const [user, setUser] = useState<UserCredential | null>(null);
+
+  useEffect(() => {
+    authService.getCurrentUser().then(setUser);
+    return authService.onAuthStateChange(setUser);
+  }, []);
+
   const [notebooksExpanded, setNotebooksExpanded] = useState(
     NOTEBOOK_VIEWS.includes(currentView),
   );
@@ -309,14 +324,45 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="sidebar__footer">
-        <button
-          className={`sidebar__nav-item${currentView === 'account' ? ' sidebar__nav-item--active' : ''}`}
-          onClick={() => onNavigate('account')}
-          title="Account"
-        >
-          <User size={16} strokeWidth={1.75} />
-          <span className="sidebar__nav-label">Account</span>
-        </button>
+        {user ? (
+          <button
+            className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
+            onClick={() => onNavigate('account')}
+            title={user.user.email ?? ''}
+          >
+            <div className="sidebar__user-avatar">
+              {user.user.photoURL ? (
+                <img
+                  src={user.user.photoURL}
+                  alt={user.user.displayName ?? 'User avatar'}
+                  className="sidebar__user-avatar-img"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="sidebar__user-avatar-initials">
+                  {getInitials(user.user.displayName ?? user.user.email ?? '?')}
+                </span>
+              )}
+            </div>
+            <div className="sidebar__user-info">
+              <span className="sidebar__user-name">
+                {user.user.displayName ?? user.user.email ?? 'Signed in'}
+              </span>
+              {user.user.email && user.user.displayName && (
+                <span className="sidebar__user-email">{user.user.email}</span>
+              )}
+            </div>
+          </button>
+        ) : (
+          <button
+            className={`sidebar__nav-item${currentView === 'account' ? ' sidebar__nav-item--active' : ''}`}
+            onClick={() => onNavigate('account')}
+            title="Account"
+          >
+            <User size={16} strokeWidth={1.75} />
+            <span className="sidebar__nav-label">Account</span>
+          </button>
+        )}
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
           onClick={() => onNavigate('settings')}
