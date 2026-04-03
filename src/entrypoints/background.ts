@@ -340,8 +340,6 @@ async function firebaseAuth(): Promise<UserCredential | undefined> {
       console.error('[AUTH][BG] Authentication error:', err);
     }
     return undefined;
-  } finally {
-    await closeOffscreenDocument();
   }
 }
 
