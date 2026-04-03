@@ -48,10 +48,10 @@ export default function AccountSwitcher({ user, onSignOut }: Props) {
     try {
       const response = await authService.signIn();
       if (!response.ok) {
-        setSignInError(response.error ?? 'Sign-in failed');
+        setSignInError(getFriendlyAuthError(response.error ?? ''));
       }
     } catch (err) {
-      setSignInError(err instanceof Error ? err.message : 'Sign-in failed');
+      setSignInError(getFriendlyAuthError(err instanceof Error ? err.message : ''));
     } finally {
       setSigningIn(false);
     }
@@ -72,7 +72,7 @@ export default function AccountSwitcher({ user, onSignOut }: Props) {
     );
   }
 
-  const { displayName, email, photoURL } = user.user;
+  const { displayName = null, email = null, photoURL = null } = user.user ?? {};
   const initials = getInitials(displayName ?? email ?? '?');
 
   return (
@@ -141,4 +141,20 @@ function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getFriendlyAuthError(raw: string): string {
+  if (raw.includes('popup-closed-by-user') || raw.includes('cancelled-popup-request')) {
+    return 'Sign-in was cancelled.';
+  }
+  if (raw.includes('network-request-failed')) {
+    return 'Network error. Try again.';
+  }
+  if (raw.includes('too-many-requests')) {
+    return 'Too many attempts. Try again later.';
+  }
+  if (raw.includes('operation-not-allowed')) {
+    return 'Sign-in not configured.';
+  }
+  return 'Sign-in failed. Please try again.';
 }

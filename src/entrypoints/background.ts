@@ -320,7 +320,7 @@ function requestFirebaseAuth(): Promise<UserCredential> {
   });
 }
 
-async function firebaseAuth(): Promise<UserCredential | undefined> {
+async function firebaseAuth(): Promise<UserCredential> {
   await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
 
   try {
@@ -337,7 +337,10 @@ async function firebaseAuth(): Promise<UserCredential | undefined> {
     } else {
       console.error('[AUTH][BG] Authentication error:', err);
     }
-    return undefined;
+    // Re-throw so the message handler's .catch() sends { ok: false } to the caller.
+    // Returning undefined here would cause the .then() branch to run and incorrectly
+    // report success while storing nothing in chrome.storage.
+    throw err;
   } finally {
     await closeOffscreenDocument();
   }
@@ -927,6 +930,14 @@ export default defineBackground(() => {
         console.log('[AUTH][BG] Received firebase-auth message from popup');
         firebaseAuth()
           .then(async (authUser) => {
+            // Guard: a FirebaseError object ({ code, name }) must never reach storage.
+            // This can happen if the offscreen filter fails to catch a cancellation.
+            const cred = authUser as unknown as Record<string, unknown>;
+            if (typeof cred.code === 'string' && cred.code.startsWith('auth/')) {
+              console.warn('[AUTH][BG] Received FirebaseError as credential — rejecting:', cred.code);
+              sendResponse({ ok: false, error: String(cred.code) });
+              return;
+            }
             console.log('[AUTH][BG] Storing authUser in chrome.storage.local:', authUser);
             await chrome.storage.local.set({ [AUTH_USER_KEY]: authUser });
             // Attribute any pre-sign-in local data to this user on first sign-in

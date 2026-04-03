@@ -37,6 +37,25 @@ function getInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
+function getFriendlyAuthError(raw: string): string {
+  if (raw.includes('popup-closed-by-user') || raw.includes('cancelled-popup-request')) {
+    return 'Sign-in was cancelled. Please try again.';
+  }
+  if (raw.includes('network-request-failed')) {
+    return 'Network error. Check your connection and try again.';
+  }
+  if (raw.includes('too-many-requests')) {
+    return 'Too many sign-in attempts. Please wait a moment and try again.';
+  }
+  if (raw.includes('operation-not-allowed')) {
+    return 'Google sign-in is not enabled. Please contact support.';
+  }
+  if (raw.includes('user-disabled')) {
+    return 'This account has been disabled. Please contact support.';
+  }
+  return 'Sign-in failed. Please try again.';
+}
+
 /**
  * Dashboard account management page.
  * - Unauthenticated: shows Google sign-in card with a note that local data is safe.
@@ -86,10 +105,10 @@ export default function AccountPage() {
     try {
       const response = await authService.signIn();
       if (!response.ok) {
-        setSignInError(response.error ?? 'Sign-in failed');
+        setSignInError(getFriendlyAuthError(response.error ?? ''));
       }
     } catch (err) {
-      setSignInError(err instanceof Error ? err.message : 'Sign-in failed');
+      setSignInError(getFriendlyAuthError(err instanceof Error ? err.message : ''));
     } finally {
       setSigningIn(false);
     }
@@ -159,28 +178,35 @@ export default function AccountPage() {
           )}
 
           <div className="account-page__profile">
-            <div className="account-page__avatar">
-              {user.user.photoURL ? (
-                <img
-                  src={user.user.photoURL}
-                  alt={user.user.displayName ?? 'User avatar'}
-                  className="account-page__avatar-img"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span className="account-page__avatar-initials">
-                  {getInitials(user.user.displayName ?? user.user.email ?? '?')}
-                </span>
-              )}
-            </div>
-            <div className="account-page__profile-info">
-              {user.user.displayName && (
-                <span className="account-page__display-name">{user.user.displayName}</span>
-              )}
-              {user.user.email && (
-                <span className="account-page__email">{user.user.email}</span>
-              )}
-            </div>
+            {(() => {
+              const { displayName = null, email = null, photoURL = null } = user.user ?? {};
+              return (
+                <>
+                  <div className="account-page__avatar">
+                    {photoURL ? (
+                      <img
+                        src={photoURL}
+                        alt={displayName ?? 'User avatar'}
+                        className="account-page__avatar-img"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="account-page__avatar-initials">
+                        {getInitials(displayName ?? email ?? '?')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="account-page__profile-info">
+                    {displayName && (
+                      <span className="account-page__display-name">{displayName}</span>
+                    )}
+                    {email && (
+                      <span className="account-page__email">{email}</span>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div className="account-page__actions">

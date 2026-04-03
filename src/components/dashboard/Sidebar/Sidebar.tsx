@@ -325,34 +325,39 @@ export default function Sidebar({
       {/* Footer */}
       <div className="sidebar__footer">
         {user ? (
-          <button
-            className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
-            onClick={() => onNavigate('account')}
-            title={user.user.email ?? ''}
-          >
-            <div className="sidebar__user-avatar">
-              {user.user.photoURL ? (
-                <img
-                  src={user.user.photoURL}
-                  alt={user.user.displayName ?? 'User avatar'}
-                  className="sidebar__user-avatar-img"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span className="sidebar__user-avatar-initials">
-                  {getInitials(user.user.displayName ?? user.user.email ?? '?')}
-                </span>
-              )}
-            </div>
-            <div className="sidebar__user-info">
-              <span className="sidebar__user-name">
-                {user.user.displayName ?? user.user.email ?? 'Signed in'}
-              </span>
-              {user.user.email && user.user.displayName && (
-                <span className="sidebar__user-email">{user.user.email}</span>
-              )}
-            </div>
-          </button>
+          (() => {
+            const { displayName = null, email = null, photoURL = null } = user.user ?? {};
+            return (
+              <button
+                className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
+                onClick={() => onNavigate('account')}
+                title={email ?? ''}
+              >
+                <div className="sidebar__user-avatar">
+                  {photoURL ? (
+                    <img
+                      src={photoURL}
+                      alt={displayName ?? 'User avatar'}
+                      className="sidebar__user-avatar-img"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="sidebar__user-avatar-initials">
+                      {getInitials(displayName ?? email ?? '?')}
+                    </span>
+                  )}
+                </div>
+                <div className="sidebar__user-info">
+                  <span className="sidebar__user-name">
+                    {displayName ?? email ?? 'Signed in'}
+                  </span>
+                  {email && displayName && (
+                    <span className="sidebar__user-email">{email}</span>
+                  )}
+                </div>
+              </button>
+            );
+          })()
         ) : (
           <button
             className={`sidebar__nav-item${currentView === 'account' ? ' sidebar__nav-item--active' : ''}`}

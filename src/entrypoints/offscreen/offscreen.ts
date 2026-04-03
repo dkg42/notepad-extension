@@ -172,12 +172,27 @@ chrome.runtime.onMessage.addListener(
 
         window.removeEventListener('message', handleIframeMessage);
 
-        const payload = parsed.payload as { credential?: Record<string, unknown>; error?: string } | null;
+        // The iframe may post either a structured result ({ credential, ... })
+        // or a raw FirebaseError object ({ code, name, customData }) when the
+        // user cancels or an error occurs. Handle both shapes.
+        const payload = parsed.payload as {
+          credential?: Record<string, unknown>;
+          error?: string;
+          code?: string;   // present when iframe posts a FirebaseError directly
+          name?: string;   // "FirebaseError"
+        } | null;
+
+        // Detect a FirebaseError posted directly as the payload (e.g. auth/user-cancelled).
+        // FirebaseError objects have a `code` like "auth/<reason>" but no `error` string.
+        const payloadIsFirebaseError =
+          payload !== null &&
+          typeof payload.code === 'string' &&
+          payload.code.startsWith('auth/');
 
         // Send the auth result back as a new message — the original request
         // channel is already closed (ACK above), so sendResponse can't be reused.
-        if (!payload || payload.error) {
-          const error = payload?.error ?? 'Unknown auth error';
+        if (!payload || payload.error || payloadIsFirebaseError) {
+          const error = payload?.code ?? payload?.error ?? 'Unknown auth error';
           console.error('[AUTH][Offscreen] iframe returned error:', error);
           chrome.runtime.sendMessage({ type: 'AUTH_RESULT', ok: false, error }).catch(
             (err: unknown) => console.error('[AUTH][Offscreen] Failed to relay AUTH_RESULT error:', err),
