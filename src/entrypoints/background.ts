@@ -24,7 +24,6 @@ import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
-import { getAuth, signOut } from 'firebase/auth/web-extension';
 import type { UserCredential, AuthError } from 'firebase/auth';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 
@@ -951,12 +950,32 @@ export default defineBackground(() => {
       }
 
       if (message.type === 'firebase-sign-out') {
-        signOut(getAuth())
+        setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH)
+          .then(() => new Promise<void>((resolve, reject) => {
+            const signOutResultListener = (msg: unknown): void => {
+              if (!isMessage(msg)) return;
+              const m = msg as { type: string; ok?: boolean; error?: string };
+              if (m.type !== 'SIGN_OUT_RESULT') return;
+              chrome.runtime.onMessage.removeListener(signOutResultListener);
+              if (m.ok) {
+                resolve();
+              } else {
+                reject(new Error(m.error ?? 'Sign-out failed'));
+              }
+            };
+            chrome.runtime.onMessage.addListener(signOutResultListener);
+            chrome.runtime.sendMessage({ type: 'firebase-sign-out', target: 'offscreen' })
+              .catch((err: unknown) => {
+                chrome.runtime.onMessage.removeListener(signOutResultListener);
+                reject(err instanceof Error ? err : new Error(String(err)));
+              });
+          }))
           .then(() => chrome.storage.local.remove(AUTH_USER_KEY))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
-          );
+          )
+          .finally(() => void closeOffscreenDocument());
         return true;
       }
 

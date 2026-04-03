@@ -26,13 +26,34 @@ console.log('[AUTH][Offscreen] Script loaded');
 
 const iframe = document.createElement('iframe');
 iframe.src = EXTERNAL_AUTH_URL;
-// Track readiness so we never postMessage before the page's listener is registered
-let iframeReady = false;
+// iframeReadyPromise resolves when the iframe's useEffect posts 'notehub:iframe-ready',
+// guaranteeing listeners are registered before we send any auth trigger.
+let iframeReadyResolve: (() => void) | null = null;
+let iframeReadyPromise = new Promise<void>((resolve) => { iframeReadyResolve = resolve; });
 
+// On reload (e.g., unexpected navigation), reset the promise so the next auth call
+// waits for the new React mount to complete its useEffect.
 iframe.addEventListener('load', () => {
-  iframeReady = true;
-  console.log('[AUTH][Offscreen] iframe loaded and ready:', EXTERNAL_AUTH_URL);
+  console.log('[AUTH][Offscreen] iframe load event — awaiting useEffect handshake');
+  if (iframeReadyResolve === null) {
+    // Previous promise already resolved; create a fresh one for the next auth trigger.
+    iframeReadyPromise = new Promise<void>((resolve) => { iframeReadyResolve = resolve; });
+  }
 });
+
+// Two-way handshake: resolve only when the iframe confirms its listeners are active.
+window.addEventListener('message', (event: MessageEvent) => {
+  if (event.origin !== EXTERNAL_AUTH_ORIGIN) return;
+  let parsed: { type?: string };
+  try {
+    parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+  } catch { return; }
+  if (parsed.type !== 'notehub:iframe-ready') return;
+  console.log('[AUTH][Offscreen] iframe truly ready (useEffect listeners registered)');
+  iframeReadyResolve?.();
+  iframeReadyResolve = null;
+});
+
 iframe.addEventListener('error', (e) => {
   console.error('[AUTH][Offscreen] iframe failed to load:', e);
 });
@@ -61,8 +82,63 @@ chrome.runtime.onMessage.addListener(
 
     const msg = message as { type: string; target: string };
 
+    if (msg.type === 'firebase-sign-out') {
+      console.log('[AUTH][Offscreen] Handling firebase-sign-out');
+
+      sendResponse({ ack: true });
+
+      const handleSignOutMessage = (event: MessageEvent) => {
+        console.log('[AUTH][Offscreen] window.message received (sign-out) — origin:', event.origin, 'data:', event.data);
+        if (event.origin !== EXTERNAL_AUTH_ORIGIN) {
+          console.log('[AUTH][Offscreen] Ignoring message from unexpected origin:', event.origin);
+          return;
+        }
+
+        let parsed: { type?: string; payload?: unknown };
+        try {
+          parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        } catch {
+          console.log('[AUTH][Offscreen] Ignoring non-JSON message:', event.data);
+          return;
+        }
+
+        if (parsed.type !== 'notehub:sign-out-response') {
+          console.log('[AUTH][Offscreen] Ignoring unrelated message type:', parsed.type);
+          return;
+        }
+
+        window.removeEventListener('message', handleSignOutMessage);
+
+        const payload = parsed.payload as { error?: string } | null;
+        if (!payload || payload.error) {
+          const error = payload?.error ?? 'Unknown sign-out error';
+          console.error('[AUTH][Offscreen] iframe returned sign-out error:', error);
+          chrome.runtime.sendMessage({ type: 'SIGN_OUT_RESULT', ok: false, error }).catch(
+            (err: unknown) => console.error('[AUTH][Offscreen] Failed to relay SIGN_OUT_RESULT error:', err),
+          );
+        } else {
+          console.log('[AUTH][Offscreen] iframe sign-out succeeded, relaying result');
+          chrome.runtime.sendMessage({ type: 'SIGN_OUT_RESULT', ok: true }).catch(
+            (err: unknown) => console.error('[AUTH][Offscreen] Failed to relay SIGN_OUT_RESULT success:', err),
+          );
+        }
+      };
+
+      window.addEventListener('message', handleSignOutMessage);
+
+      const triggerSignOut = () => {
+        console.log('[AUTH][Offscreen] postMessage({ signOut: true }) sent to iframe');
+        iframe.contentWindow?.postMessage({ signOut: true }, EXTERNAL_AUTH_ORIGIN);
+      };
+
+      console.log('[AUTH][Offscreen] Awaiting iframe-ready before triggering sign-out');
+      iframeReadyPromise.then(triggerSignOut);
+
+      return false;
+    }
+
     if (msg.type === 'firebase-auth') {
-      console.log('[AUTH][Offscreen] Handling firebase-auth, iframe ready:', iframeReady);
+      console.log('[AUTH][Offscreen] Handling firebase-auth');
 
       // ACK immediately so Chrome does not hold the request channel open.
       // The actual auth result is delivered via a separate chrome.runtime.sendMessage
@@ -130,17 +206,11 @@ chrome.runtime.onMessage.addListener(
 
       const triggerAuth = () => {
         console.log('[AUTH][Offscreen] postMessage({ initAuth: true }) sent to iframe');
-        iframe.contentWindow?.postMessage({ initAuth: true }, new URL(EXTERNAL_AUTH_URL).origin);
+        iframe.contentWindow?.postMessage({ initAuth: true }, EXTERNAL_AUTH_ORIGIN);
       };
 
-      // Wait for iframe to finish loading before triggering — if we postMessage
-      // before the external page's event listener is registered, the message is lost.
-      if (iframeReady) {
-        triggerAuth();
-      } else {
-        console.log('[AUTH][Offscreen] iframe not yet ready, waiting for load event...');
-        iframe.addEventListener('load', triggerAuth, { once: true });
-      }
+      console.log('[AUTH][Offscreen] Awaiting iframe-ready before triggering auth');
+      iframeReadyPromise.then(triggerAuth);
 
       // Return false — sendResponse was already called synchronously (ACK).
       return false;
