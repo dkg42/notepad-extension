@@ -1,4 +1,5 @@
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
+import { ensureGoogleSession, invalidateSessionCache } from './google-session-service';
 
 const NOTEBOOKLM_ORIGIN = 'https://notebooklm.google.com';
 const BATCHEXECUTE_PATH = '/_/LabsTailwindUi/data/batchexecute';
@@ -37,9 +38,26 @@ interface Tokens {
   sessionId: string | null;
 }
 
-async function extractTokens(): Promise<Tokens> {
-  const response = await fetch(`${NOTEBOOKLM_ORIGIN}/`, { credentials: 'include' });
-  if (!response.ok) return { csrfToken: null, sessionId: null };
+async function fetchTokensFromHomepage(): Promise<Tokens> {
+  const response = await fetch(`${NOTEBOOKLM_ORIGIN}/`, {
+    credentials: 'include',
+    redirect: 'manual',
+  });
+
+  // redirect: 'manual' prevents the browser from following any redirect to
+  // accounts.google.com, which would violate the extension's CSP connect-src.
+  // An opaqueredirect response means the NotebookLM session is absent or stale.
+  if (response.type === 'opaqueredirect') {
+    invalidateSessionCache();
+    return { csrfToken: null, sessionId: null };
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      invalidateSessionCache();
+    }
+    return { csrfToken: null, sessionId: null };
+  }
 
   const html = await response.text();
   const csrfMatch = html.match(/"SNlM0e":"([^"]+)"/);
@@ -49,6 +67,29 @@ async function extractTokens(): Promise<Tokens> {
     csrfToken: csrfMatch?.[1] ?? null,
     sessionId: sidMatch?.[1] ?? null,
   };
+}
+
+/**
+ * Ensures a Google session exists, then extracts the CSRF and session tokens
+ * from the NotebookLM homepage. If the first attempt returns no CSRF token
+ * (session expired/invalid), invalidates the cache, re-establishes the session,
+ * and retries once.
+ */
+async function extractTokens(): Promise<Tokens> {
+  await ensureGoogleSession();
+
+  const tokens = await fetchTokensFromHomepage();
+
+  if (!tokens.csrfToken) {
+    // Session appeared valid (SID cookie present) but the homepage returned
+    // no tokens — likely a stale session. Force re-authentication by bypassing
+    // the SID cookie check so the user sees the sign-in tab.
+    invalidateSessionCache();
+    await ensureGoogleSession(true);
+    return fetchTokensFromHomepage();
+  }
+
+  return tokens;
 }
 
 /** Executes a single batchexecute RPC call and returns the parsed result. */
@@ -79,6 +120,10 @@ async function executeBatchRpc(
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      invalidateSessionCache();
+      throw new Error(`Google session expired (HTTP ${response.status}) — please sign in again`);
+    }
     throw new Error(`batchexecute ${rpcId} failed: HTTP ${response.status}`);
   }
 
@@ -86,15 +131,35 @@ async function executeBatchRpc(
   return parseBatchexecuteResponse(text, rpcId);
 }
 
-/** Convenience: extract tokens + execute RPC in one call. Throws if not signed in. */
+/**
+ * Convenience: extract tokens + execute RPC in one call.
+ * On auth failure (401/403 or missing CSRF token), invalidates the session cache
+ * and retries once after re-establishing the Google session.
+ */
 async function executeAuthenticatedRpc(
   rpcId: string,
   payload: string,
   sourcePath: string,
 ): Promise<unknown[] | null> {
-  const { csrfToken, sessionId } = await extractTokens();
-  if (!csrfToken) throw new Error('Not signed in to NotebookLM');
-  return executeBatchRpc(rpcId, payload, sourcePath, csrfToken, sessionId);
+  const attempt = async () => {
+    const { csrfToken, sessionId } = await extractTokens();
+    if (!csrfToken) throw new Error('Not signed in to NotebookLM');
+    return executeBatchRpc(rpcId, payload, sourcePath, csrfToken, sessionId);
+  };
+
+  try {
+    return await attempt();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const isAuthError =
+      message.includes('Google session expired') || message.includes('Not signed in');
+
+    if (!isAuthError) throw err;
+
+    // Single retry after session re-establishment
+    invalidateSessionCache();
+    return attempt();
+  }
 }
 
 // ── Existing public API ──────────────────────────────────────────────────────
@@ -367,6 +432,8 @@ export async function fetchAudioBlob(mediaUrl: string): Promise<{ blob: Blob; mi
   if (!isAllowed) {
     throw new Error(`Audio URL domain not permitted: ${url.hostname}`);
   }
+
+  await ensureGoogleSession();
 
   const response = await fetch(mediaUrl, { credentials: 'include' });
   if (!response.ok) {

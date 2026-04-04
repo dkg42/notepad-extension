@@ -63,6 +63,26 @@ export const authService = {
   },
 
   /**
+   * Ensures the browser has an active Google/NotebookLM session.
+   * Delegates to the background service worker, which opens a NotebookLM
+   * tab for the user to sign in if the required cookies are missing.
+   */
+  async ensureNotebookLMSession(): Promise<{ ok: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { type: 'ensure-google-session' },
+        (response: { ok: boolean; error?: string } | undefined) => {
+          if (chrome.runtime.lastError) {
+            resolve({ ok: false, error: chrome.runtime.lastError.message });
+            return;
+          }
+          resolve(response ?? { ok: false, error: 'No response from background' });
+        },
+      );
+    });
+  },
+
+  /**
    * Subscribes to auth state changes via chrome.storage.onChanged.
    * Fires immediately-on-change when the background writes or removes authUser.
    * Returns an unsubscribe function — call it in React's cleanup effect.

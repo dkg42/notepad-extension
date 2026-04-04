@@ -23,6 +23,7 @@ import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
+import { ensureGoogleSession } from '@/services/google-session-service';
 import type { UserCredential, AuthError } from 'firebase/auth/web-extension';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 
@@ -924,6 +925,17 @@ export default defineBackground(() => {
         return true;
       }
 
+      // ── Google session handler ────────────────────────────────────────────
+
+      if (message.type === 'ensure-google-session') {
+        ensureGoogleSession()
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
+      }
+
       // ── Firebase auth handlers ─────────────────────────────────────────────
 
       if (message.type === 'firebase-auth') {
@@ -951,6 +963,12 @@ export default defineBackground(() => {
             }
             console.log('[AUTH][BG] Auth complete, sending ok to popup');
             sendResponse({ ok: true });
+            // Proactively establish the NotebookLM Google session so batchRPC
+            // calls work immediately after sign-in. Fire-and-forget — any failure
+            // here is handled gracefully on the first actual API call.
+            ensureGoogleSession().catch((err: unknown) => {
+              console.warn('[AUTH][BG] Proactive NotebookLM session setup failed:', err);
+            });
           })
           .catch((err: unknown) => {
             console.error('[AUTH][BG] Auth flow error:', err);
