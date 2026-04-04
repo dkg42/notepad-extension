@@ -95,6 +95,16 @@ export const storageService = {
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [] });
   },
 
+  async clearAllData(): Promise<void> {
+    await chrome.storage.local.remove([
+      SNIPPETS_KEY,
+      FOLDERS_KEY,
+      TAGS_META_KEY,
+      EXPORT_HISTORY_KEY,
+      PODCAST_EPISODES_KEY,
+    ]);
+  },
+
   // ── Bulk Operations ────────────────────────────────────────────────────────
 
   async bulkDelete(ids: string[]): Promise<void> {

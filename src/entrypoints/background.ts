@@ -15,6 +15,9 @@ import {
   fetchAudioBlob,
 } from '@/services/notebooklm-api';
 import { audioCacheService } from '@/services/audio-cache-service';
+import { podcastAudioService } from '@/services/podcast-audio-service';
+import { storageService } from '@/services/storage-service';
+import { domainRouterService } from '@/services/domain-router-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
@@ -23,7 +26,7 @@ import { crawlUrls } from '@/services/web-crawler-service';
 import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
-import { ensureGoogleSession } from '@/services/google-session-service';
+import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-session-service';
 import type { UserCredential, AuthError } from 'firebase/auth/web-extension';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 
@@ -38,6 +41,8 @@ const PIPELINE_CHECK_ALARM = 'pipeline-check';
 const PIPELINE_CHECK_INTERVAL_MINUTES = 15;
 
 async function syncNotebooks(): Promise<void> {
+  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
+  if (!stored[AUTH_USER_KEY]) return;
   try {
     const notebooks = await fetchNotebooks();
     if (notebooks.length > 0) {
@@ -65,6 +70,8 @@ function needsPolling(pipeline: Pipeline): boolean {
  * min-sources triggers by comparing current API data to stored baselines.
  */
 async function runPipelineCheck(): Promise<void> {
+  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
+  if (!stored[AUTH_USER_KEY]) return;
   try {
     const pipelines = await pipelineService.getAll();
     const pollable = pipelines.filter((p) => p.enabled && needsPolling(p));
@@ -137,6 +144,8 @@ async function runPipelineAnnotationTriggers(
   newAnnotations: NotebookAnnotation[],
   oldAnnotations: NotebookAnnotation[],
 ): Promise<void> {
+  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
+  if (!stored[AUTH_USER_KEY]) return;
   try {
     const pipelines = await pipelineService.getAll();
     const eventDriven = pipelines.filter(
@@ -200,6 +209,11 @@ async function runPipelineAnnotationTriggers(
 
 function isMessage(value: unknown): value is { type: string } {
   return typeof value === 'object' && value !== null && 'type' in value;
+}
+
+async function ensureSignedIn(): Promise<void> {
+  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
+  if (!stored[AUTH_USER_KEY]) throw new Error('Not signed in');
 }
 
 
@@ -388,13 +402,19 @@ export default defineBackground(() => {
     (message: unknown, _sender, sendResponse: (r: unknown) => void) => {
       if (!isMessage(message)) return false;
       if (message.type === 'SYNC_NOTEBOOKS') {
-        syncNotebooks().then(() => sendResponse({ ok: true }));
+        ensureSignedIn()
+          .then(() => syncNotebooks())
+          .then(() => sendResponse({ ok: true }))
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
         return true; // keep channel open for async
       }
 
       if (message.type === 'FETCH_SOURCE_COUNTS') {
         const { notebookIds } = message as { type: string; notebookIds: string[] };
-        fetchSourceCounts(notebookIds)
+        ensureSignedIn()
+          .then(() => fetchSourceCounts(notebookIds))
           .then((counts) => sendResponse({ ok: true, counts }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -404,7 +424,8 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_NOTEBOOK_SOURCES') {
         const { notebookId } = message as { type: string; notebookId: string };
-        fetchNotebookSources(notebookId)
+        ensureSignedIn()
+          .then(() => fetchNotebookSources(notebookId))
           .then((sources) => sendResponse({ ok: true, sources, count: sources.length }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -414,7 +435,8 @@ export default defineBackground(() => {
 
       if (message.type === 'DELETE_NOTEBOOK') {
         const { notebookId } = message as { type: string; notebookId: string };
-        deleteNotebook(notebookId)
+        ensureSignedIn()
+          .then(() => deleteNotebook(notebookId))
           .then(() => notebookSyncService.remove(notebookId))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
@@ -425,7 +447,8 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_NOTEBOOK_SOURCES_DETAILED') {
         const { notebookId } = message as { type: string; notebookId: string };
-        fetchNotebookSourcesDetailed(notebookId)
+        ensureSignedIn()
+          .then(() => fetchNotebookSourcesDetailed(notebookId))
           .then((sources) => sendResponse({ ok: true, sources }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -435,7 +458,8 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_NOTEBOOK_FULL_DATA') {
         const { notebookId } = message as { type: string; notebookId: string };
-        fetchNotebookFullData(notebookId)
+        ensureSignedIn()
+          .then(() => fetchNotebookFullData(notebookId))
           .then((data) => sendResponse({ ok: true, ...data }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -445,7 +469,8 @@ export default defineBackground(() => {
 
       if (message.type === 'SUMMARIZE_NOTEBOOK') {
         const { notebookId } = message as { type: string; notebookId: string };
-        summarizeNotebook(notebookId)
+        ensureSignedIn()
+          .then(() => summarizeNotebook(notebookId))
           .then((summary) => sendResponse({ ok: true, summary }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -455,7 +480,8 @@ export default defineBackground(() => {
 
       if (message.type === 'ADD_SOURCE_URL') {
         const { notebookId, url } = message as { type: string; notebookId: string; url: string };
-        addSourceUrl(notebookId, url)
+        ensureSignedIn()
+          .then(() => addSourceUrl(notebookId, url))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -465,7 +491,8 @@ export default defineBackground(() => {
 
       if (message.type === 'DELETE_SOURCE') {
         const { sourceId } = message as { type: string; sourceId: string };
-        deleteSource(sourceId)
+        ensureSignedIn()
+          .then(() => deleteSource(sourceId))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -479,7 +506,8 @@ export default defineBackground(() => {
           notebookId: string;
           options?: import('@/services/notebooklm-api').AudioOverviewOptions;
         };
-        createAudioOverview(notebookId, options)
+        ensureSignedIn()
+          .then(() => createAudioOverview(notebookId, options))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -489,7 +517,8 @@ export default defineBackground(() => {
 
       if (message.type === 'LIST_ARTIFACTS') {
         const { notebookId } = message as { type: string; notebookId: string };
-        listArtifacts(notebookId)
+        ensureSignedIn()
+          .then(() => listArtifacts(notebookId))
           .then((artifacts) => sendResponse({ ok: true, artifacts }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -499,7 +528,8 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_NOTEBOOK_NOTES') {
         const { notebookId } = message as { type: string; notebookId: string };
-        fetchNotebookNotes(notebookId)
+        ensureSignedIn()
+          .then(() => fetchNotebookNotes(notebookId))
           .then((notes) => sendResponse({ ok: true, notes }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -510,6 +540,7 @@ export default defineBackground(() => {
       if (message.type === 'FETCH_AUDIO_FOR_PLAYBACK') {
         const { url, artifactId } = message as { type: string; url: string; artifactId: string };
         (async () => {
+          await ensureSignedIn();
           // Return early if already cached in IndexedDB
           const cached = await audioCacheService.get(artifactId);
           if (cached) {
@@ -540,7 +571,8 @@ export default defineBackground(() => {
           platform: import('@/types').ChatPlatform;
           conversations: import('@/types').ConversationMeta[];
         };
-        chatHistoryStorage.upsertConversations(conversations)
+        ensureSignedIn()
+          .then(() => chatHistoryStorage.upsertConversations(conversations))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -553,7 +585,8 @@ export default defineBackground(() => {
           type: string;
           conversation: import('@/types').ConversationFull;
         };
-        chatHistoryStorage.saveConversationContent(conversation)
+        ensureSignedIn()
+          .then(() => chatHistoryStorage.saveConversationContent(conversation))
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -594,6 +627,7 @@ export default defineBackground(() => {
           id: string;
         };
         (async () => {
+          await ensureSignedIn();
           // Return cached content if available
           const cached = await chatHistoryStorage.getConversationContent(platform, id);
           if (cached) return { ok: true, conversation: cached };
@@ -687,6 +721,7 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_ALL_SOURCES') {
         (async () => {
+          await ensureSignedIn();
           const notebooks = await notebookSyncService.getAll();
           const allSources: Array<{
             id: string; title: string; type: string; sourceUrl?: string;
@@ -721,6 +756,7 @@ export default defineBackground(() => {
 
       if (message.type === 'FETCH_ALL_ARTIFACTS') {
         (async () => {
+          await ensureSignedIn();
           const notebooks = await notebookSyncService.getAll();
           const allArtifacts: Array<{
             id: string; title: string; typeCode: number; mediaUrl?: string;
@@ -756,9 +792,15 @@ export default defineBackground(() => {
 
       if (message.type === 'BULK_ADD_SOURCES') {
         const { notebookId, urls } = message as { type: string; notebookId: string; urls: string[] };
-        const jobId = importJobService.createAndStart(notebookId, urls);
-        sendResponse({ ok: true, jobId });
-        return false; // sync response
+        ensureSignedIn()
+          .then(() => {
+            const jobId = importJobService.createAndStart(notebookId, urls);
+            sendResponse({ ok: true, jobId });
+          })
+          .catch((err: unknown) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+          );
+        return true;
       }
 
       if (message.type === 'GET_IMPORT_JOB_PROGRESS') {
@@ -826,6 +868,7 @@ export default defineBackground(() => {
       if (message.type === 'DELETE_ALL_SOURCES') {
         const { notebookId } = message as { type: string; notebookId: string };
         (async () => {
+          await ensureSignedIn();
           const sources = await fetchNotebookSourcesDetailed(notebookId);
           for (const src of sources) {
             await deleteSource(src.id);
@@ -903,6 +946,7 @@ export default defineBackground(() => {
       if (message.type === 'RUN_PIPELINE_NOW') {
         const { pipeline } = message as { type: string; pipeline: Pipeline };
         (async () => {
+          await ensureSignedIn();
           const [notebooks, annotations, collections] = await Promise.all([
             notebookSyncService.getAll(),
             notebookAnnotationService.getAllAnnotations(),
@@ -928,7 +972,8 @@ export default defineBackground(() => {
       // ── Google session handler ────────────────────────────────────────────
 
       if (message.type === 'ensure-google-session') {
-        ensureGoogleSession()
+        ensureSignedIn()
+          .then(() => ensureGoogleSession())
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
@@ -998,7 +1043,20 @@ export default defineBackground(() => {
                 reject(err instanceof Error ? err : new Error(String(err)));
               });
           }))
-          .then(() => chrome.storage.local.remove(AUTH_USER_KEY))
+          .then(() => {
+            invalidateSessionCache();
+            return Promise.all([
+              chrome.storage.local.remove([AUTH_USER_KEY, MIGRATION_KEY]),
+              storageService.clearAllData(),
+              chatHistoryStorage.clearAllData(),
+              pipelineService.clearAllData(),
+              notebookSyncService.clear(),
+              notebookAnnotationService.clearAllData(),
+              audioCacheService.clear(),
+              podcastAudioService.clear(),
+              domainRouterService.clearAllData(),
+            ]);
+          })
           .then(() => sendResponse({ ok: true }))
           .catch((err: unknown) =>
             sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),

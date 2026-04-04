@@ -26,6 +26,7 @@ export default function App() {
     });
 
     const unsubscribe = authService.onAuthStateChange((user) => {
+      if (!user) localStorage.clear();
       setUserCredential(user);
       setIsLoadingAuth(false);
     });

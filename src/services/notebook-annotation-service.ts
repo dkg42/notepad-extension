@@ -71,4 +71,8 @@ export const notebookAnnotationService = {
       [ANNOTATIONS_KEY]: updatedAnnotations,
     });
   },
+
+  async clearAllData(): Promise<void> {
+    await chrome.storage.sync.remove([ANNOTATIONS_KEY, COLLECTIONS_KEY]);
+  },
 };

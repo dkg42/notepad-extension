@@ -38,6 +38,10 @@ export const domainRouterService = {
       ),
     });
   },
+
+  async clearAllData(): Promise<void> {
+    await chrome.storage.local.remove(STORAGE_KEY);
+  },
 };
 
 /**

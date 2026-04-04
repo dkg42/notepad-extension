@@ -86,6 +86,15 @@ export const pipelineService = {
     await chrome.storage.local.set({ [PIPELINE_RUNS_KEY]: [] });
   },
 
+  async clearAllData(): Promise<void> {
+    await chrome.storage.local.remove([
+      PIPELINES_KEY,
+      PIPELINE_RUNS_KEY,
+      SOURCE_BASELINE_KEY,
+      ARTIFACT_BASELINE_KEY,
+    ]);
+  },
+
   // ── Source count baseline (for 'source-added' trigger) ───────────────────
 
   /** Returns a map of notebookId → source count from the last poll. */

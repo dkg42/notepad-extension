@@ -85,4 +85,10 @@ export const chatHistoryStorage = {
     }
     await chrome.storage.local.set({ [SYNC_META_KEY]: all });
   },
+
+  async clearAllData(): Promise<void> {
+    const allData = await chrome.storage.local.get(null);
+    const dynamicKeys = Object.keys(allData).filter((k) => k.startsWith('chatContent_'));
+    await chrome.storage.local.remove([CONVERSATIONS_KEY, SYNC_META_KEY, ...dynamicKeys]);
+  },
 };
