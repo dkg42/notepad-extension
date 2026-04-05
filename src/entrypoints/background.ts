@@ -43,15 +43,26 @@ const PIPELINE_CHECK_INTERVAL_MINUTES = 15;
 async function syncNotebooks(): Promise<void> {
   const stored = await chrome.storage.local.get(AUTH_USER_KEY);
   if (!stored[AUTH_USER_KEY]) return;
+  const uid: string | undefined = stored[AUTH_USER_KEY]?.user?.uid;
+  // Clear stale data before syncing if the stored data belongs to a different
+  // user or was written before ownerUid tracking was introduced.
+  if (uid) {
+    const syncMeta = await notebookSyncService.getSyncMeta();
+    if (syncMeta && (!syncMeta.ownerUid || syncMeta.ownerUid !== uid)) {
+      console.warn('[SYNC] Stale or untagged notebook data — clearing before re-sync', { stored: syncMeta.ownerUid, current: uid });
+      await notebookSyncService.clear();
+    }
+  }
   try {
     const notebooks = await fetchNotebooks();
     if (notebooks.length > 0) {
       await notebookSyncService.upsertMany(notebooks);
     }
-    await notebookSyncService.setSyncMeta({ lastSyncedAt: Date.now() });
+    await notebookSyncService.setSyncMeta({ lastSyncedAt: Date.now(), ownerUid: uid });
   } catch (error) {
     await notebookSyncService.setSyncMeta({
       lastSyncedAt: Date.now(),
+      ownerUid: uid,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -994,6 +1005,29 @@ export default defineBackground(() => {
               console.warn('[AUTH][BG] Received FirebaseError as credential — rejecting:', cred.code);
               sendResponse({ ok: false, error: String(cred.code) });
               return;
+            }
+            // Clear all user data if a different user is signing in, or if there
+            // is no prior local auth record (stale sync data may remain from a
+            // previous session that was signed out on another device).
+            const existingStored = await chrome.storage.local.get(AUTH_USER_KEY);
+            const existingUid: string | undefined = existingStored[AUTH_USER_KEY]?.user?.uid;
+            const incomingUid: string | undefined = authUser?.user?.uid;
+            const syncMeta = await notebookSyncService.getSyncMeta();
+            const isUserSwitch = existingUid && incomingUid && existingUid !== incomingUid;
+            const hasOrphanedSyncData = !existingUid && syncMeta?.ownerUid && syncMeta.ownerUid !== incomingUid;
+            if (isUserSwitch || hasOrphanedSyncData) {
+              console.log('[AUTH][BG] User switch or orphaned data detected — clearing', { existingUid, incomingUid, syncOwner: syncMeta?.ownerUid });
+              invalidateSessionCache();
+              await Promise.all([
+                storageService.clearAllData(),
+                chatHistoryStorage.clearAllData(),
+                pipelineService.clearAllData(),
+                notebookSyncService.clear(),
+                notebookAnnotationService.clearAllData(),
+                audioCacheService.clear(),
+                podcastAudioService.clear(),
+                domainRouterService.clearAllData(),
+              ]);
             }
             console.log('[AUTH][BG] Storing authUser in chrome.storage.local:', authUser);
             await chrome.storage.local.set({ [AUTH_USER_KEY]: authUser });

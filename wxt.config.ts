@@ -14,7 +14,7 @@ export default defineConfig({
       open_in_tab: true,
     },
     content_security_policy: {
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://notebooklm.google.com;",
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://notebooklm.google.com https://accounts.google.com;",
     },
     background: {
       service_worker: "background.js"
@@ -33,6 +33,7 @@ export default defineConfig({
       // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
       'https://securetoken.googleapis.com/*', // Firebase token refresh
       'https://identitytoolkit.googleapis.com/*',
+      'https://accounts.google.com/*',
       'https://localhost:3000/*'
     ],
     // ── Future: Google Docs sync ──────────────────────────────────────────────

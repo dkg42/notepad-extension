@@ -1,5 +1,5 @@
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
-import { ensureGoogleSession, invalidateSessionCache } from './google-session-service';
+import { ensureGoogleSession, getSignedInGoogleAccountEmail, invalidateSessionCache } from './google-session-service';
 
 const NOTEBOOKLM_ORIGIN = 'https://notebooklm.google.com';
 const BATCHEXECUTE_PATH = '/_/LabsTailwindUi/data/batchexecute';
@@ -70,13 +70,41 @@ async function fetchTokensFromHomepage(): Promise<Tokens> {
 }
 
 /**
+ * Verifies that the Google account currently signed into the browser matches
+ * the Firebase-authenticated user. Throws if they differ, preventing RPC calls
+ * from running against the wrong Google account's NotebookLM data.
+ *
+ * Skips the check when either email is unavailable (e.g. ListAccounts fails or
+ * no Firebase user is signed in) to avoid blocking legitimate use.
+ */
+async function assertSessionOwnership(): Promise<void> {
+  const sessionEmail = await getSignedInGoogleAccountEmail();
+  if (!sessionEmail) return;
+  const authResult = await chrome.storage.local.get('authUser');
+  const expectedEmail: string | undefined = authResult['authUser']?.user?.email;
+  if (!expectedEmail) return;
+  if (sessionEmail.toLowerCase() !== expectedEmail.toLowerCase()) {
+    invalidateSessionCache();
+    throw new Error(
+      `Account mismatch: the browser is signed into Google as ${sessionEmail} ` +
+      `but the extension is authenticated as ${expectedEmail}. ` +
+      `Please sign in to NotebookLM with your ${expectedEmail} account.`,
+    );
+  }
+}
+
+/**
  * Ensures a Google session exists, then extracts the CSRF and session tokens
  * from the NotebookLM homepage. If the first attempt returns no CSRF token
  * (session expired/invalid), invalidates the cache, re-establishes the session,
  * and retries once.
+ *
+ * Also asserts that the Google session belongs to the Firebase-authenticated
+ * user before returning, so no RPC call fires against the wrong account.
  */
 async function extractTokens(): Promise<Tokens> {
   await ensureGoogleSession();
+  await assertSessionOwnership();
 
   const tokens = await fetchTokensFromHomepage();
 

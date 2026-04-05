@@ -19,8 +19,12 @@ const GOOGLE_COOKIE_DOMAIN = '.google.com';
 const SESSION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const SIGN_IN_TIMEOUT_MS = 2 * 60 * 1000;   // 2 minutes
 
+const LIST_ACCOUNTS_URL = 'https://accounts.google.com/ListAccounts?json=standard&gpsia=1&source=ogb&origin=https%3A%2F%2Fwww.google.com';
+
 /** Cached validation result with a TTL. */
 let cachedValidAt: number | null = null;
+/** Cached primary signed-in Google account email — cleared on session invalidation. */
+let cachedAccountEmail: string | null | undefined = undefined; // undefined = not yet fetched
 
 /**
  * Checks whether the browser has an active Google session by verifying
@@ -58,6 +62,56 @@ export async function validateGoogleSession(): Promise<boolean> {
  */
 export function invalidateSessionCache(): void {
   cachedValidAt = null;
+  cachedAccountEmail = undefined;
+}
+
+/**
+ * Returns the email of the primary Google account currently signed into the
+ * browser, by calling the accounts.google.com/ListAccounts API.
+ *
+ * The result is cached until `invalidateSessionCache()` is called (i.e. on
+ * auth failure or sign-out), so only one network call is made per session.
+ * Returns null if the call fails or no account is found.
+ */
+export async function getSignedInGoogleAccountEmail(): Promise<string | null> {
+  if (cachedAccountEmail != null) return cachedAccountEmail;
+  try {
+    const resp = await fetch(LIST_ACCOUNTS_URL, { credentials: 'include' });
+    if (!resp.ok) {
+      cachedAccountEmail = null;
+      return null;
+    }
+    const text = await resp.text();
+    // Response is an HTML page (OGB iframe format) containing a postMessage call with
+    // the account data as a \xNN-escaped JS string, e.g.:
+    //   window.parent.postMessage('\x5b\x22gaia.l.a.r\x22,...', 'https:\/\/www.google.com')
+    const match = text.match(/window\.parent\.postMessage\('([\s\S]*?)',\s*'[^']*'\)/);
+    if (!match) {
+      cachedAccountEmail = null;
+      return null;
+    }
+    // Unescape \xNN hex sequences and escaped forward slashes to get valid JSON.
+    const jsonText = match[1]
+      .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\\//g, '/');
+    const data = JSON.parse(jsonText) as unknown[];
+    // Decoded: ["gaia.l.a.r", [[account0], [account1], ...]]
+    // Each account entry: ["gaia.l.a", index, displayName, email, photoUrl, ...]
+    const accounts = data[1];
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      cachedAccountEmail = null;
+      return null;
+    }
+    const primary = accounts[0];
+    const email = Array.isArray(primary) && typeof primary[3] === 'string' && primary[3].includes('@')
+      ? primary[3] as string
+      : null;
+    cachedAccountEmail = email;
+    return email;
+  } catch {
+    cachedAccountEmail = null;
+    return null;
+  }
 }
 
 /**

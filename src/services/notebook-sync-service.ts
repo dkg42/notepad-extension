@@ -6,6 +6,7 @@ const MAX_NOTEBOOKS = 150;
 
 export interface SyncMeta {
   lastSyncedAt: number;
+  ownerUid?: string;
   error?: string;
 }
 
