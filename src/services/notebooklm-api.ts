@@ -1,5 +1,5 @@
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
-import { ensureGoogleSession, getSignedInGoogleAccountEmail, invalidateSessionCache } from './google-session-service';
+import { ensureGoogleSession, findAuthuserIndex, invalidateSessionCache } from './google-session-service';
 
 const NOTEBOOKLM_ORIGIN = 'https://notebooklm.google.com';
 const BATCHEXECUTE_PATH = '/_/LabsTailwindUi/data/batchexecute';
@@ -38,8 +38,11 @@ interface Tokens {
   sessionId: string | null;
 }
 
-async function fetchTokensFromHomepage(): Promise<Tokens> {
-  const response = await fetch(`${NOTEBOOKLM_ORIGIN}/`, {
+async function fetchTokensFromHomepage(authuser?: number): Promise<Tokens> {
+  const url = authuser !== undefined
+    ? `${NOTEBOOKLM_ORIGIN}/?authuser=${authuser}&pageId=none`
+    : `${NOTEBOOKLM_ORIGIN}/`;
+  const response = await fetch(url, {
     credentials: 'include',
     redirect: 'manual',
   });
@@ -70,51 +73,44 @@ async function fetchTokensFromHomepage(): Promise<Tokens> {
 }
 
 /**
- * Verifies that the Google account currently signed into the browser matches
- * the Firebase-authenticated user. Throws if they differ, preventing RPC calls
- * from running against the wrong Google account's NotebookLM data.
+ * Resolves the `authuser` index for the extension's authenticated user, then
+ * extracts the CSRF and session tokens from the NotebookLM homepage using that
+ * account-specific URL (`?authuser=N&pageId=none`).
  *
- * Skips the check when either email is unavailable (e.g. ListAccounts fails or
- * no Firebase user is signed in) to avoid blocking legitimate use.
- */
-async function assertSessionOwnership(): Promise<void> {
-  const sessionEmail = await getSignedInGoogleAccountEmail();
-  if (!sessionEmail) return;
-  const authResult = await chrome.storage.local.get('authUser');
-  const expectedEmail: string | undefined = authResult['authUser']?.user?.email;
-  if (!expectedEmail) return;
-  if (sessionEmail.toLowerCase() !== expectedEmail.toLowerCase()) {
-    invalidateSessionCache();
-    throw new Error(
-      `Account mismatch: the browser is signed into Google as ${sessionEmail} ` +
-      `but the extension is authenticated as ${expectedEmail}. ` +
-      `Please sign in to NotebookLM with your ${expectedEmail} account.`,
-    );
-  }
-}
-
-/**
- * Ensures a Google session exists, then extracts the CSRF and session tokens
- * from the NotebookLM homepage. If the first attempt returns no CSRF token
- * (session expired/invalid), invalidates the cache, re-establishes the session,
- * and retries once.
- *
- * Also asserts that the Google session belongs to the Firebase-authenticated
- * user before returning, so no RPC call fires against the wrong account.
+ * If the extension user's email is not found among the browser's signed-in
+ * Google accounts, throws a clear error. If the homepage returns no CSRF token
+ * on the first attempt (stale session), invalidates the cache and retries once.
  */
 async function extractTokens(): Promise<Tokens> {
-  await ensureGoogleSession();
-  await assertSessionOwnership();
+  const authResult = await chrome.storage.local.get('authUser');
+  const expectedEmail: string | undefined = authResult['authUser']?.user?.email;
 
-  const tokens = await fetchTokensFromHomepage();
+  if (!expectedEmail) {
+    // No extension user signed in — attempt unauthenticated fetch as fallback
+    return fetchTokensFromHomepage();
+  }
+
+  const authuserIndex = await findAuthuserIndex(expectedEmail);
+  if (authuserIndex === null) {
+    throw new Error(
+      `Your ${expectedEmail} account is not signed in to Google in this browser. ` +
+      `Please sign in to Google first.`,
+    );
+  }
+
+  const tokens = await fetchTokensFromHomepage(authuserIndex);
 
   if (!tokens.csrfToken) {
-    // Session appeared valid (SID cookie present) but the homepage returned
-    // no tokens — likely a stale session. Force re-authentication by bypassing
-    // the SID cookie check so the user sees the sign-in tab.
+    // Tokens missing — session may be stale. Invalidate cache and retry once.
     invalidateSessionCache();
-    await ensureGoogleSession(true);
-    return fetchTokensFromHomepage();
+    const retryIndex = await findAuthuserIndex(expectedEmail);
+    if (retryIndex === null) {
+      throw new Error(
+        `Your ${expectedEmail} account is not signed in to Google in this browser. ` +
+        `Please sign in to Google first.`,
+      );
+    }
+    return fetchTokensFromHomepage(retryIndex);
   }
 
   return tokens;
