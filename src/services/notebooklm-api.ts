@@ -36,6 +36,7 @@ const GET_NOTES_RPC_ID = 'cFji9';
 interface Tokens {
   csrfToken: string | null;
   sessionId: string | null;
+  authuserIndex?: number;
 }
 
 async function fetchTokensFromHomepage(authuser?: number): Promise<Tokens> {
@@ -110,10 +111,10 @@ async function extractTokens(): Promise<Tokens> {
         `Please sign in to Google first.`,
       );
     }
-    return fetchTokensFromHomepage(retryIndex);
+    return { ...await fetchTokensFromHomepage(retryIndex), authuserIndex: retryIndex };
   }
 
-  return tokens;
+  return { ...tokens, authuserIndex };
 }
 
 /** Executes a single batchexecute RPC call and returns the parsed result. */
@@ -123,6 +124,7 @@ async function executeBatchRpc(
   sourcePath: string,
   csrfToken: string,
   sessionId: string | null,
+  authuserIndex?: number,
 ): Promise<unknown[] | null> {
   const envelope = [[[rpcId, payload, null, 'generic']]];
   const body =
@@ -135,6 +137,7 @@ async function executeBatchRpc(
     rt: 'c',
   });
   if (sessionId) params.set('f.sid', sessionId);
+  if (authuserIndex !== undefined) params.set('authuser', String(authuserIndex));
 
   const response = await fetch(`${NOTEBOOKLM_ORIGIN}${BATCHEXECUTE_PATH}?${params}`, {
     method: 'POST',
@@ -166,9 +169,9 @@ async function executeAuthenticatedRpc(
   sourcePath: string,
 ): Promise<unknown[] | null> {
   const attempt = async () => {
-    const { csrfToken, sessionId } = await extractTokens();
+    const { csrfToken, sessionId, authuserIndex } = await extractTokens();
     if (!csrfToken) throw new Error('Not signed in to NotebookLM');
-    return executeBatchRpc(rpcId, payload, sourcePath, csrfToken, sessionId);
+    return executeBatchRpc(rpcId, payload, sourcePath, csrfToken, sessionId, authuserIndex);
   };
 
   try {
@@ -197,7 +200,7 @@ async function executeAuthenticatedRpc(
  * Returns an empty array if the user is not signed in or the API fails.
  */
 export async function fetchNotebooks(): Promise<NotebookMeta[]> {
-  const { csrfToken, sessionId } = await extractTokens();
+  const { csrfToken, sessionId, authuserIndex } = await extractTokens();
   if (!csrfToken) return [];
 
   const rpcResult = await executeBatchRpc(
@@ -206,6 +209,7 @@ export async function fetchNotebooks(): Promise<NotebookMeta[]> {
     '/',
     csrfToken,
     sessionId,
+    authuserIndex,
   );
   if (!rpcResult) return [];
 
@@ -228,9 +232,9 @@ export async function deleteNotebook(notebookId: string): Promise<void> {
  * Returns an empty array if the notebook is not found or the user is not signed in.
  */
 export async function fetchNotebookSources(notebookId: string): Promise<SourceRecord[]> {
-  const { csrfToken, sessionId } = await extractTokens();
+  const { csrfToken, sessionId, authuserIndex } = await extractTokens();
   if (!csrfToken) throw new Error('Not signed in to NotebookLM');
-  return fetchNotebookSourcesInternal(notebookId, csrfToken, sessionId);
+  return fetchNotebookSourcesInternal(notebookId, csrfToken, sessionId, authuserIndex);
 }
 
 /**
@@ -241,13 +245,13 @@ export async function fetchNotebookSources(notebookId: string): Promise<SourceRe
 export async function fetchSourceCounts(
   notebookIds: string[],
 ): Promise<Record<string, number>> {
-  const { csrfToken, sessionId } = await extractTokens();
+  const { csrfToken, sessionId, authuserIndex } = await extractTokens();
   if (!csrfToken) throw new Error('Not signed in to NotebookLM');
 
   const counts: Record<string, number> = {};
   for (const id of notebookIds) {
     try {
-      const sources = await fetchNotebookSourcesInternal(id, csrfToken, sessionId);
+      const sources = await fetchNotebookSourcesInternal(id, csrfToken, sessionId, authuserIndex);
       counts[id] = sources.length;
     } catch {
       // Skip notebooks that fail — UI will show "—"
@@ -261,6 +265,7 @@ async function fetchNotebookSourcesInternal(
   notebookId: string,
   csrfToken: string,
   sessionId: string | null,
+  authuserIndex?: number,
 ): Promise<SourceRecord[]> {
   const payload = JSON.stringify([notebookId, null, [2], null, 0]);
   const rpcResult = await executeBatchRpc(
@@ -269,6 +274,7 @@ async function fetchNotebookSourcesInternal(
     `/notebook/${notebookId}`,
     csrfToken,
     sessionId,
+    authuserIndex,
   );
   if (!rpcResult) return [];
 
@@ -293,7 +299,7 @@ export interface NotebookFullData {
  * - Artifacts: LIST_ARTIFACTS (`gArtLc`)
  */
 export async function fetchNotebookFullData(notebookId: string): Promise<NotebookFullData> {
-  const { csrfToken, sessionId } = await extractTokens();
+  const { csrfToken, sessionId, authuserIndex } = await extractTokens();
   if (!csrfToken) return { sources: [], notes: [], artifacts: [] };
 
   const sourcePath = `/notebook/${notebookId}`;
@@ -306,6 +312,7 @@ export async function fetchNotebookFullData(notebookId: string): Promise<Noteboo
       sourcePath,
       csrfToken,
       sessionId,
+      authuserIndex,
     ),
     executeBatchRpc(
       GET_NOTES_RPC_ID,
@@ -313,6 +320,7 @@ export async function fetchNotebookFullData(notebookId: string): Promise<Noteboo
       sourcePath,
       csrfToken,
       sessionId,
+      authuserIndex,
     ),
     executeBatchRpc(
       LIST_ARTIFACTS_RPC_ID,
@@ -320,6 +328,7 @@ export async function fetchNotebookFullData(notebookId: string): Promise<Noteboo
       sourcePath,
       csrfToken,
       sessionId,
+      authuserIndex,
     ),
   ]);
 
