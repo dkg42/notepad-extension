@@ -133,6 +133,37 @@ export interface CustomAudioEntry {
   addedAt: number;
 }
 
+// ── Auth types ────────────────────────────────────────────────────────────────
+
+/**
+ * Minimal user profile stored in chrome.storage.local after sign-in.
+ * Contains only non-sensitive identity fields needed by the extension UI and API
+ * layer. Firebase tokens are intentionally excluded.
+ *
+ * Note: uid/email/displayName/photoURL are null until Firebase is initialized in
+ * the background service worker (requires Firebase config env vars). The presence
+ * of this record in storage indicates the user is signed in.
+ */
+export interface StoredAuthProfile {
+  uid: string | null;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+
+/** Encrypted token blob stored in chrome.storage.local. */
+export interface EncryptedTokenBlob {
+  ciphertext: string; // base64-encoded AES-GCM ciphertext
+  iv: string;         // base64-encoded, 12 bytes
+  salt: string;       // base64-encoded PBKDF2 salt, 16 bytes
+}
+
+/** Short-lived access token stored in chrome.storage.session (never touches disk). */
+export interface SessionTokenData {
+  accessToken: string;
+  expiresAt: number; // Unix timestamp ms
+}
+
 // ── Notebook types ─────────────────────────────────────────────────────────────
 
 /** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */

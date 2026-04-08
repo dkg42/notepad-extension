@@ -1,6 +1,5 @@
-import type { UserCredential } from 'firebase/auth/web-extension';
-
-const AUTH_USER_KEY = 'authUser';
+import type { StoredAuthProfile } from '@/types';
+import { authStorageService } from './auth-storage-service';
 
 /**
  * Auth service for use in popup, dashboard, and components.
@@ -8,16 +7,15 @@ const AUTH_USER_KEY = 'authUser';
  * Has zero Firebase SDK imports — all Firebase operations are delegated to
  * the background service worker via chrome.runtime.sendMessage. Auth state
  * is read from chrome.storage.local where the background writes it after
- * each sign-in/sign-out via onAuthStateChanged.
+ * each sign-in/sign-out.
  */
 export const authService = {
   /**
-   * Returns the currently signed-in UserCredential from chrome.storage.local,
+   * Returns the currently signed-in user profile from chrome.storage.local,
    * or null if no user is authenticated.
    */
-  async getCurrentUser(): Promise<UserCredential | null> {
-    const result = await chrome.storage.local.get(AUTH_USER_KEY);
-    return (result[AUTH_USER_KEY] as UserCredential) ?? null;
+  async getCurrentUser(): Promise<StoredAuthProfile | null> {
+    return authStorageService.getAuthProfile();
   },
 
   /**
@@ -45,7 +43,7 @@ export const authService = {
 
   /**
    * Signs out the current user. The background clears Firebase auth state
-   * and removes the authUser key from chrome.storage.local.
+   * and removes auth data from chrome.storage.local.
    */
   async signOut(): Promise<{ ok: boolean; error?: string }> {
     return new Promise((resolve) => {
@@ -84,20 +82,10 @@ export const authService = {
 
   /**
    * Subscribes to auth state changes via chrome.storage.onChanged.
-   * Fires immediately-on-change when the background writes or removes authUser.
+   * Fires when the background writes or removes the authProfile key.
    * Returns an unsubscribe function — call it in React's cleanup effect.
    */
-  onAuthStateChange(callback: (user: UserCredential | null) => void): () => void {
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
-      if (area !== 'local' || !(AUTH_USER_KEY in changes)) return;
-      const user = (changes[AUTH_USER_KEY].newValue as UserCredential) ?? null;
-      callback(user);
-    };
-
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
+  onAuthStateChange(callback: (user: StoredAuthProfile | null) => void): () => void {
+    return authStorageService.onProfileChanged(callback);
   },
 };

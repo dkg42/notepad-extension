@@ -1,5 +1,6 @@
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
 import { ensureGoogleSession, findAuthuserIndex, invalidateSessionCache } from './google-session-service';
+import { authStorageService } from './auth-storage-service';
 
 const NOTEBOOKLM_ORIGIN = 'https://notebooklm.google.com';
 const BATCHEXECUTE_PATH = '/_/LabsTailwindUi/data/batchexecute';
@@ -83,8 +84,8 @@ async function fetchTokensFromHomepage(authuser?: number): Promise<Tokens> {
  * on the first attempt (stale session), invalidates the cache and retries once.
  */
 async function extractTokens(): Promise<Tokens> {
-  const authResult = await chrome.storage.local.get('authUser');
-  const expectedEmail: string | undefined = authResult['authUser']?.user?.email;
+  const profile = await authStorageService.getAuthProfile();
+  const expectedEmail: string | null | undefined = profile?.email;
 
   if (!expectedEmail) {
     // No extension user signed in — attempt unauthenticated fetch as fallback

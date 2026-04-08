@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { UserCredential } from 'firebase/auth/web-extension';
+import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import './AccountPage.css';
 
@@ -63,7 +63,7 @@ function getFriendlyAuthError(raw: string): string {
  *   migration confirmation banner when pre-sign-in data has been attributed.
  */
 export default function AccountPage() {
-  const [user, setUser] = useState<UserCredential | null>(null);
+  const [user, setUser] = useState<StoredAuthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -179,7 +179,7 @@ export default function AccountPage() {
 
           <div className="account-page__profile">
             {(() => {
-              const { displayName = null, email = null, photoURL = null } = user.user ?? {};
+              const { displayName = null, email = null, photoURL = null } = user ?? {};
               return (
                 <>
                   <div className="account-page__avatar">

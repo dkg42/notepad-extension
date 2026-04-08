@@ -6,7 +6,7 @@ import FolderManager from '@/components/FolderManager/FolderManager';
 import SnippetList from '@/components/SnippetList/SnippetList';
 import TagFilter from '@/components/TagFilter/TagFilter';
 import AccountSwitcher from '@/components/AccountSwitcher/AccountSwitcher';
-import type { UserCredential } from 'firebase/auth/web-extension';
+import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import { useApp } from './useApp';
 import './App.css';
@@ -17,7 +17,7 @@ import './App.css';
  */
 export default function App() {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [authUser, setUserCredential] = useState<UserCredential | null>(null);
+  const [authUser, setUserCredential] = useState<StoredAuthProfile | null>(null);
 
   useEffect(() => {
     authService.getCurrentUser().then((user) => {
@@ -48,7 +48,7 @@ export default function App() {
 // ── App content (always rendered regardless of auth state) ───────────────────
 
 interface AppContentProps {
-  user: UserCredential | null;
+  user: StoredAuthProfile | null;
 }
 
 function AppContent({ user }: AppContentProps) {

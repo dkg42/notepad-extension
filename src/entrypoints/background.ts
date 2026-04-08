@@ -27,11 +27,11 @@ import { fetchAndParseRssFeed } from '@/services/rss-parser-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
 import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-session-service';
-import type { UserCredential, AuthError } from 'firebase/auth/web-extension';
+import type { AuthError } from 'firebase/auth/web-extension';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
+import { authStorageService, type OAuthCredentialPayload } from '@/services/auth-storage-service';
 
 const ALARM_NAME = 'notebooklm-sync';
-const AUTH_USER_KEY = 'authUser';
 const MIGRATION_KEY = 'preSignInDataMigratedToUid';
 const OFFSCREEN_DOCUMENT_PATH = '/offscreen.html';
 const SYNC_INTERVAL_MINUTES = 30;
@@ -41,9 +41,9 @@ const PIPELINE_CHECK_ALARM = 'pipeline-check';
 const PIPELINE_CHECK_INTERVAL_MINUTES = 15;
 
 async function syncNotebooks(): Promise<void> {
-  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
-  if (!stored[AUTH_USER_KEY]) return;
-  const uid: string | undefined = stored[AUTH_USER_KEY]?.user?.uid;
+  const profile = await authStorageService.getAuthProfile();
+  if (!profile) return;
+  const uid: string | null = profile.uid;
   // Clear stale data before syncing if the stored data belongs to a different
   // user or was written before ownerUid tracking was introduced.
   if (uid) {
@@ -58,11 +58,11 @@ async function syncNotebooks(): Promise<void> {
     if (notebooks.length > 0) {
       await notebookSyncService.upsertMany(notebooks);
     }
-    await notebookSyncService.setSyncMeta({ lastSyncedAt: Date.now(), ownerUid: uid });
+    await notebookSyncService.setSyncMeta({ lastSyncedAt: Date.now(), ownerUid: uid ?? undefined });
   } catch (error) {
     await notebookSyncService.setSyncMeta({
       lastSyncedAt: Date.now(),
-      ownerUid: uid,
+      ownerUid: uid ?? undefined,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -81,8 +81,7 @@ function needsPolling(pipeline: Pipeline): boolean {
  * min-sources triggers by comparing current API data to stored baselines.
  */
 async function runPipelineCheck(): Promise<void> {
-  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
-  if (!stored[AUTH_USER_KEY]) return;
+  if (!await authStorageService.getAuthProfile()) return;
   try {
     const pipelines = await pipelineService.getAll();
     const pollable = pipelines.filter((p) => p.enabled && needsPolling(p));
@@ -155,8 +154,7 @@ async function runPipelineAnnotationTriggers(
   newAnnotations: NotebookAnnotation[],
   oldAnnotations: NotebookAnnotation[],
 ): Promise<void> {
-  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
-  if (!stored[AUTH_USER_KEY]) return;
+  if (!await authStorageService.getAuthProfile()) return;
   try {
     const pipelines = await pipelineService.getAll();
     const eventDriven = pipelines.filter(
@@ -223,8 +221,7 @@ function isMessage(value: unknown): value is { type: string } {
 }
 
 async function ensureSignedIn(): Promise<void> {
-  const stored = await chrome.storage.local.get(AUTH_USER_KEY);
-  if (!stored[AUTH_USER_KEY]) throw new Error('Not signed in');
+  if (!await authStorageService.getAuthProfile()) throw new Error('Not signed in');
 }
 
 
@@ -316,13 +313,13 @@ async function closeOffscreenDocument(): Promise<void> {
  * message when the iframe finishes the auth flow. This listener captures that
  * second message to resolve/reject the Promise.
  */
-function requestFirebaseAuth(): Promise<UserCredential> {
-  return new Promise<UserCredential>((resolve, reject) => {
+function requestFirebaseAuth(): Promise<OAuthCredentialPayload> {
+  return new Promise<OAuthCredentialPayload>((resolve, reject) => {
     // Register the AUTH_RESULT listener BEFORE sending the initiation message
     // to guarantee we never miss the response.
     const authResultListener = (message: unknown): void => {
       if (!isMessage(message)) return;
-      const msg = message as { type: string; ok?: boolean; result?: UserCredential; error?: string };
+      const msg = message as { type: string; ok?: boolean; result?: OAuthCredentialPayload; error?: string };
       if (msg.type !== 'AUTH_RESULT') return;
 
       chrome.runtime.onMessage.removeListener(authResultListener);
@@ -346,12 +343,12 @@ function requestFirebaseAuth(): Promise<UserCredential> {
   });
 }
 
-async function firebaseAuth(): Promise<UserCredential> {
+async function firebaseAuth(): Promise<OAuthCredentialPayload> {
   await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
 
   try {
     const credential = await requestFirebaseAuth();
-    console.log('[AUTH][BG] User authenticated:', credential.user?.email);
+    console.log('[AUTH][BG] OAuth credential received, providerId:', credential.providerId);
     return credential;
   } catch (err) {
     const authErr = err as AuthError;
@@ -997,24 +994,26 @@ export default defineBackground(() => {
       if (message.type === 'firebase-auth') {
         console.log('[AUTH][BG] Received firebase-auth message from popup');
         firebaseAuth()
-          .then(async (authUser) => {
+          .then(async (credential) => {
             // Guard: a FirebaseError object ({ code, name }) must never reach storage.
             // This can happen if the offscreen filter fails to catch a cancellation.
-            const cred = authUser as unknown as Record<string, unknown>;
-            if (typeof cred.code === 'string' && cred.code.startsWith('auth/')) {
-              console.warn('[AUTH][BG] Received FirebaseError as credential — rejecting:', cred.code);
-              sendResponse({ ok: false, error: String(cred.code) });
+            const raw = credential as unknown as Record<string, unknown>;
+            if (typeof raw.code === 'string' && raw.code.startsWith('auth/')) {
+              console.warn('[AUTH][BG] Received FirebaseError as credential — rejecting:', raw.code);
+              sendResponse({ ok: false, error: String(raw.code) });
               return;
             }
             // Clear all user data if a different user is signing in, or if there
             // is no prior local auth record (stale sync data may remain from a
             // previous session that was signed out on another device).
-            const existingStored = await chrome.storage.local.get(AUTH_USER_KEY);
-            const existingUid: string | undefined = existingStored[AUTH_USER_KEY]?.user?.uid;
-            const incomingUid: string | undefined = authUser?.user?.uid;
+            const existingProfile = await authStorageService.getAuthProfile();
+            const existingUid: string | null = existingProfile?.uid ?? null;
+            // uid is null until Firebase is initialized in the background — user-switch
+            // detection will work once signInWithCredential is called here.
+            const incomingUid: string | null = null;
             const syncMeta = await notebookSyncService.getSyncMeta();
             const isUserSwitch = existingUid && incomingUid && existingUid !== incomingUid;
-            const hasOrphanedSyncData = !existingUid && syncMeta?.ownerUid && syncMeta.ownerUid !== incomingUid;
+            const hasOrphanedSyncData = !existingUid && syncMeta?.ownerUid;
             if (isUserSwitch || hasOrphanedSyncData) {
               console.log('[AUTH][BG] User switch or orphaned data detected — clearing', { existingUid, incomingUid, syncOwner: syncMeta?.ownerUid });
               invalidateSessionCache();
@@ -1029,16 +1028,16 @@ export default defineBackground(() => {
                 domainRouterService.clearAllData(),
               ]);
             }
-            console.log('[AUTH][BG] Storing authUser in chrome.storage.local:', authUser);
-            await chrome.storage.local.set({ [AUTH_USER_KEY]: authUser });
+            console.log('[AUTH][BG] Auth complete, storing profile and session token');
+            await authStorageService.saveAuthData(credential);
             // Attribute any pre-sign-in local data to this user on first sign-in
             const stored = await chrome.storage.local.get(MIGRATION_KEY);
-            const existing = stored[MIGRATION_KEY] as { uid: string } | undefined;
-            if (!existing || existing.uid !== authUser?.user?.uid) {
+            const existing = stored[MIGRATION_KEY] as { uid: string | null } | undefined;
+            if (!existing) {
               await chrome.storage.local.set({
-                [MIGRATION_KEY]: { uid: authUser?.user?.uid, migratedAt: Date.now() },
+                [MIGRATION_KEY]: { uid: incomingUid, migratedAt: Date.now() },
               });
-              chrome.runtime.sendMessage({ type: 'local-data-migrated', uid: authUser?.user?.uid }).catch(() => {});
+              chrome.runtime.sendMessage({ type: 'local-data-migrated', uid: incomingUid }).catch(() => {});
             }
             console.log('[AUTH][BG] Auth complete, sending ok to popup');
             sendResponse({ ok: true });
@@ -1080,7 +1079,8 @@ export default defineBackground(() => {
           .then(() => {
             invalidateSessionCache();
             return Promise.all([
-              chrome.storage.local.remove([AUTH_USER_KEY, MIGRATION_KEY]),
+              authStorageService.clearAll(),
+              chrome.storage.local.remove([MIGRATION_KEY]),
               storageService.clearAllData(),
               chatHistoryStorage.clearAllData(),
               pipelineService.clearAllData(),

@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { UserCredential } from 'firebase/auth/web-extension';
+import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import './AccountSwitcher.css';
 
 interface Props {
-  user: UserCredential | null;
+  user: StoredAuthProfile | null;
   onSignOut?: () => void;
 }
 
@@ -72,7 +72,7 @@ export default function AccountSwitcher({ user, onSignOut }: Props) {
     );
   }
 
-  const { displayName = null, email = null, photoURL = null } = user.user ?? {};
+  const { displayName = null, email = null, photoURL = null } = user ?? {};
   const initials = getInitials(displayName ?? email ?? '?');
 
   return (

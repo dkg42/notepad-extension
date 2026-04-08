@@ -22,7 +22,7 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react';
-import type { UserCredential } from 'firebase/auth/web-extension';
+import type { StoredAuthProfile } from '@/types';
 import type { DashboardView } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
 import './Sidebar.css';
@@ -196,7 +196,7 @@ export default function Sidebar({
   podcastsCount,
   pipelinesCount,
 }: SidebarProps) {
-  const [user, setUser] = useState<UserCredential | null>(null);
+  const [user, setUser] = useState<StoredAuthProfile | null>(null);
 
   useEffect(() => {
     authService.getCurrentUser().then(setUser);
@@ -326,7 +326,7 @@ export default function Sidebar({
       <div className="sidebar__footer">
         {user ? (
           (() => {
-            const { displayName = null, email = null, photoURL = null } = user.user ?? {};
+            const { displayName = null, email = null, photoURL = null } = user ?? {};
             return (
               <button
                 className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
