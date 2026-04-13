@@ -162,6 +162,65 @@ export interface EncryptedTokenBlob {
 export interface SessionTokenData {
   accessToken: string;
   expiresAt: number; // Unix timestamp ms
+  /** OAuth scopes granted to this token. Populated after first token refresh. */
+  scopes?: string[];
+}
+
+/** STS token manager nested inside the Firebase user object. */
+export interface StsTokenManager {
+  /** Firebase ID token (JWT) — used for Firebase API authentication. */
+  accessToken: string;
+  /** Firebase/Google refresh token — shared with FirebaseTokenResponse.refreshToken. */
+  refreshToken: string;
+  /** Unix ms timestamp when the Firebase ID token expires. */
+  expirationTime: number;
+}
+
+/** Firebase user data returned by the BFF sign-in flow. */
+export interface FirebaseUserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  isAnonymous: boolean;
+  emailVerified: boolean;
+  stsTokenManager: StsTokenManager;
+}
+
+/** Raw Google/Firebase token response embedded in the credential payload. */
+export interface FirebaseTokenResponse {
+  /** Google OAuth access token — use this for Drive API calls. */
+  oauthAccessToken: string;
+  /** Seconds until oauthAccessToken expires (~3600). */
+  oauthExpireIn: number;
+  /** Google OAuth refresh token (same value as stsTokenManager.refreshToken). */
+  refreshToken: string;
+  /** JSON string; contains `granted_scopes` (space-separated) and profile fields. */
+  rawUserInfo: string;
+  /** Firebase ID token (same as stsTokenManager.accessToken). */
+  idToken: string;
+  /** Google OpenID Connect token. */
+  oauthIdToken?: string;
+}
+
+/**
+ * Full credential payload sent by the BFF iframe to the offscreen document,
+ * then relayed to background.ts. Matches the JSON serialisation of a Firebase UserCredential.
+ */
+export interface OAuthCredentialPayload {
+  user: FirebaseUserData;
+  providerId: string;
+  _tokenResponse: FirebaseTokenResponse;
+  operationType: string;
+}
+
+/** Response shape from Google's OAuth2 token endpoint (https://oauth2.googleapis.com/token). */
+export interface GoogleTokenRefreshResponse {
+  access_token: string;
+  expires_in: number;    // seconds until expiry
+  scope: string;         // space-separated list of granted scopes
+  token_type: 'Bearer';
+  id_token?: string;
 }
 
 // ── Notebook types ─────────────────────────────────────────────────────────────

@@ -30,6 +30,13 @@ import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-s
 import type { AuthError } from 'firebase/auth/web-extension';
 import type { CrawlConfig, NotebookAnnotation, Pipeline } from '@/types';
 import { authStorageService, type OAuthCredentialPayload } from '@/services/auth-storage-service';
+import {
+  TOKEN_REFRESH_ALARM,
+  handleRefreshAlarm,
+  scheduleRefreshAlarm,
+  cancelRefreshAlarm,
+  revokeToken,
+} from '@/services/token-lifecycle-service';
 
 const ALARM_NAME = 'notebooklm-sync';
 const MIGRATION_KEY = 'preSignInDataMigratedToUid';
@@ -216,6 +223,7 @@ async function runPipelineAnnotationTriggers(
   }
 }
 
+
 function isMessage(value: unknown): value is { type: string } {
   return typeof value === 'object' && value !== null && 'type' in value;
 }
@@ -376,6 +384,8 @@ export default defineBackground(() => {
     chrome.alarms.create(ALARM_NAME, { periodInMinutes: SYNC_INTERVAL_MINUTES });
     chrome.alarms.create(AUDIO_CLEANUP_ALARM, { periodInMinutes: AUDIO_CLEANUP_INTERVAL_MINUTES });
     chrome.alarms.create(PIPELINE_CHECK_ALARM, { periodInMinutes: PIPELINE_CHECK_INTERVAL_MINUTES });
+    // Re-arm token refresh alarm in case the extension was updated while signed in.
+    void scheduleRefreshAlarm();
   });
 
   // Sync on browser startup
@@ -383,6 +393,9 @@ export default defineBackground(() => {
     void syncNotebooks();
     void audioCacheService.cleanup();
     void runPipelineCheck();
+    // Re-arm token refresh alarm. chrome.storage.session is cleared on browser close,
+    // so this no-ops when signed out; the first Drive call will do a just-in-time refresh.
+    void scheduleRefreshAlarm();
   });
 
   // Periodic sync via alarms
@@ -393,6 +406,8 @@ export default defineBackground(() => {
       void audioCacheService.cleanup();
     } else if (alarm.name === PIPELINE_CHECK_ALARM) {
       void runPipelineCheck();
+    } else if (alarm.name === TOKEN_REFRESH_ALARM) {
+      void handleRefreshAlarm();
     }
   });
 
@@ -1008,9 +1023,7 @@ export default defineBackground(() => {
             // previous session that was signed out on another device).
             const existingProfile = await authStorageService.getAuthProfile();
             const existingUid: string | null = existingProfile?.uid ?? null;
-            // uid is null until Firebase is initialized in the background — user-switch
-            // detection will work once signInWithCredential is called here.
-            const incomingUid: string | null = null;
+            const incomingUid: string | null = credential.user.uid;
             const syncMeta = await notebookSyncService.getSyncMeta();
             const isUserSwitch = existingUid && incomingUid && existingUid !== incomingUid;
             const hasOrphanedSyncData = !existingUid && syncMeta?.ownerUid;
@@ -1030,6 +1043,7 @@ export default defineBackground(() => {
             }
             console.log('[AUTH][BG] Auth complete, storing profile and session token');
             await authStorageService.saveAuthData(credential);
+            void scheduleRefreshAlarm();
             // Attribute any pre-sign-in local data to this user on first sign-in
             const stored = await chrome.storage.local.get(MIGRATION_KEY);
             const existing = stored[MIGRATION_KEY] as { uid: string | null } | undefined;
@@ -1076,8 +1090,26 @@ export default defineBackground(() => {
                 reject(err instanceof Error ? err : new Error(String(err)));
               });
           }))
-          .then(() => {
+          .then(async () => {
             invalidateSessionCache();
+
+            // Cancel the refresh alarm first so no stale refresh fires during clean-up.
+            await cancelRefreshAlarm();
+
+            // Revoke the refresh token (preferred — invalidates the entire OAuth grant).
+            // Fall back to the access token if the refresh token is unavailable.
+            // Revocation is best-effort: a failure must not block sign-out.
+            const [sessionData, refreshToken] = await Promise.all([
+              authStorageService.getAccessToken(),
+              authStorageService.getRefreshToken(),
+            ]);
+            const tokenToRevoke = refreshToken ?? sessionData?.accessToken;
+            if (tokenToRevoke) {
+              await revokeToken(tokenToRevoke).catch((err: unknown) => {
+                console.warn('[AUTH][BG] Token revocation failed (non-fatal):', err);
+              });
+            }
+
             return Promise.all([
               authStorageService.clearAll(),
               chrome.storage.local.remove([MIGRATION_KEY]),

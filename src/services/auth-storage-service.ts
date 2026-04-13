@@ -3,70 +3,89 @@
  *
  * Storage split:
  *   chrome.storage.local   → authProfile (plaintext profile, persists across restarts)
- *   chrome.storage.local   → authRefreshToken (AES-GCM encrypted refresh token)
- *   chrome.storage.session → authSession (access token, volatile — cleared on browser close)
+ *   chrome.storage.local   → authRefreshToken (AES-GCM encrypted Google OAuth refresh token)
+ *   chrome.storage.session → authSession (Google OAuth access token, volatile — cleared on browser close)
  *
- * This prevents access tokens from persisting to disk while keeping the user
- * signed in across browser restarts via the stored profile marker.
- *
- * Note: uid/email/displayName/photoURL are populated only when Firebase is initialized
- * in the background service worker. Until then, profile fields are null and the record's
- * presence alone indicates the user is signed in.
+ * Token notes:
+ *   The Google OAuth access token (oauthAccessToken) is stored in session — it grants Drive API access.
+ *   The Google OAuth refresh token is encrypted on disk and used to obtain new access tokens via
+ *   https://oauth2.googleapis.com/token when the session token expires or is missing.
+ *   Profile fields (uid, email, displayName, photoURL) come directly from the Firebase UserCredential
+ *   returned by the BFF and are always populated after sign-in.
  */
 
-import type { StoredAuthProfile, EncryptedTokenBlob, SessionTokenData } from '@/types';
+import type { StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, OAuthCredentialPayload } from '@/types';
 import { encryptToken, decryptToken } from './token-crypto-service';
+
+// Re-export so existing importers don't need to change.
+export type { OAuthCredentialPayload };
 
 const AUTH_PROFILE_KEY = 'authProfile';
 const AUTH_REFRESH_KEY = 'authRefreshToken';
 const AUTH_SESSION_KEY = 'authSession';
-
-/**
- * The shape of the credential payload the offscreen document sends back from the
- * Firebase OAuth sign-in flow. This is the JSON form of an OAuthCredential — NOT
- * a Firebase UserCredential (which would require signInWithCredential in the background).
- */
-export interface OAuthCredentialPayload {
-  providerId?: string;
-  signInMethod?: string;
-  idToken?: string;
-  accessToken?: string;
-}
 
 export const authStorageService = {
   /**
    * Persists auth data after a successful sign-in.
    *
    * - Profile (non-sensitive fields) → chrome.storage.local (survives browser restart)
-   * - Access token → chrome.storage.session (volatile, no disk footprint)
-   * - Refresh token → encrypted in chrome.storage.local (when provided via saveRefreshToken)
+   * - Google OAuth access token → chrome.storage.session (volatile, no disk footprint)
+   * - Google OAuth refresh token → AES-GCM encrypted in chrome.storage.local
    *
-   * @param credential  OAuth credential payload from the offscreen auth flow.
-   * @param profile     Optional user profile fields. Null until Firebase is initialized in BG.
+   * All fields are read directly from the credential — the BFF returns a full
+   * Firebase UserCredential JSON that contains both profile and token data.
+   *
+   * @param credential  Full Firebase UserCredential payload from the BFF iframe auth flow.
    */
-  async saveAuthData(
-    credential: OAuthCredentialPayload,
-    profile?: Partial<StoredAuthProfile>,
-  ): Promise<void> {
+  async saveAuthData(credential: OAuthCredentialPayload): Promise<void> {
+    // 1. Profile — read directly from credential.user.
     const storedProfile: StoredAuthProfile = {
-      uid: profile?.uid ?? null,
-      email: profile?.email ?? null,
-      displayName: profile?.displayName ?? null,
-      photoURL: profile?.photoURL ?? null,
+      uid:         credential.user.uid,
+      email:       credential.user.email,
+      displayName: credential.user.displayName,
+      photoURL:    credential.user.photoURL,
     };
     await chrome.storage.local.set({ [AUTH_PROFILE_KEY]: storedProfile });
 
-    if (credential.accessToken) {
-      const sessionData: SessionTokenData = {
-        accessToken: credential.accessToken,
-        expiresAt: Date.now() + 3_600_000, // Google access tokens expire in ~1 hour
-      };
-      // chrome.storage.session is available in MV3 service workers and MV2 background
-      // scripts. It is cleared when the browser closes.
-      await (chrome.storage.session as typeof chrome.storage.local).set({
-        [AUTH_SESSION_KEY]: sessionData,
-      });
+    // 2. Google OAuth access token → chrome.storage.session (volatile, cleared on browser close).
+    //    Parse granted_scopes from rawUserInfo so hasDriveScope is accurate immediately
+    //    without waiting for the first proactive token refresh.
+    let scopes: string[] = [];
+    try {
+      const raw = JSON.parse(credential._tokenResponse.rawUserInfo) as Record<string, unknown>;
+      if (typeof raw.granted_scopes === 'string') {
+        scopes = raw.granted_scopes.split(' ').filter(Boolean);
+      }
+    } catch {
+      // rawUserInfo is not valid JSON — scopes will be empty until the first token refresh.
     }
+
+    const sessionData: SessionTokenData = {
+      accessToken: credential._tokenResponse.oauthAccessToken,
+      expiresAt:   Date.now() + credential._tokenResponse.oauthExpireIn * 1000,
+      scopes,
+    };
+    await (chrome.storage.session as typeof chrome.storage.local).set({
+      [AUTH_SESSION_KEY]: sessionData,
+    });
+
+    // 3. Google OAuth refresh token → encrypted in chrome.storage.local.
+    await this.saveRefreshToken(credential._tokenResponse.refreshToken);
+  },
+
+  /**
+   * Updates only the session token after a proactive or just-in-time token refresh.
+   * Does not touch the auth profile or encrypted refresh token.
+   *
+   * @param accessToken  New Google OAuth access token.
+   * @param expiresAt    Exact expiry timestamp in Unix ms (from token endpoint expires_in).
+   * @param scopes       Granted OAuth scopes returned by the token endpoint.
+   */
+  async saveSessionToken(accessToken: string, expiresAt: number, scopes?: string[]): Promise<void> {
+    const sessionData: SessionTokenData = { accessToken, expiresAt, scopes };
+    await (chrome.storage.session as typeof chrome.storage.local).set({
+      [AUTH_SESSION_KEY]: sessionData,
+    });
   },
 
   /**

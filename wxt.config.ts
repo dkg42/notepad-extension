@@ -14,7 +14,7 @@ export default defineConfig({
       open_in_tab: true,
     },
     content_security_policy: {
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://notebooklm.google.com https://accounts.google.com;",
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://notebooklm.google.com https://accounts.google.com https://oauth2.googleapis.com;",
     },
     background: {
       service_worker: "background.js"
@@ -30,7 +30,8 @@ export default defineConfig({
       'https://lh3.googleusercontent.com/*',
       'https://lh3.google.com/*',
       'https://*.usercontent.google.com/*', // Audio CDN redirect target (drum.usercontent.google.com)
-      // 'https://www.googleapis.com/*', // Uncomment when Google Docs sync is enabled
+      'https://www.googleapis.com/*',      // Drive API
+      'https://oauth2.googleapis.com/*',   // Token refresh and revocation endpoints
       'https://securetoken.googleapis.com/*', // Firebase token refresh
       'https://identitytoolkit.googleapis.com/*',
       'https://accounts.google.com/*',
