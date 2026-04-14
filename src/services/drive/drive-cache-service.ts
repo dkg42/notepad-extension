@@ -1,0 +1,198 @@
+/**
+ * drive-cache-service.ts
+ *
+ * Session-storage cache layer for Drive data.
+ *
+ * Uses chrome.storage.session (MV3 — volatile, cleared on browser close, 10 MB quota)
+ * as the in-process cache for Drive file contents. This avoids redundant Drive API
+ * reads within a browser session.
+ *
+ * Cache key catalogue:
+ *   drive_cache_manifest              → DriveManifest
+ *   drive_cache_snippets_meta         → DriveSnippetsMetaFile
+ *   drive_cache_snippet_text_{id}     → string (raw snippet text)
+ *   drive_cache_folders               → DriveFoldersFile
+ *   drive_cache_tags                  → DriveTagsFile
+ *   drive_cache_settings              → DriveSettingsFile
+ *   drive_cache_export_history        → DriveExportHistoryFile
+ *   drive_cache_notebooks_meta        → DriveNotebooksMetaFile
+ *   drive_cache_annotations           → DriveNotebookAnnotationsFile
+ *   drive_cache_pipelines             → DrivePipelinesFile
+ *   drive_cache_pipeline_runs         → DrivePipelineRunsFile
+ *   drive_cache_podcast_episodes      → DrivePodcastEpisodesFile
+ *   drive_cache_domain_router         → DriveDomainRouterFile
+ *   drive_cache_chat_meta             → DriveChatConversationsMetaFile
+ *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
+ *   drive_cache_etag_{fileId}         → string (Drive ETag for a file)
+ *
+ * LRU eviction:
+ *   Only `drive_cache_snippet_text_*` entries are subject to LRU eviction.
+ *   All other keys are bounded by domain-level trim limits (200 runs, etc.).
+ *   Eviction is triggered when the estimated session storage size exceeds 8 MB
+ *   (leaving 2 MB headroom before the 10 MB limit).
+ */
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const KEY_PREFIX = 'drive_cache_';
+const SNIPPET_TEXT_PREFIX = `${KEY_PREFIX}snippet_text_`;
+const CHAT_CONTENT_PREFIX = `${KEY_PREFIX}chat_`;
+const ETAG_PREFIX = `${KEY_PREFIX}etag_`;
+
+/** Session storage size threshold (bytes) above which LRU eviction kicks in. */
+const EVICTION_THRESHOLD_BYTES = 8 * 1024 * 1024; // 8 MB
+
+/**
+ * In-memory LRU tracker for snippet text cache keys.
+ * Maps cacheKey → last-access Unix ms.
+ * Only tracks snippet text entries (the only unbounded-growth cache type).
+ */
+const snippetTextAccessTime = new Map<string, number>();
+
+// ── Well-known cache keys ──────────────────────────────────────────────────────
+
+export const CacheKeys = {
+  manifest: `${KEY_PREFIX}manifest`,
+  snippetsMeta: `${KEY_PREFIX}snippets_meta`,
+  folders: `${KEY_PREFIX}folders`,
+  tags: `${KEY_PREFIX}tags`,
+  settings: `${KEY_PREFIX}settings`,
+  exportHistory: `${KEY_PREFIX}export_history`,
+  annotations: `${KEY_PREFIX}annotations`,
+  pipelines: `${KEY_PREFIX}pipelines`,
+  pipelineRuns: `${KEY_PREFIX}pipeline_runs`,
+  podcastEpisodes: `${KEY_PREFIX}podcast_episodes`,
+  domainRouter: `${KEY_PREFIX}domain_router`,
+  chatMeta: `${KEY_PREFIX}chat_meta`,
+
+  snippetText: (snippetId: string) => `${SNIPPET_TEXT_PREFIX}${snippetId}`,
+  chatContent: (platform: string, id: string) => `${CHAT_CONTENT_PREFIX}${platform}_${id}`,
+  etag: (fileId: string) => `${ETAG_PREFIX}${fileId}`,
+} as const;
+
+// ── Core cache operations ──────────────────────────────────────────────────────
+
+/**
+ * Reads a cached value from session storage.
+ * Returns null on cache miss or deserialization error.
+ */
+export async function get<T>(key: string): Promise<T | null> {
+  try {
+    const result = await chrome.storage.session.get(key);
+    const value = result[key];
+    if (value === undefined || value === null) return null;
+
+    // Track access time for snippet text LRU
+    if (key.startsWith(SNIPPET_TEXT_PREFIX)) {
+      snippetTextAccessTime.set(key, Date.now());
+    }
+
+    return value as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes a value to session storage.
+ * Triggers LRU eviction if snippet text cache is approaching the size limit.
+ */
+export async function set<T>(key: string, value: T): Promise<void> {
+  try {
+    await chrome.storage.session.set({ [key]: value });
+
+    if (key.startsWith(SNIPPET_TEXT_PREFIX)) {
+      snippetTextAccessTime.set(key, Date.now());
+      // Fire-and-forget eviction check after write
+      void evictSnippetTextsIfNeeded();
+    }
+  } catch {
+    // Session storage write failures are non-fatal — cache is best-effort
+  }
+}
+
+/**
+ * Removes a single key from the session storage cache.
+ */
+export async function invalidate(key: string): Promise<void> {
+  try {
+    await chrome.storage.session.remove(key);
+    snippetTextAccessTime.delete(key);
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
+ * Removes all drive_cache_* keys from session storage.
+ * Called on sign-out to prevent stale data leaking to a subsequent sign-in.
+ */
+export async function invalidateAll(): Promise<void> {
+  try {
+    const all = await chrome.storage.session.get(null);
+    const driveKeys = Object.keys(all).filter((k) => k.startsWith(KEY_PREFIX));
+    if (driveKeys.length > 0) {
+      await chrome.storage.session.remove(driveKeys);
+    }
+    snippetTextAccessTime.clear();
+  } catch {
+    // Non-fatal
+  }
+}
+
+// ── ETag helpers ───────────────────────────────────────────────────────────────
+
+/** Returns the cached Drive ETag for a file, or null if not cached. */
+export async function getEtag(fileId: string): Promise<string | null> {
+  return get<string>(CacheKeys.etag(fileId));
+}
+
+/** Stores a Drive ETag for a file in session storage. */
+export async function setEtag(fileId: string, etag: string): Promise<void> {
+  return set(CacheKeys.etag(fileId), etag);
+}
+
+// ── LRU eviction ──────────────────────────────────────────────────────────────
+
+/**
+ * Evicts the least-recently-used snippet text entries from session storage
+ * when the total estimated size exceeds EVICTION_THRESHOLD_BYTES.
+ *
+ * Only snippet text entries are evicted because they are the only cache type
+ * that can grow unboundedly (one entry per snippet, potentially thousands).
+ */
+async function evictSnippetTextsIfNeeded(): Promise<void> {
+  try {
+    const all = await chrome.storage.session.get(null);
+    const estimatedBytes = JSON.stringify(all).length * 2; // rough UTF-16 estimate
+
+    if (estimatedBytes < EVICTION_THRESHOLD_BYTES) return;
+
+    // Sort snippet text keys by last-access time (oldest first)
+    const snippetKeys = Object.keys(all).filter((k) => k.startsWith(SNIPPET_TEXT_PREFIX));
+    snippetKeys.sort((a, b) => {
+      const ta = snippetTextAccessTime.get(a) ?? 0;
+      const tb = snippetTextAccessTime.get(b) ?? 0;
+      return ta - tb; // oldest first
+    });
+
+    // Evict ~25% of snippet text entries
+    const toEvict = snippetKeys.slice(0, Math.max(1, Math.floor(snippetKeys.length * 0.25)));
+    if (toEvict.length > 0) {
+      await chrome.storage.session.remove(toEvict);
+      toEvict.forEach((k) => snippetTextAccessTime.delete(k));
+    }
+  } catch {
+    // Non-fatal — eviction is best-effort
+  }
+}
+
+export const driveCacheService = {
+  get,
+  set,
+  invalidate,
+  invalidateAll,
+  getEtag,
+  setEtag,
+  CacheKeys,
+};

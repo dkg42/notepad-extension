@@ -37,15 +37,15 @@ export default defineConfig({
       'https://accounts.google.com/*',
       'https://localhost:3000/*'
     ],
-    // ── Future: Google Docs sync ──────────────────────────────────────────────
-    // Uncomment and fill in client_id when enabling direct Google Drive sync.
-    // See background.ts for the identity message handler.
+    // ── Google Drive AppData sync ─────────────────────────────────────────────
+    // drive.appdata: app-private storage invisible to the user (AppData folder).
+    // drive.file: kept for future Google Docs export feature.
+    // These scopes are requested at sign-in time via the Firebase/OAuth2 flow
+    // in offscreen.ts — they are documented here for reference only.
     //
-    // permissions: ['storage', 'identity'],
-    // oauth2: {
-    //   client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
-    //   scopes: ['https://www.googleapis.com/auth/drive.file'],
-    // },
+    // Requested scopes:
+    //   https://www.googleapis.com/auth/drive.appdata
+    //   https://www.googleapis.com/auth/drive.file  (reserved for Docs export)
     // ─────────────────────────────────────────────────────────────────────────
   },
 });

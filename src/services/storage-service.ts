@@ -1,5 +1,7 @@
 import type { Folder, PodcastEpisode, EpisodeTrack, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
+import { driveSyncService } from './drive/drive-sync-service';
+import { getValidToken } from './token-lifecycle-service';
 
 const SNIPPETS_KEY = 'snippets';
 const FOLDERS_KEY = 'folders';
@@ -14,6 +16,17 @@ const DEFAULT_SETTINGS: DashboardSettings = {
   defaultSortColumn: 'savedAt',
   defaultSortDirection: 'desc',
 };
+
+/**
+ * Returns the current OAuth access token if Drive scope is granted.
+ * Returns null if the user is not signed in or Drive scope is missing.
+ * Used for fire-and-forget Drive sync tail calls — failures are silent.
+ */
+async function getDriveToken(): Promise<string | null> {
+  const result = await getValidToken();
+  if (!result.ok || !result.hasDriveScope) return null;
+  return result.accessToken;
+}
 
 /**
  * Single-responsibility service for persisting all extension data via chrome.storage.local.
@@ -37,6 +50,7 @@ export const storageService = {
     };
     const existing = await this.getAll();
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [snippet, ...existing] });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.saveSnippet(snippet, t); });
     return snippet;
   },
 
@@ -54,6 +68,7 @@ export const storageService = {
     }));
     const existing = await this.getAll();
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [...newSnippets, ...existing] });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.saveAllSnippets([...newSnippets, ...existing], t); });
     return newSnippets;
   },
 
@@ -62,37 +77,33 @@ export const storageService = {
     await chrome.storage.local.set({
       [SNIPPETS_KEY]: existing.filter((s) => s.id !== id),
     });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.deleteSnippet(id, t); });
   },
 
   async moveToFolder(snippetId: string, folderId: string | undefined): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) =>
-        s.id === snippetId ? { ...s, folderId } : s,
-      ),
-    });
+    const updated = existing.map((s) => s.id === snippetId ? { ...s, folderId } : s);
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async updateTags(snippetId: string, tags: string[]): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) =>
-        s.id === snippetId ? { ...s, tags } : s,
-      ),
-    });
+    const updated = existing.map((s) => s.id === snippetId ? { ...s, tags } : s);
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async toggleFavorite(id: string): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) =>
-        s.id === id ? { ...s, isFavorite: !s.isFavorite } : s,
-      ),
-    });
+    const updated = existing.map((s) => s.id === id ? { ...s, isFavorite: !s.isFavorite } : s);
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async clear(): Promise<void> {
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [] });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta([], t); });
   },
 
   async clearAllData(): Promise<void> {
@@ -110,43 +121,41 @@ export const storageService = {
   async bulkDelete(ids: string[]): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.filter((s) => !idSet.has(s.id)),
-    });
+    const updated = existing.filter((s) => !idSet.has(s.id));
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async bulkMoveToFolder(ids: string[], folderId: string | undefined): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) =>
-        idSet.has(s.id) ? { ...s, folderId } : s,
-      ),
-    });
+    const updated = existing.map((s) => idSet.has(s.id) ? { ...s, folderId } : s);
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async bulkAddTags(ids: string[], tags: string[]): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) => {
-        if (!idSet.has(s.id)) return s;
-        const merged = Array.from(new Set([...(s.tags ?? []), ...tags]));
-        return { ...s, tags: merged };
-      }),
+    const updated = existing.map((s) => {
+      if (!idSet.has(s.id)) return s;
+      const merged = Array.from(new Set([...(s.tags ?? []), ...tags]));
+      return { ...s, tags: merged };
     });
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   async bulkRemoveTags(ids: string[], tags: string[]): Promise<void> {
     const idSet = new Set(ids);
     const removeSet = new Set(tags);
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [SNIPPETS_KEY]: existing.map((s) => {
-        if (!idSet.has(s.id)) return s;
-        return { ...s, tags: (s.tags ?? []).filter((t) => !removeSet.has(t)) };
-      }),
+    const updated = existing.map((s) => {
+      if (!idSet.has(s.id)) return s;
+      return { ...s, tags: (s.tags ?? []).filter((t) => !removeSet.has(t)) };
     });
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
   // ── Folders ───────────────────────────────────────────────────────────────
@@ -168,7 +177,9 @@ export const storageService = {
       createdAt: Date.now(),
       sortOrder: existing.length,
     };
-    await chrome.storage.local.set({ [FOLDERS_KEY]: [...existing, folder] });
+    const updated = [...existing, folder];
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
     return folder;
   },
 
@@ -178,9 +189,9 @@ export const storageService = {
     if (existing.some((f) => f.id !== id && f.name.toLowerCase() === trimmed.toLowerCase())) {
       throw new Error(`A folder named "${trimmed}" already exists.`);
     }
-    await chrome.storage.local.set({
-      [FOLDERS_KEY]: existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f)),
-    });
+    const updated = existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f));
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
   async deleteFolder(id: string): Promise<void> {
@@ -188,24 +199,30 @@ export const storageService = {
     const updatedSnippets = snippets.map((s) =>
       s.folderId === id ? { ...s, folderId: undefined } : s,
     );
+    const updatedFolders = folders.filter((f) => f.id !== id);
     await chrome.storage.local.set({
-      [FOLDERS_KEY]: folders.filter((f) => f.id !== id),
+      [FOLDERS_KEY]: updatedFolders,
       [SNIPPETS_KEY]: updatedSnippets,
+    });
+    void getDriveToken().then((t) => {
+      if (!t) return;
+      driveSyncService.saveFolders(updatedFolders, t);
+      driveSyncService.saveSnippetsMeta(updatedSnippets.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t);
     });
   },
 
   async updateFolderColor(id: string, color: string | undefined): Promise<void> {
     const existing = await this.getFolders();
-    await chrome.storage.local.set({
-      [FOLDERS_KEY]: existing.map((f) => (f.id === id ? { ...f, color } : f)),
-    });
+    const updated = existing.map((f) => (f.id === id ? { ...f, color } : f));
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
   async updateFolderOrder(id: string, sortOrder: number): Promise<void> {
     const existing = await this.getFolders();
-    await chrome.storage.local.set({
-      [FOLDERS_KEY]: existing.map((f) => (f.id === id ? { ...f, sortOrder } : f)),
-    });
+    const updated = existing.map((f) => (f.id === id ? { ...f, sortOrder } : f));
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
   async bulkUpdateFolderSortOrders(
@@ -213,11 +230,11 @@ export const storageService = {
   ): Promise<void> {
     const orderMap = new Map(updates.map((u) => [u.id, u.sortOrder]));
     const existing = await this.getFolders();
-    await chrome.storage.local.set({
-      [FOLDERS_KEY]: existing.map((f) =>
-        orderMap.has(f.id) ? { ...f, sortOrder: orderMap.get(f.id)! } : f,
-      ),
-    });
+    const updated = existing.map((f) =>
+      orderMap.has(f.id) ? { ...f, sortOrder: orderMap.get(f.id)! } : f,
+    );
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
   // ── Tags Metadata ─────────────────────────────────────────────────────────
@@ -233,13 +250,14 @@ export const storageService = {
       ? existing.map((t) => (t.name === meta.name ? meta : t))
       : [...existing, meta];
     await chrome.storage.local.set({ [TAGS_META_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveTags(updated, t); });
   },
 
   async deleteTagMeta(name: string): Promise<void> {
     const existing = await this.getTagsMeta();
-    await chrome.storage.local.set({
-      [TAGS_META_KEY]: existing.filter((t) => t.name !== name),
-    });
+    const updated = existing.filter((t) => t.name !== name);
+    await chrome.storage.local.set({ [TAGS_META_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveTags(updated, t); });
   },
 
   async renameTag(oldName: string, newName: string): Promise<void> {
@@ -256,6 +274,11 @@ export const storageService = {
       [SNIPPETS_KEY]: updatedSnippets,
       [TAGS_META_KEY]: updatedMeta,
     });
+    void getDriveToken().then((token) => {
+      if (!token) return;
+      driveSyncService.saveTags(updatedMeta, token);
+      driveSyncService.saveSnippetsMeta(updatedSnippets.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), token);
+    });
   },
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -267,7 +290,9 @@ export const storageService = {
 
   async saveSettings(settings: Partial<DashboardSettings>): Promise<void> {
     const current = await this.getSettings();
-    await chrome.storage.local.set({ [SETTINGS_KEY]: { ...current, ...settings } });
+    const merged = { ...current, ...settings };
+    await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveSettings(merged, t); });
   },
 
   // ── Export History ─────────────────────────────────────────────────────────
@@ -284,6 +309,7 @@ export const storageService = {
     await chrome.storage.local.set({
       [EXPORT_HISTORY_KEY]: [newRecord, ...existing].slice(0, 200),
     });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.appendExportRecord(newRecord, t); });
   },
 
   async clearExportHistory(): Promise<void> {
@@ -327,12 +353,14 @@ export const storageService = {
       episodes.push(episode);
     }
     await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(episodes, t); });
   },
 
   async deletePodcastEpisode(id: string): Promise<void> {
     const episodes = await this.getPodcastEpisodes();
     const filtered = episodes.filter((e) => e.id !== id);
     await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: filtered });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(filtered, t); });
   },
 
   async updateEpisodeTracks(id: string, tracks: EpisodeTrack[]): Promise<void> {
@@ -341,6 +369,7 @@ export const storageService = {
     if (idx < 0) return;
     episodes[idx] = { ...episodes[idx], tracks, updatedAt: Date.now() };
     await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(episodes, t); });
   },
 
   async importAllData(data: Record<string, unknown>): Promise<void> {

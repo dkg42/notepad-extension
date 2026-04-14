@@ -1,7 +1,15 @@
 import type { NotebookAnnotation, NotebookCollection } from '@/types';
+import { driveSyncService } from './drive/drive-sync-service';
+import { getValidToken } from './token-lifecycle-service';
 
 const ANNOTATIONS_KEY = 'notebookAnnotations';
 const COLLECTIONS_KEY = 'notebookCollections';
+
+async function getDriveToken(): Promise<string | null> {
+  const result = await getValidToken();
+  if (!result.ok || !result.hasDriveScope) return null;
+  return result.accessToken;
+}
 
 /**
  * Service for persisting user-defined notebook annotations (tags, collection
@@ -27,12 +35,22 @@ export const notebookAnnotationService = {
       all.push(annotation);
     }
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: all });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      const collections = await this.getAllCollections();
+      driveSyncService.saveAnnotations(all, collections, t);
+    });
   },
 
   async removeAnnotation(notebookId: string): Promise<void> {
     const all = await this.getAllAnnotations();
     const filtered = all.filter((a) => a.notebookId !== notebookId);
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: filtered });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      const collections = await this.getAllCollections();
+      driveSyncService.saveAnnotations(filtered, collections, t);
+    });
   },
 
   // ── Collections ─────────────────────────────────────────────────────────────
@@ -51,6 +69,11 @@ export const notebookAnnotationService = {
       all.push(collection);
     }
     await chrome.storage.sync.set({ [COLLECTIONS_KEY]: all });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      const annotations = await this.getAllAnnotations();
+      driveSyncService.saveAnnotations(annotations, all, t);
+    });
   },
 
   /**
@@ -69,6 +92,9 @@ export const notebookAnnotationService = {
     await chrome.storage.sync.set({
       [COLLECTIONS_KEY]: updatedCollections,
       [ANNOTATIONS_KEY]: updatedAnnotations,
+    });
+    void getDriveToken().then((t) => {
+      if (t) driveSyncService.saveAnnotations(updatedAnnotations, updatedCollections, t);
     });
   },
 

@@ -1,7 +1,15 @@
 import type { ChatPlatform, ChatSyncMeta, ConversationFull, ConversationMeta } from '@/types';
+import { driveSyncService } from './drive/drive-sync-service';
+import { getValidToken } from './token-lifecycle-service';
 
 const CONVERSATIONS_KEY = 'chatConversations';
 const SYNC_META_KEY = 'chatSyncMeta';
+
+async function getDriveToken(): Promise<string | null> {
+  const result = await getValidToken();
+  if (!result.ok || !result.hasDriveScope) return null;
+  return result.accessToken;
+}
 
 /** Storage key for a single conversation's full content. */
 function contentKey(platform: ChatPlatform, id: string): string {
@@ -39,6 +47,11 @@ export const chatHistoryStorage = {
 
     const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: merged });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      const syncMeta = await this.getSyncMeta();
+      driveSyncService.saveChatConversationsMeta(merged, syncMeta, t);
+    });
   },
 
   /** Returns the full content for a single conversation, or null if not cached. */
@@ -62,6 +75,12 @@ export const chatHistoryStorage = {
         : c,
     );
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: updated });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      void driveSyncService.saveChatConversationContent(full, t);
+      const syncMeta = await this.getSyncMeta();
+      driveSyncService.saveChatConversationsMeta(updated, syncMeta, t);
+    });
   },
 
   /** Returns sync metadata for all platforms. */
@@ -84,6 +103,11 @@ export const chatHistoryStorage = {
       all.push(updated);
     }
     await chrome.storage.local.set({ [SYNC_META_KEY]: all });
+    void getDriveToken().then(async (t) => {
+      if (!t) return;
+      const conversations = await this.getConversations();
+      driveSyncService.saveChatConversationsMeta(conversations, all, t);
+    });
   },
 
   async clearAllData(): Promise<void> {

@@ -1,4 +1,6 @@
 import type { Pipeline, PipelineRun } from '@/types';
+import { driveSyncService } from './drive/drive-sync-service';
+import { getValidToken } from './token-lifecycle-service';
 
 const PIPELINES_KEY = 'pipelines';
 const PIPELINE_RUNS_KEY = 'pipelineRuns';
@@ -7,6 +9,12 @@ const ARTIFACT_BASELINE_KEY = 'pipelineArtifactBaseline';
 
 /** Maximum number of run log entries kept in local storage. */
 const MAX_RUNS = 200;
+
+async function getDriveToken(): Promise<string | null> {
+  const result = await getValidToken();
+  if (!result.ok || !result.hasDriveScope) return null;
+  return result.accessToken;
+}
 
 /**
  * Manages pipeline rules, their run log, and polling baselines.
@@ -31,22 +39,23 @@ export const pipelineService = {
       existing.push(pipeline);
     }
     await chrome.storage.local.set({ [PIPELINES_KEY]: existing });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(existing, t); });
   },
 
   async remove(id: string): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [PIPELINES_KEY]: existing.filter((p) => p.id !== id),
-    });
+    const updated = existing.filter((p) => p.id !== id);
+    await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
   },
 
   async toggleEnabled(id: string): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [PIPELINES_KEY]: existing.map((p) =>
-        p.id === id ? { ...p, enabled: !p.enabled, updatedAt: Date.now() } : p,
-      ),
-    });
+    const updated = existing.map((p) =>
+      p.id === id ? { ...p, enabled: !p.enabled, updatedAt: Date.now() } : p,
+    );
+    await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
   },
 
   /**
@@ -55,15 +64,15 @@ export const pipelineService = {
    */
   async updateLastFiredAt(id: string, notebookId: string, ts: number): Promise<void> {
     const existing = await this.getAll();
-    await chrome.storage.local.set({
-      [PIPELINES_KEY]: existing.map((p) => {
-        if (p.id !== id) return p;
-        return {
-          ...p,
-          lastFiredAt: { ...(p.lastFiredAt ?? {}), [notebookId]: ts },
-        };
-      }),
+    const updated = existing.map((p) => {
+      if (p.id !== id) return p;
+      return {
+        ...p,
+        lastFiredAt: { ...(p.lastFiredAt ?? {}), [notebookId]: ts },
+      };
     });
+    await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
   },
 
   // ── Run log ──────────────────────────────────────────────────────────────
@@ -80,6 +89,7 @@ export const pipelineService = {
     const existing = (result[PIPELINE_RUNS_KEY] as PipelineRun[]) ?? [];
     const updated = [run, ...existing].slice(0, MAX_RUNS);
     await chrome.storage.local.set({ [PIPELINE_RUNS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.appendPipelineRun(run, t); });
   },
 
   async clearRuns(): Promise<void> {

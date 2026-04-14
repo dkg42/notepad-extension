@@ -26,7 +26,7 @@ export const TOKEN_REFRESH_ALARM = 'token-refresh';
 /** Refresh this many milliseconds before token expiry to avoid racing with expiry. */
 const LEAD_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
 export type GetTokenResult =
   | { ok: true; accessToken: string; hasDriveScope: boolean }

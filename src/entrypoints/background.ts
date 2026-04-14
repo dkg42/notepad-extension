@@ -36,7 +36,10 @@ import {
   scheduleRefreshAlarm,
   cancelRefreshAlarm,
   revokeToken,
+  getValidToken,
 } from '@/services/token-lifecycle-service';
+import { driveInitService } from '@/services/drive/drive-init-service';
+import { driveWriteQueue } from '@/services/drive/drive-write-queue';
 
 const ALARM_NAME = 'notebooklm-sync';
 const MIGRATION_KEY = 'preSignInDataMigratedToUid';
@@ -1061,6 +1064,14 @@ export default defineBackground(() => {
             ensureGoogleSession().catch((err: unknown) => {
               console.warn('[AUTH][BG] Proactive NotebookLM session setup failed:', err);
             });
+            // Initialize Drive AppData sync — migrate local data or validate
+            // ETag-based freshness for returning users. Fire-and-forget.
+            getValidToken().then((tokenResult) => {
+              if (!tokenResult.ok || !tokenResult.hasDriveScope) return;
+              void driveInitService.initialize(tokenResult.accessToken, credential.user.uid ?? '').catch((err: unknown) => {
+                console.warn('[AUTH][BG] Drive init failed (non-fatal):', err);
+              });
+            }).catch(() => {});
           })
           .catch((err: unknown) => {
             console.error('[AUTH][BG] Auth flow error:', err);
@@ -1110,6 +1121,10 @@ export default defineBackground(() => {
               });
             }
 
+            // Tear down Drive sync: cancel pending writes and clear session cache
+            // before clearing auth data so no stale writes fire after sign-out.
+            await driveInitService.teardown();
+
             return Promise.all([
               authStorageService.clearAll(),
               chrome.storage.local.remove([MIGRATION_KEY]),
@@ -1134,4 +1149,10 @@ export default defineBackground(() => {
       return false;
     },
   );
+
+  // Flush any pending Drive writes before the service worker is terminated.
+  // Chrome gives ~5 seconds on this event, so this is best-effort.
+  chrome.runtime.onSuspend.addListener(() => {
+    void driveWriteQueue.flushAll();
+  });
 });
