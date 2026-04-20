@@ -23,7 +23,7 @@
  *   drive_cache_domain_router         → DriveDomainRouterFile
  *   drive_cache_chat_meta             → DriveChatConversationsMetaFile
  *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
- *   drive_cache_etag_{fileId}         → string (Drive ETag for a file)
+ *   drive_cache_version_{fileId}      → number (Drive version for a file)
  *
  * LRU eviction:
  *   Only `drive_cache_snippet_text_*` entries are subject to LRU eviction.
@@ -37,7 +37,7 @@
 const KEY_PREFIX = 'drive_cache_';
 const SNIPPET_TEXT_PREFIX = `${KEY_PREFIX}snippet_text_`;
 const CHAT_CONTENT_PREFIX = `${KEY_PREFIX}chat_`;
-const ETAG_PREFIX = `${KEY_PREFIX}etag_`;
+const VERSION_PREFIX = `${KEY_PREFIX}version_`;
 
 /** Session storage size threshold (bytes) above which LRU eviction kicks in. */
 const EVICTION_THRESHOLD_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -67,7 +67,7 @@ export const CacheKeys = {
 
   snippetText: (snippetId: string) => `${SNIPPET_TEXT_PREFIX}${snippetId}`,
   chatContent: (platform: string, id: string) => `${CHAT_CONTENT_PREFIX}${platform}_${id}`,
-  etag: (fileId: string) => `${ETAG_PREFIX}${fileId}`,
+  version: (fileId: string) => `${VERSION_PREFIX}${fileId}`,
 } as const;
 
 // ── Core cache operations ──────────────────────────────────────────────────────
@@ -140,16 +140,16 @@ export async function invalidateAll(): Promise<void> {
   }
 }
 
-// ── ETag helpers ───────────────────────────────────────────────────────────────
+// ── Version helpers ───────────────────────────────────────────────────────────
 
-/** Returns the cached Drive ETag for a file, or null if not cached. */
-export async function getEtag(fileId: string): Promise<string | null> {
-  return get<string>(CacheKeys.etag(fileId));
+/** Returns the cached Drive version for a file, or null if not cached. */
+export async function getVersion(fileId: string): Promise<number | null> {
+  return get<number>(CacheKeys.version(fileId));
 }
 
-/** Stores a Drive ETag for a file in session storage. */
-export async function setEtag(fileId: string, etag: string): Promise<void> {
-  return set(CacheKeys.etag(fileId), etag);
+/** Stores a Drive version number for a file in session storage. */
+export async function setVersion(fileId: string, version: number): Promise<void> {
+  return set(CacheKeys.version(fileId), version);
 }
 
 // ── LRU eviction ──────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ export const driveCacheService = {
   set,
   invalidate,
   invalidateAll,
-  getEtag,
-  setEtag,
+  getVersion,
+  setVersion,
   CacheKeys,
 };

@@ -8,7 +8,7 @@
  *
  * Drive AppData file layout (flat — AppData has no real subdirectory support):
  *
- *   manifest.json                      ← file-ID registry + ETags + schema versions
+ *   manifest.json                      ← file-ID registry + versions + schema versions
  *   snippets-meta.json                 ← snippet metadata (text bodies excluded)
  *   snippet-text-{id}.txt              ← one plain-text file per snippet body
  *   folders.json
@@ -78,7 +78,8 @@ export function chatContentFilename(platform: string, conversationId: string): s
 export interface DriveFileRef {
   id: string;
   name: string;
-  etag: string;
+  /** Monotonically increasing version number from Drive API v3. */
+  version: number;
   size: number;
 }
 
@@ -91,8 +92,8 @@ export interface DriveManifestEntry {
   schemaVersion: number;
   /** Unix ms of the last successful write to Drive for this file. */
   syncedAt: number;
-  /** Drive ETag returned from the last read or write. Used for conditional GETs. */
-  etag?: string;
+  /** Drive version number from the last read or write. Used for change detection. */
+  version?: number;
   /** File size in bytes (informational). */
   size?: number;
 }
@@ -115,7 +116,7 @@ export interface DriveManifest {
   updatedAt: number;
   /** Firebase UID of the account that owns this AppData — guards cross-account reads. */
   ownerUid: string;
-  files: Partial<Record<DriveFilename, DriveManifestEntry>>;
+  files: Record<string, DriveManifestEntry>;
 }
 
 // ── Common file envelope ───────────────────────────────────────────────────────

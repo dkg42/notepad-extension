@@ -13,5 +13,9 @@
 .output/
 .wxt/
 
+# Local env files (contain secrets — never commit)
+.env.local
+.env.*.local
+
 # Dependencies
 node_modules/

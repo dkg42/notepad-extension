@@ -14,6 +14,11 @@
  * pattern for Chrome extensions using web application OAuth credentials — the secret is
  * technically recoverable from the bundle, but the risk is mitigated by the token being
  * bound to the signed-in user and requiring explicit OAuth consent.
+ *
+ * TODO: Move token refresh to the webapp (BFF). Add a /auth/token/refresh endpoint that
+ * holds client_secret server-side. The extension should POST the refresh token to that
+ * endpoint and receive a new access token in return. This removes VITE_GOOGLE_CLIENT_SECRET
+ * from the extension bundle entirely.
  */
 
 import type { GoogleTokenRefreshResponse } from '@/types';

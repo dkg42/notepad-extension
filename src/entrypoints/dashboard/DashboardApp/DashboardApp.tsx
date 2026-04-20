@@ -22,6 +22,7 @@ import AccountPage from '@/components/dashboard/AccountPage/AccountPage';
 import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
+import DriveConflictDialog from '@/components/dashboard/DriveConflictDialog/DriveConflictDialog';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
 import { useCommandPalette } from '@/components/dashboard/CommandPalette/useCommandPalette';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -81,6 +82,8 @@ export default function DashboardApp() {
     handleDeleteTag,
     handleTagColorChange,
     handleSettingsChange,
+    driveConflict,
+    handleConflictResolution,
   } = useDashboardApp();
 
   const palette = useCommandPalette(snippets, folders, setCurrentView);
@@ -294,6 +297,14 @@ export default function DashboardApp() {
           title={audioTitle}
           onClose={stopAudio}
           onEnded={() => void playNext()}
+        />
+      )}
+
+      {driveConflict && (
+        <DriveConflictDialog
+          summary={driveConflict}
+          onMerge={() => void handleConflictResolution('merge')}
+          onOverwrite={() => void handleConflictResolution('overwrite')}
         />
       )}
     </ThemeProvider>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
+import type { ConflictSummary } from '@/services/drive/drive-init-service';
 import { storageService } from '@/services/storage-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
@@ -33,8 +34,20 @@ export function useDashboardApp() {
   const [podcastsCount, setPodcastsCount] = useState(0);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
   const [pipelinesCount, setPipelinesCount] = useState(0);
+  const [driveConflict, setDriveConflict] = useState<ConflictSummary | null>(null);
 
   useEffect(() => {
+    // Trigger Drive sync in the background. Responses land via the local storage
+    // change listener below — the dashboard renders immediately from local storage
+    // and updates automatically when Drive init writes fresher data.
+    chrome.runtime.sendMessage({ type: 'DRIVE_INITIALIZE' })
+      .then((res: { ok: boolean; needsMergeDecision?: boolean; conflictSummary?: ConflictSummary }) => {
+        if (res?.ok && res.needsMergeDecision && res.conflictSummary) {
+          setDriveConflict(res.conflictSummary);
+        }
+      })
+      .catch(() => {}); // non-fatal: offline or not signed in
+
     Promise.all([
       storageService.getAll(),
       storageService.getFolders(),
@@ -83,9 +96,21 @@ export function useDashboardApp() {
       .catch(() => {});
   }, []);
 
-  // Update chat history count when local storage changes
+  // React to local storage changes — covers both user edits and Drive sync writes.
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('snippets' in changes) {
+        setSnippets((changes.snippets.newValue as Snippet[]) ?? []);
+      }
+      if ('folders' in changes) {
+        setFolders((changes.folders.newValue as Folder[]) ?? []);
+      }
+      if ('tagsMeta' in changes) {
+        setTagsMeta((changes.tagsMeta.newValue as TagMeta[]) ?? []);
+      }
+      if ('dashboardSettings' in changes && changes.dashboardSettings.newValue) {
+        setSettings(changes.dashboardSettings.newValue as DashboardSettings);
+      }
       if ('chatConversations' in changes) {
         const updated = (changes.chatConversations.newValue as Array<unknown>) ?? [];
         setChatHistoryCount(updated.length);
@@ -312,6 +337,11 @@ export function useDashboardApp() {
     setSettings((prev) => ({ ...prev, ...partial }));
   };
 
+  const handleConflictResolution = async (decision: 'merge' | 'overwrite') => {
+    setDriveConflict(null);
+    await chrome.runtime.sendMessage({ type: 'DRIVE_RESOLVE_CONFLICT', decision }).catch(() => {});
+  };
+
   return {
     ...globalAudio,
     snippets,
@@ -357,5 +387,7 @@ export function useDashboardApp() {
     handleDeleteTag,
     handleTagColorChange,
     handleSettingsChange,
+    driveConflict,
+    handleConflictResolution,
   };
 }

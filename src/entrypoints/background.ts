@@ -39,6 +39,7 @@ import {
   getValidToken,
 } from '@/services/token-lifecycle-service';
 import { driveInitService } from '@/services/drive/drive-init-service';
+import { driveSyncService } from '@/services/drive/drive-sync-service';
 import { driveWriteQueue } from '@/services/drive/drive-write-queue';
 
 const ALARM_NAME = 'notebooklm-sync';
@@ -399,6 +400,18 @@ export default defineBackground(() => {
     // Re-arm token refresh alarm. chrome.storage.session is cleared on browser close,
     // so this no-ops when signed out; the first Drive call will do a just-in-time refresh.
     void scheduleRefreshAlarm();
+    // Re-initialize Drive sync. chrome.storage.session is cleared on browser close so the
+    // manifest session cache is gone — reload from Drive for signed-in users with Drive scope.
+    void (async () => {
+      const [tokenResult, profile] = await Promise.all([
+        getValidToken(),
+        authStorageService.getAuthProfile(),
+      ]);
+      if (!tokenResult.ok || !tokenResult.hasDriveScope || !profile?.uid) return;
+      await driveInitService.initialize(tokenResult.accessToken, profile.uid);
+    })().catch((err: unknown) => {
+      console.warn('[STARTUP] Drive re-init failed (non-fatal):', err);
+    });
   });
 
   // Periodic sync via alarms
@@ -427,6 +440,44 @@ export default defineBackground(() => {
   chrome.runtime.onMessage.addListener(
     (message: unknown, _sender, sendResponse: (r: unknown) => void) => {
       if (!isMessage(message)) return false;
+
+      if (message.type === 'DRIVE_INITIALIZE') {
+        (async () => {
+          const [tokenResult, profile] = await Promise.all([
+            getValidToken(),
+            authStorageService.getAuthProfile(),
+          ]);
+          if (!tokenResult.ok || !tokenResult.hasDriveScope || !profile?.uid) {
+            sendResponse({ ok: true, skipped: true });
+            return;
+          }
+          const result = await driveInitService.initialize(tokenResult.accessToken, profile.uid);
+          sendResponse({ ok: true, ...result });
+        })().catch((err: unknown) =>
+          sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+        );
+        return true; // keep channel open for async response
+      }
+
+      if (message.type === 'DRIVE_RESOLVE_CONFLICT') {
+        const { decision } = message as { type: string; decision: 'merge' | 'overwrite' };
+        (async () => {
+          const [tokenResult, profile] = await Promise.all([
+            getValidToken(),
+            authStorageService.getAuthProfile(),
+          ]);
+          if (!tokenResult.ok || !tokenResult.hasDriveScope || !profile?.uid) {
+            sendResponse({ ok: false, error: 'not_signed_in' });
+            return;
+          }
+          const result = await driveInitService.initialize(tokenResult.accessToken, profile.uid, decision);
+          sendResponse({ ok: true, ...result });
+        })().catch((err: unknown) =>
+          sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+        );
+        return true; // keep channel open for async response
+      }
+
       if (message.type === 'SYNC_NOTEBOOKS') {
         ensureSignedIn()
           .then(() => syncNotebooks())
@@ -657,6 +708,18 @@ export default defineBackground(() => {
           // Return cached content if available
           const cached = await chatHistoryStorage.getConversationContent(platform, id);
           if (cached) return { ok: true, conversation: cached };
+
+          // Drive fallback: if not in local storage, check Drive before opening a tab
+          const driveTokenResult = await getValidToken();
+          if (driveTokenResult.ok && driveTokenResult.hasDriveScope) {
+            const driveConversation = await driveSyncService.getChatConversationContent(
+              platform, id, driveTokenResult.accessToken,
+            );
+            if (driveConversation) {
+              await chatHistoryStorage.saveConversationContent(driveConversation);
+              return { ok: true, conversation: driveConversation };
+            }
+          }
 
           // For ChatGPT/Claude: any authenticated tab works (REST APIs, fetch by ID).
           // For Gemini: no REST API exists — content must be extracted from the rendered DOM.

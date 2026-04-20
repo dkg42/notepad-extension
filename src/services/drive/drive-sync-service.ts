@@ -41,7 +41,7 @@ import {
   chatContentFilename,
   toDriveSafeEpisode,
 } from './types/drive-schemas';
-import { CacheKeys, get as cacheGet, set as cacheSet, invalidate as cacheInvalidate, setEtag, getEtag } from './drive-cache-service';
+import { CacheKeys, get as cacheGet, set as cacheSet, invalidate as cacheInvalidate } from './drive-cache-service';
 import { getEntry } from './drive-manifest-service';
 import { readFile } from './drive-io-service';
 import { enqueue } from './drive-write-queue';
@@ -57,34 +57,27 @@ const MAX_PIPELINE_RUNS = 200;
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
 /**
- * Reads a JSON file from Drive, using the session cache for ETag-based
- * conditional GETs. Returns null if the file does not exist or read fails.
+ * Reads a JSON file from Drive and populates the session cache.
+ * Returns null if the file does not exist or read fails.
  */
 async function readJsonFromDrive<T>(
   filename: string,
   cacheKey: string,
   token: string,
 ): Promise<T | null> {
-  const entry = getEntry(filename as Parameters<typeof getEntry>[0]);
+  const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
-  const cachedEtag = await getEtag(entry.driveFileId);
-  const result = await readFile(entry.driveFileId, token, cachedEtag ?? undefined);
+  const result = await readFile(entry.driveFileId, token);
 
   if (!result.ok) {
     console.warn(`[DRIVE-SYNC] Failed to read ${filename}:`, result.error);
     return null;
   }
 
-  if (result.data === null) {
-    // 304 Not Modified — cache is still valid; re-read from cache
-    return cacheGet<T>(cacheKey);
-  }
-
   try {
     const parsed = JSON.parse(result.data) as T;
     await cacheSet(cacheKey, parsed);
-    if (result.etag) await setEtag(entry.driveFileId, result.etag);
     return parsed;
   } catch (err) {
     console.error(`[DRIVE-SYNC] Failed to parse ${filename}:`, err);
@@ -129,16 +122,13 @@ export async function getSnippetText(snippetId: string, token: string): Promise<
   if (cached !== null) return cached;
 
   const filename = snippetTextFilename(snippetId);
-  const entry = getEntry(filename as Parameters<typeof getEntry>[0]);
+  const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
-  const cachedEtag = await getEtag(entry.driveFileId);
-  const result = await readFile(entry.driveFileId, token, cachedEtag ?? undefined);
+  const result = await readFile(entry.driveFileId, token);
   if (!result.ok) return null;
-  if (result.data === null) return cacheGet<string>(cacheKey); // 304
 
   await cacheSet(cacheKey, result.data);
-  if (result.etag) await setEtag(entry.driveFileId, result.etag);
   return result.data;
 }
 
@@ -373,19 +363,13 @@ export async function getChatConversationContent(
   const cachedNdjson = await cacheGet<string>(cacheKey);
   if (cachedNdjson !== null) return parseConversationNdjson(cachedNdjson);
 
-  const entry = getEntry(filename as Parameters<typeof getEntry>[0]);
+  const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
-  const cachedEtag = await getEtag(entry.driveFileId);
-  const result = await readFile(entry.driveFileId, token, cachedEtag ?? undefined);
+  const result = await readFile(entry.driveFileId, token);
   if (!result.ok) return null;
-  if (result.data === null) {
-    const existing = await cacheGet<string>(cacheKey);
-    return existing ? parseConversationNdjson(existing) : null;
-  }
 
   await cacheSet(cacheKey, result.data);
-  if (result.etag) await setEtag(entry.driveFileId, result.etag);
   return parseConversationNdjson(result.data);
 }
 

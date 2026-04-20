@@ -5,7 +5,7 @@
  *
  * The manifest stores Drive file IDs for every known AppData file so subsequent
  * writes go directly to PATCH /files/{id} without a list-by-name lookup.
- * It also stores ETags and `syncedAt` timestamps for conflict resolution.
+ * It also stores version numbers and `syncedAt` timestamps for conflict resolution.
  *
  * In-memory copy:
  *   The manifest is held in a module-level variable for the lifetime of the
@@ -66,14 +66,9 @@ export async function load(token: string): Promise<DriveManifest | null> {
   }
 
   manifestFileId = findResult.data.id;
-  const readResult = await readFile(manifestFileId, token, findResult.data.etag);
+  const readResult = await readFile(manifestFileId, token);
   if (!readResult.ok) {
     console.warn('[MANIFEST] Failed to read manifest file:', readResult.error);
-    return null;
-  }
-
-  if (readResult.data === null) {
-    // 304 Not Modified — this shouldn't happen on initial load without an ETag, but handle gracefully
     return null;
   }
 
@@ -101,16 +96,14 @@ export async function save(manifest: DriveManifest, token: string): Promise<void
       console.error('[MANIFEST] Failed to update manifest:', result.error);
       return;
     }
-    if (result.etag) {
-      manifest.files[MANIFEST_FILENAME] = {
-        ...(manifest.files[MANIFEST_FILENAME] ?? {}),
-        driveFileId: manifestFileId,
-        filename: MANIFEST_FILENAME,
-        schemaVersion: DRIVE_SCHEMA_VERSION,
-        syncedAt: Date.now(),
-        etag: result.etag,
-      };
-    }
+    manifest.files[MANIFEST_FILENAME] = {
+      ...(manifest.files[MANIFEST_FILENAME] ?? {}),
+      driveFileId: manifestFileId,
+      filename: MANIFEST_FILENAME,
+      schemaVersion: DRIVE_SCHEMA_VERSION,
+      syncedAt: Date.now(),
+      version: result.data.version,
+    };
   } else {
     const result = await createFile(MANIFEST_FILENAME, 'application/json', body, token);
     if (!result.ok) {
@@ -123,7 +116,7 @@ export async function save(manifest: DriveManifest, token: string): Promise<void
       filename: MANIFEST_FILENAME,
       schemaVersion: DRIVE_SCHEMA_VERSION,
       syncedAt: Date.now(),
-      etag: result.data.etag,
+      version: result.data.version,
     };
   }
 
@@ -139,7 +132,7 @@ export async function save(manifest: DriveManifest, token: string): Promise<void
  * without debounce to keep the manifest consistent.
  */
 export async function upsertEntry(
-  filename: DriveFilename,
+  filename: string,
   patch: Partial<DriveManifestEntry>,
   token: string,
 ): Promise<void> {
@@ -166,7 +159,7 @@ export async function upsertEntry(
  * Synchronous — callers must ensure load() has been called first.
  * Returns null if the entry does not exist or the manifest is not loaded.
  */
-export function getEntry(filename: DriveFilename): DriveManifestEntry | null {
+export function getEntry(filename: string): DriveManifestEntry | null {
   return inMemoryManifest?.files[filename] ?? null;
 }
 

@@ -29,8 +29,7 @@
  */
 
 import { createFile, updateFile } from './drive-io-service';
-import { upsertEntry, getEntry } from './drive-manifest-service';
-import type { DriveFilename } from './types/drive-schemas';
+import { upsertEntry, getEntry, getManifest, load as loadManifest } from './drive-manifest-service';
 import { DRIVE_SCHEMA_VERSION } from './types/drive-schemas';
 
 // ── Configuration ──────────────────────────────────────────────────────────────
@@ -72,6 +71,17 @@ let inFlight = 0;
 /** Queue of thunks waiting for a semaphore slot. */
 const semaphoreWaiters: Array<() => void> = [];
 
+/**
+ * When true, enqueue() is a no-op. Set during driveInitService.initialize()
+ * to prevent fire-and-forget sync-backs from overwriting Drive with empty
+ * local data before applyDriveData() has populated chrome.storage.local.
+ */
+let _initInProgress = false;
+
+export function setInitializing(active: boolean): void {
+  _initInProgress = active;
+}
+
 // ── Semaphore ──────────────────────────────────────────────────────────────────
 
 async function acquireSemaphore(): Promise<void> {
@@ -94,16 +104,23 @@ function releaseSemaphore(): void {
 async function executeWrite(filename: string, payload: string, token: string): Promise<void> {
   await acquireSemaphore();
   try {
+    // If the service worker was restarted (MV3 lifecycle), inMemoryManifest will be
+    // null. Load from session cache (fast) or Drive (browser restart) before proceeding
+    // so getEntry returns the correct existing file ID and upsertEntry can persist.
+    if (!getManifest()) {
+      await loadManifest(token);
+    }
+
     const mimeType = filename.endsWith('.txt') ? 'text/plain' : 'application/json';
-    const existingEntry = getEntry(filename as DriveFilename);
+    const existingEntry = getEntry(filename);
 
     let fileId: string | null = existingEntry?.driveFileId ?? null;
-    let etag: string | undefined;
+    let version: number | undefined;
 
     if (fileId) {
       const result = await updateFile(fileId, payload, token);
       if (result.ok) {
-        etag = result.data.etag;
+        version = result.data.version;
       } else if (result.status === 404) {
         // File was deleted externally — recreate it
         fileId = null;
@@ -120,17 +137,17 @@ async function executeWrite(filename: string, payload: string, token: string): P
         return;
       }
       fileId = result.data.id;
-      etag = result.data.etag;
+      version = result.data.version;
     }
 
-    // Update manifest entry with the new file ID and ETag
+    // Update manifest entry with the new file ID and version
     if (filename !== 'manifest.json') {
-      await upsertEntry(filename as DriveFilename, {
+      await upsertEntry(filename, {
         driveFileId: fileId,
         filename,
         schemaVersion: DRIVE_SCHEMA_VERSION,
         syncedAt: Date.now(),
-        etag,
+        version,
       }, token);
     }
   } finally {
@@ -156,11 +173,16 @@ export function enqueue(
   token: string,
   debounceMs?: number,
 ): void {
+  if (_initInProgress) {
+    console.debug(`[DRIVE-QUEUE] Skipping enqueue for ${filename} — init in progress`);
+    return;
+  }
+
   const ms = debounceMs ?? defaultDebounceMs(filename);
   const existing = queue.get(filename);
 
   // Cancel any existing timer for this filename
-  if (existing?.timer !== null) {
+  if (existing?.timer !== null && existing?.timer !== undefined) {
     clearTimeout(existing!.timer);
   }
 
@@ -234,7 +256,7 @@ export async function flushAll(): Promise<void> {
  */
 export function cancelAll(): void {
   for (const [, pending] of queue) {
-    if (pending.timer !== null) {
+    if (pending.timer !== null && pending.timer !== undefined) {
       clearTimeout(pending.timer);
     }
     // Resolve any flush() waiters so they do not hang
@@ -256,4 +278,5 @@ export const driveWriteQueue = {
   flushAll,
   cancelAll,
   hasPending,
+  setInitializing,
 };

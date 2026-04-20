@@ -13,7 +13,8 @@
       "Bash(npm install:*)",
       "WebFetch(domain:firebase.google.com)",
       "Bash(find /f/Work/git_clones/extension/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.json \\\\\\))",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "WebFetch(domain:developers.google.com)"
     ]
   }
 }
