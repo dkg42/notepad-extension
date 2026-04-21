@@ -390,6 +390,7 @@ export default defineBackground(() => {
     chrome.alarms.create(PIPELINE_CHECK_ALARM, { periodInMinutes: PIPELINE_CHECK_INTERVAL_MINUTES });
     // Re-arm token refresh alarm in case the extension was updated while signed in.
     void scheduleRefreshAlarm();
+    void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   });
 
   // Sync on browser startup
@@ -400,6 +401,7 @@ export default defineBackground(() => {
     // Re-arm token refresh alarm. chrome.storage.session is cleared on browser close,
     // so this no-ops when signed out; the first Drive call will do a just-in-time refresh.
     void scheduleRefreshAlarm();
+    void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
     // Re-initialize Drive sync. chrome.storage.session is cleared on browser close so the
     // manifest session cache is gone — reload from Drive for signed-in users with Drive scope.
     void (async () => {
