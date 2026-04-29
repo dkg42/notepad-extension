@@ -10,6 +10,7 @@ interface FolderCardProps {
   onDelete: (id: string) => void;
   onColorChange: (id: string, color: string | undefined) => void;
   onViewPrompts: (folderId: string) => void;
+  onMove?: (id: string) => void;
 }
 
 export default function FolderCard({
@@ -19,6 +20,7 @@ export default function FolderCard({
   onDelete,
   onColorChange,
   onViewPrompts,
+  onMove,
 }: FolderCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
@@ -109,6 +111,15 @@ export default function FolderCard({
         >
           Color
         </button>
+        {onMove && (
+          <button
+            className="folder-card__action-btn"
+            onClick={() => onMove(folder.id)}
+            title="Move to…"
+          >
+            Move
+          </button>
+        )}
         <button
           className="folder-card__action-btn folder-card__action-btn--danger"
           onClick={() => onDelete(folder.id)}

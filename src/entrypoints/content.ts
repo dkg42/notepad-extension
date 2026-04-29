@@ -3,7 +3,6 @@ import { getAdapter } from '@/adapters/adapter-registry';
 import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
 import { isStudioPanelAdapter } from '@/adapters/studio-panel-adapter.interface';
 import { setupSelectionSave } from '@/content/selection-save';
-import { setupHeaderButtons } from '@/content/header-injector';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
 import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
 import { setupChatHistorySync } from '@/content/chat-history-sync';
@@ -26,9 +25,6 @@ export default defineContentScript({
 
     const adapter = getAdapter(location.hostname);
     if (!adapter) return;
-
-    // Feature: "Export chat" + "Save prompts" buttons injected into the page header
-    setupHeaderButtons(adapter);
 
     // Feature: source panel search + type filters (NotebookLM)
     if (isSourcePanelAdapter(adapter)) {

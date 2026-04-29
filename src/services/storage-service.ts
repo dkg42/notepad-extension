@@ -1,5 +1,6 @@
 import type { Folder, PodcastEpisode, EpisodeTrack, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
+import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
@@ -165,17 +166,19 @@ export const storageService = {
     return (result[FOLDERS_KEY] as Folder[]) ?? [];
   },
 
-  async createFolder(name: string): Promise<Folder> {
+  async createFolder(name: string, parentId?: string): Promise<Folder> {
     const trimmed = name.trim();
     const existing = await this.getFolders();
-    if (existing.some((f) => f.name.toLowerCase() === trimmed.toLowerCase())) {
-      throw new Error(`A folder named "${trimmed}" already exists.`);
+    const siblings = existing.filter((f) => f.parentId === parentId);
+    if (siblings.some((f) => f.name.toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error(`A folder named "${trimmed}" already exists here.`);
     }
     const folder: Folder = {
       id: crypto.randomUUID(),
       name: trimmed,
       createdAt: Date.now(),
-      sortOrder: existing.length,
+      parentId,
+      sortOrder: siblings.length,
     };
     const updated = [...existing, folder];
     await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
@@ -186,8 +189,9 @@ export const storageService = {
   async renameFolder(id: string, name: string): Promise<void> {
     const trimmed = name.trim();
     const existing = await this.getFolders();
-    if (existing.some((f) => f.id !== id && f.name.toLowerCase() === trimmed.toLowerCase())) {
-      throw new Error(`A folder named "${trimmed}" already exists.`);
+    const target = existing.find((f) => f.id === id);
+    if (existing.some((f) => f.id !== id && f.parentId === target?.parentId && f.name.toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error(`A folder named "${trimmed}" already exists here.`);
     }
     const updated = existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f));
     await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
@@ -196,10 +200,11 @@ export const storageService = {
 
   async deleteFolder(id: string): Promise<void> {
     const [folders, snippets] = await Promise.all([this.getFolders(), this.getAll()]);
-    const updatedSnippets = snippets.map((s) =>
-      s.folderId === id ? { ...s, folderId: undefined } : s,
-    );
-    const updatedFolders = folders.filter((f) => f.id !== id);
+    const subtreeIds = getFolderSubtreeIds(id, folders);
+    // Cascade-delete all snippets in the subtree
+    const updatedSnippets = snippets.filter((s) => !s.folderId || !subtreeIds.has(s.folderId));
+    // Delete all folders in the subtree
+    const updatedFolders = folders.filter((f) => !subtreeIds.has(f.id));
     await chrome.storage.local.set({
       [FOLDERS_KEY]: updatedFolders,
       [SNIPPETS_KEY]: updatedSnippets,
@@ -209,6 +214,19 @@ export const storageService = {
       driveSyncService.saveFolders(updatedFolders, t);
       driveSyncService.saveSnippetsMeta(updatedSnippets.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t);
     });
+  },
+
+  async moveFolder(id: string, newParentId: string | undefined): Promise<void> {
+    const existing = await this.getFolders();
+    if (newParentId) {
+      const subtreeIds = getFolderSubtreeIds(id, existing);
+      if (subtreeIds.has(newParentId)) {
+        throw new Error('Cannot move a folder into one of its own subfolders.');
+      }
+    }
+    const updated = existing.map((f) => (f.id === id ? { ...f, parentId: newParentId } : f));
+    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
   async updateFolderColor(id: string, color: string | undefined): Promise<void> {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, Snippet, TagMeta } from '@/types';
+import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
 import { storageService } from '@/services/storage-service';
@@ -192,8 +193,8 @@ export function useDashboardApp() {
 
   // ── Folder operations ─────────────────────────────────────────────────────
 
-  const handleCreateFolder = async (name: string) => {
-    const folder = await storageService.createFolder(name);
+  const handleCreateFolder = async (name: string, parentId?: string) => {
+    const folder = await storageService.createFolder(name, parentId);
     setFolders((prev) => [...prev, folder]);
   };
 
@@ -203,9 +204,17 @@ export function useDashboardApp() {
   };
 
   const handleDeleteFolder = async (id: string) => {
+    const subtreeIds = getFolderSubtreeIds(id, folders);
     await storageService.deleteFolder(id);
-    setFolders((prev) => prev.filter((f) => f.id !== id));
-    setSnippets((prev) => prev.map((s) => (s.folderId === id ? { ...s, folderId: undefined } : s)));
+    setFolders((prev) => prev.filter((f) => !subtreeIds.has(f.id)));
+    setSnippets((prev) => prev.filter((s) => !s.folderId || !subtreeIds.has(s.folderId)));
+  };
+
+  const handleMoveFolder = async (id: string, newParentId: string | undefined) => {
+    await storageService.moveFolder(id, newParentId);
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, parentId: newParentId } : f)),
+    );
   };
 
   const handleFolderColorChange = async (id: string, color: string | undefined) => {
@@ -380,6 +389,7 @@ export function useDashboardApp() {
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,
+    handleMoveFolder,
     handleFolderColorChange,
     handleFolderReorder,
     handleViewFolderPrompts,

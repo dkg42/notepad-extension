@@ -75,6 +75,7 @@ export default function DashboardApp() {
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,
+    handleMoveFolder,
     handleFolderColorChange,
     handleFolderReorder,
     handleViewFolderPrompts,
@@ -161,6 +162,7 @@ export default function DashboardApp() {
             onFolderColorChange={handleFolderColorChange}
             onViewFolderPrompts={handleViewFolderPrompts}
             onReorderFolders={handleFolderReorder}
+            onMoveFolder={handleMoveFolder}
           />
         );
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 import { storageService } from '@/services/storage-service';
 import { filterSnippets } from '@/utils/filter-snippets';
+import { getFolderSubtreeIds } from '@/utils/folder-utils';
 
 export function useApp() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -28,8 +29,8 @@ export function useApp() {
   }, [snippets]);
 
   const filteredSnippets = useMemo(
-    () => filterSnippets(snippets, searchQuery, selectedFolderIds, selectedTags),
-    [snippets, searchQuery, selectedFolderIds, selectedTags],
+    () => filterSnippets(snippets, searchQuery, selectedFolderIds, selectedTags, folders),
+    [snippets, searchQuery, selectedFolderIds, selectedTags, folders],
   );
 
   const handleDelete = async (id: string) => {
@@ -49,8 +50,8 @@ export function useApp() {
     );
   };
 
-  const handleCreateFolder = async (name: string) => {
-    const folder = await storageService.createFolder(name);
+  const handleCreateFolder = async (name: string, parentId?: string) => {
+    const folder = await storageService.createFolder(name, parentId);
     setFolders((prev) => [...prev, folder]);
   };
 
@@ -60,14 +61,13 @@ export function useApp() {
   };
 
   const handleDeleteFolder = async (id: string) => {
+    const subtreeIds = getFolderSubtreeIds(id, folders);
     await storageService.deleteFolder(id);
-    setFolders((prev) => prev.filter((f) => f.id !== id));
-    setSnippets((prev) =>
-      prev.map((s) => (s.folderId === id ? { ...s, folderId: undefined } : s)),
-    );
+    setFolders((prev) => prev.filter((f) => !subtreeIds.has(f.id)));
+    setSnippets((prev) => prev.filter((s) => !s.folderId || !subtreeIds.has(s.folderId)));
     setSelectedFolderIds((prev) => {
       const next = new Set(prev);
-      next.delete(id);
+      subtreeIds.forEach((sid) => next.delete(sid));
       return next;
     });
   };

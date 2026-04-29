@@ -7,10 +7,22 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [viewMode, setViewMode] = useState<FolderViewMode>('grid');
+  const [viewMode, setViewMode] = useState<FolderViewMode>('tree');
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [selectedTreeId, setSelectedTreeId] = useState<string | undefined>(undefined);
+
+  // State for inline subfolder creation in tree view
+  const [creatingSubfolderParentId, setCreatingSubfolderParentId] = useState<string | null>(null);
+  const [newSubfolderName, setNewSubfolderName] = useState('');
+  const [subfolderError, setSubfolderError] = useState('');
+
+  // State for inline rename in tree view
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  // State for move dialog
+  const [movingFolderId, setMovingFolderId] = useState<string | null>(null);
 
   const snippetCountByFolder = useMemo(() => {
     const counts = new Map<string, number>();
@@ -35,7 +47,43 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
 
   const clearError = () => setErrorMessage('');
 
-  // ── Drag-to-reorder ────────────────────────────────────────────────────────
+  // ── Subfolder creation ─────────────────────────────────────────────────────
+
+  const startCreatingSubfolder = useCallback((parentId: string) => {
+    setCreatingSubfolderParentId(parentId);
+    setNewSubfolderName('');
+    setSubfolderError('');
+  }, []);
+
+  const cancelCreatingSubfolder = useCallback(() => {
+    setCreatingSubfolderParentId(null);
+    setNewSubfolderName('');
+    setSubfolderError('');
+  }, []);
+
+  // ── Rename (tree view inline) ──────────────────────────────────────────────
+
+  const startRenaming = useCallback((id: string, currentName: string) => {
+    setRenamingFolderId(id);
+    setRenameValue(currentName);
+  }, []);
+
+  const cancelRenaming = useCallback(() => {
+    setRenamingFolderId(null);
+    setRenameValue('');
+  }, []);
+
+  // ── Move dialog ────────────────────────────────────────────────────────────
+
+  const openMoveDialog = useCallback((id: string) => {
+    setMovingFolderId(id);
+  }, []);
+
+  const closeMoveDialog = useCallback(() => {
+    setMovingFolderId(null);
+  }, []);
+
+  // ── Drag-to-reorder (grid view) ────────────────────────────────────────────
 
   const handleDragStart = useCallback((id: string) => {
     setDraggedId(id);
@@ -50,10 +98,6 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
     setDragOverId(null);
   }, []);
 
-  /**
-   * Computes the new sortOrder assignments after dragging `draggedId` to
-   * drop on top of `targetId` (insert after target in the sorted list).
-   */
   const computeReorder = useCallback(
     (targetId: string): Array<{ id: string; sortOrder: number }> | null => {
       if (!draggedId || draggedId === targetId) return null;
@@ -87,5 +131,23 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
     handleDragOver,
     handleDragEnd,
     computeReorder,
+    // Subfolder creation
+    creatingSubfolderParentId,
+    newSubfolderName,
+    setNewSubfolderName,
+    subfolderError,
+    setSubfolderError,
+    startCreatingSubfolder,
+    cancelCreatingSubfolder,
+    // Rename
+    renamingFolderId,
+    renameValue,
+    setRenameValue,
+    startRenaming,
+    cancelRenaming,
+    // Move dialog
+    movingFolderId,
+    openMoveDialog,
+    closeMoveDialog,
   };
 }

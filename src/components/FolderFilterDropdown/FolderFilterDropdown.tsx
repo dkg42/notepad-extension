@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Folder } from '@/types';
 import { UNCATEGORIZED_ID } from '@/types';
+import { getFolderTreeItems } from '@/utils/folder-utils';
 import { useFolderFilterDropdown } from './useFolderFilterDropdown';
 import './FolderFilterDropdown.css';
 
@@ -24,6 +25,8 @@ export default function FolderFilterDropdown({
     selectedIds.size === 0
       ? 'All folders'
       : `${selectedIds.size} folder${selectedIds.size > 1 ? 's' : ''} selected`;
+
+  const treeItems = getFolderTreeItems(folders);
 
   return (
     <div ref={ref} className="folder-filter">
@@ -60,14 +63,24 @@ export default function FolderFilterDropdown({
                 </label>
               )}
 
-              {folders.map((f) => (
-                <label key={f.id} className="folder-filter__option">
+              {treeItems.map(({ folder, depth }) => (
+                <label
+                  key={folder.id}
+                  className="folder-filter__option"
+                  style={{ paddingLeft: 10 + depth * 14 }}
+                >
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(f.id)}
-                    onChange={() => handleToggle(f.id)}
+                    checked={selectedIds.has(folder.id)}
+                    onChange={() => handleToggle(folder.id)}
                   />
-                  <span>{f.name}</span>
+                  {folder.color && (
+                    <span
+                      className="folder-filter__dot"
+                      style={{ background: folder.color }}
+                    />
+                  )}
+                  <span>{folder.name}</span>
                 </label>
               ))}
             </>

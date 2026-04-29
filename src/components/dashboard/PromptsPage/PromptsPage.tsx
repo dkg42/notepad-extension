@@ -13,6 +13,7 @@ import type { SortColumn } from '@/types/dashboard';
 import PromptsTable from '@/components/dashboard/PromptsTable/PromptsTable';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import { filterSnippets } from '@/utils/filter-snippets';
+import { getFolderPath } from '@/utils/folder-utils';
 import './PromptsPage.css';
 
 interface PromptsPageProps {
@@ -70,8 +71,8 @@ export default function PromptsPage({
   };
 
   const filtered = useMemo(
-    () => filterSnippets(snippets, searchQuery, new Set(), selectedTags),
-    [snippets, searchQuery, selectedTags],
+    () => filterSnippets(snippets, searchQuery, new Set(), selectedTags, folders),
+    [snippets, searchQuery, selectedTags, folders],
   );
 
   // Group filtered snippets by folderId
@@ -193,7 +194,7 @@ export default function PromptsPage({
                   >
                     <FolderIcon size={16} strokeWidth={1.75} />
                   </span>
-                  <span className="prompts-page__folder-name">{folder.name}</span>
+                  <span className="prompts-page__folder-name">{getFolderPath(folder.id, folders)}</span>
                   <span className="prompts-page__folder-count">{folderSnippets.length}</span>
                 </div>
                 <ChevronRight size={14} className="accordion-trigger__chevron" />

@@ -1,13 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { Snippet } from '@/types';
+import type { Folder, Snippet } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { filterSnippets } from '@/utils/filter-snippets';
+import { getFolderPath } from '@/utils/folder-utils';
 
 const DEFAULT_SORT_COLUMN: SortColumn = 'savedAt';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
 const DEFAULT_ROWS_PER_PAGE = 25;
 
-export function usePromptsTable(snippets: Snippet[]) {
+export function usePromptsTable(snippets: Snippet[], folders: Folder[] = []) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
@@ -25,8 +26,8 @@ export function usePromptsTable(snippets: Snippet[]) {
   }, [snippets]);
 
   const filtered = useMemo(
-    () => filterSnippets(snippets, searchQuery, selectedFolderIds, selectedTags),
-    [snippets, searchQuery, selectedFolderIds, selectedTags],
+    () => filterSnippets(snippets, searchQuery, selectedFolderIds, selectedTags, folders),
+    [snippets, searchQuery, selectedFolderIds, selectedTags, folders],
   );
 
   const sorted = useMemo(() => {
@@ -40,7 +41,9 @@ export function usePromptsTable(snippets: Snippet[]) {
         case 'source':
           return dir * a.source.localeCompare(b.source);
         case 'folder':
-          return dir * (a.folderId ?? '').localeCompare(b.folderId ?? '');
+          return dir * getFolderPath(a.folderId ?? '', folders).localeCompare(
+            getFolderPath(b.folderId ?? '', folders),
+          );
         case 'tags':
           return dir * (a.tags?.join(',') ?? '').localeCompare(b.tags?.join(',') ?? '');
         case 'savedAt':

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Folder } from '@/types';
 
 interface Handlers {
-  onCreateFolder: (name: string) => Promise<void>;
+  onCreateFolder: (name: string, parentId?: string) => Promise<void>;
   onRenameFolder: (id: string, name: string) => Promise<void>;
   onDeleteFolder: (id: string) => Promise<void>;
 }
@@ -14,6 +14,11 @@ export function useFolderManager({ onCreateFolder, onRenameFolder }: Handlers) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Subfolder creation: tracks which folder is getting a child
+  const [subfolderParentId, setSubfolderParentId] = useState<string | null>(null);
+  const [subfolderName, setSubfolderName] = useState('');
+  const [subfolderError, setSubfolderError] = useState<string | null>(null);
 
   const handleNewNameChange = (name: string) => {
     setNewName(name);
@@ -54,12 +59,44 @@ export function useFolderManager({ onCreateFolder, onRenameFolder }: Handlers) {
     setEditingId(folder.id);
     setEditName(folder.name);
     setEditError(null);
+    // Cancel any open subfolder form
+    setSubfolderParentId(null);
+    setSubfolderName('');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName('');
     setEditError(null);
+  };
+
+  const startCreatingSubfolder = (parentId: string) => {
+    setSubfolderParentId(parentId);
+    setSubfolderName('');
+    setSubfolderError(null);
+    // Cancel any open rename form
+    setEditingId(null);
+    setEditName('');
+  };
+
+  const cancelSubfolder = () => {
+    setSubfolderParentId(null);
+    setSubfolderName('');
+    setSubfolderError(null);
+  };
+
+  const handleCreateSubfolder = async () => {
+    if (!subfolderParentId) return;
+    const trimmed = subfolderName.trim();
+    if (!trimmed) return;
+    try {
+      await onCreateFolder(trimmed, subfolderParentId);
+      setSubfolderParentId(null);
+      setSubfolderName('');
+      setSubfolderError(null);
+    } catch (err) {
+      setSubfolderError(err instanceof Error ? err.message : 'Failed to create subfolder.');
+    }
   };
 
   return {
@@ -70,11 +107,19 @@ export function useFolderManager({ onCreateFolder, onRenameFolder }: Handlers) {
     editingId,
     editName,
     editError,
+    subfolderParentId,
+    subfolderName,
+    subfolderError,
     handleNewNameChange,
     handleEditNameChange,
     handleCreate,
     handleRename,
     startEdit,
     cancelEdit,
+    startCreatingSubfolder,
+    cancelSubfolder,
+    setSubfolderName,
+    setSubfolderError,
+    handleCreateSubfolder,
   };
 }

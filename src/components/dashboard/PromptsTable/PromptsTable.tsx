@@ -9,6 +9,7 @@ import PromptsTableRow from '@/components/dashboard/PromptsTableRow/PromptsTable
 import BulkActionsBar from '@/components/dashboard/BulkActionsBar/BulkActionsBar';
 import { usePromptsTable } from './usePromptsTable';
 import { useColumnResize } from '@/hooks/useColumnResize';
+import { getFolderPath } from '@/utils/folder-utils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import './PromptsTable.css';
 
@@ -86,7 +87,7 @@ export default function PromptsTable({
     moveFocusDown,
     moveFocusUp,
     toggleFocusedSelect,
-  } = usePromptsTable(snippets);
+  } = usePromptsTable(snippets, folders);
 
   const { startResize, getWidth } = useColumnResize(RESIZE_STORAGE_KEY);
 
@@ -158,7 +159,7 @@ export default function PromptsTable({
 
   // ── Derived data ────────────────────────────────────────────────────────────
   const folderMap = useMemo(
-    () => new Map(folders.map((f) => [f.id, f.name])),
+    () => new Map(folders.map((f) => [f.id, getFolderPath(f.id, folders)])),
     [folders],
   );
 
