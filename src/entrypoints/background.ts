@@ -41,6 +41,7 @@ import {
 import { driveInitService } from '@/services/drive/drive-init-service';
 import { driveSyncService } from '@/services/drive/drive-sync-service';
 import { driveWriteQueue } from '@/services/drive/drive-write-queue';
+import { clipboardSessionService } from '@/services/clipboard-session-service';
 
 const ALARM_NAME = 'notebooklm-sync';
 const MIGRATION_KEY = 'preSignInDataMigratedToUid';
@@ -1209,6 +1210,12 @@ export default defineBackground(() => {
           )
           .finally(() => void closeOffscreenDocument());
         return true;
+      }
+
+      if (message.type === 'CLIPBOARD_COPY') {
+        const { entry } = message as { type: string; entry: Parameters<typeof clipboardSessionService.add>[0] };
+        clipboardSessionService.add(entry).catch(() => {});
+        return false;
       }
 
       return false;

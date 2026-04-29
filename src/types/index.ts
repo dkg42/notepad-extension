@@ -28,6 +28,16 @@ export interface Snippet {
   isFavorite?: boolean;
 }
 
+export interface ClipboardEntry {
+  id: string;
+  type: 'text' | 'image';
+  text?: string;
+  thumbnailDataUrl?: string;
+  mimeType?: string;
+  source: string;
+  copiedAt: number;
+}
+
 export interface ChatMessage {
   /**
    * 'user' — a human turn

@@ -50,6 +50,65 @@
   font-family: inherit;
 }
 
+.app-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+}
+
+.app-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.app-tab:hover {
+  color: #111827;
+}
+
+.app-tab--active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.app-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 8px;
+}
+
+.app-tab--active .app-tab__badge {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.app-header-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+  min-height: 24px;
+}
+
 .app-search {
   position: relative;
   display: flex;

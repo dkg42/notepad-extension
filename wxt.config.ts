@@ -8,7 +8,6 @@ export default defineConfig({
     description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
     version: '1.0.0',
     permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel'],
-    optional_host_permissions: ['<all_urls>'],
     options_ui: {
       page: 'dashboard.html',
       open_in_tab: true,
@@ -20,6 +19,7 @@ export default defineConfig({
       service_worker: "background.js"
     },
     host_permissions: [
+      '<all_urls>',
       'https://chatgpt.com/*',
       'https://chat.openai.com/*',
       'https://claude.ai/*',
