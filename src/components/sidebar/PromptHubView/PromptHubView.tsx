@@ -21,7 +21,7 @@ import {
 import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderPath } from '@/utils/folder-utils';
 import { filterSnippets } from '@/utils/filter-snippets';
-import { usePromptHubView } from './usePromptHubView';
+import { usePromptHubView, type SortOrder } from './usePromptHubView';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -97,6 +97,11 @@ interface FolderTreeProps {
   onSelectFolder: (id: string) => void;
   expandedFolders: Set<string>;
   onToggleFolder: (id: string) => void;
+  newFolderParentId: string | null;
+  onStartCreateFolder: (parentId: string) => void;
+  onCommitCreateFolder: (name: string, parentId: string) => void;
+  onCancelCreateFolder: () => void;
+  onDeleteFolder: (id: string) => void;
 }
 
 function FolderTree({
@@ -106,8 +111,39 @@ function FolderTree({
   onSelectFolder,
   expandedFolders,
   onToggleFolder,
+  newFolderParentId,
+  onStartCreateFolder,
+  onCommitCreateFolder,
+  onCancelCreateFolder,
+  onDeleteFolder,
 }: FolderTreeProps) {
   const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
+
+  const displayItems = useMemo(() => {
+    type DisplayItem =
+      | { type: 'folder'; folder: FolderType; depth: number }
+      | { type: 'create'; parentId: string; depth: number };
+
+    const result: DisplayItem[] = [];
+    const visibleIds = new Set<string>();
+
+    if (newFolderParentId === '') {
+      result.push({ type: 'create', parentId: '', depth: 0 });
+    }
+
+    for (const { folder, depth } of treeItems) {
+      const parentVisible = !folder.parentId || (visibleIds.has(folder.parentId) && expandedFolders.has(folder.parentId));
+      if (!parentVisible) continue;
+      visibleIds.add(folder.id);
+      result.push({ type: 'folder', folder, depth });
+      if (newFolderParentId === folder.id) {
+        result.push({ type: 'create', parentId: folder.id, depth: depth + 1 });
+      }
+    }
+
+    return result;
+  }, [treeItems, expandedFolders, newFolderParentId]);
+
   const totalCount = snippets.length;
   const starredCount = snippets.filter((s) => s.isFavorite).length;
 
@@ -132,35 +168,53 @@ function FolderTree({
         icon={<Star size={13} strokeWidth={1.8} />}
       />
 
-      {folders.length > 0 && (
-        <>
-          <div className="prompt-hub__folders-header">
-            <span className="prompt-hub__folders-label">Folders</span>
-            <button className="prompt-hub__folders-add" title="New folder">
-              <Plus size={12} strokeWidth={2} />
-            </button>
-          </div>
-          {treeItems.map(({ folder, depth }) => {
-            const isOpen = expandedFolders.has(folder.id);
-            const hasChildren = folders.some((f) => f.parentId === folder.id);
-            const count = countDescendants(folder.id, folders, snippets);
-            return (
-              <FolderRow
-                key={folder.id}
-                id={folder.id}
-                name={folder.name}
-                depth={depth}
-                selected={selectedFolder === folder.id}
-                onSelect={() => onSelectFolder(folder.id)}
-                count={count}
-                icon={isOpen ? <FolderOpen size={13} strokeWidth={1.8} /> : <Folder size={13} strokeWidth={1.8} />}
-                hasChildren={hasChildren}
-                isOpen={isOpen}
-                onToggle={() => onToggleFolder(folder.id)}
-              />
-            );
-          })}
-        </>
+      <div className="prompt-hub__folders-header">
+        <span className="prompt-hub__folders-label">Folders</span>
+        <button
+          className="prompt-hub__folders-add"
+          title="New folder"
+          onClick={() => onStartCreateFolder('')}
+        >
+          <Plus size={12} strokeWidth={2} />
+        </button>
+      </div>
+
+      {displayItems.map((item, i) =>
+        item.type === 'create' ? (
+          <FolderCreateRow
+            key={`create-${i}`}
+            depth={item.depth}
+            onCommit={(name) => onCommitCreateFolder(name, item.parentId)}
+            onCancel={onCancelCreateFolder}
+            validate={(name) => {
+              const parentIdToCheck = item.parentId || undefined;
+              const siblings = folders.filter((f) => f.parentId === parentIdToCheck);
+              return siblings.some((f) => f.name.toLowerCase() === name.toLowerCase())
+                ? `"${name}" already exists here`
+                : null;
+            }}
+          />
+        ) : (
+          <FolderRow
+            key={item.folder.id}
+            id={item.folder.id}
+            name={item.folder.name}
+            depth={item.depth}
+            selected={selectedFolder === item.folder.id}
+            onSelect={() => onSelectFolder(item.folder.id)}
+            count={countDescendants(item.folder.id, folders, snippets)}
+            icon={
+              expandedFolders.has(item.folder.id)
+                ? <FolderOpen size={13} strokeWidth={1.8} />
+                : <Folder size={13} strokeWidth={1.8} />
+            }
+            hasChildren={folders.some((f) => f.parentId === item.folder.id)}
+            isOpen={expandedFolders.has(item.folder.id)}
+            onToggle={() => onToggleFolder(item.folder.id)}
+            onCreateChild={() => onStartCreateFolder(item.folder.id)}
+            onDelete={() => onDeleteFolder(item.folder.id)}
+          />
+        ),
       )}
     </div>
   );
@@ -177,9 +231,51 @@ interface FolderRowProps {
   hasChildren?: boolean;
   isOpen?: boolean;
   onToggle?: () => void;
+  onCreateChild?: () => void;
+  onDelete?: () => void;
 }
 
-function FolderRow({ id, name, depth, selected, onSelect, count, icon, hasChildren, isOpen, onToggle }: FolderRowProps) {
+function FolderRow({ id, name, depth, selected, onSelect, count, icon, hasChildren, isOpen, onToggle, onCreateChild, onDelete }: FolderRowProps) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div
+        className="prompt-hub__folder-row prompt-hub__folder-row--deleting"
+        style={{ paddingLeft: 8 + depth * 14 }}
+      >
+        {hasChildren ? (
+          <button
+            className={`prompt-hub__folder-toggle${isOpen ? ' prompt-hub__folder-toggle--open' : ' prompt-hub__folder-toggle--closed'}`}
+            onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+          >
+            <ChevronDown size={11} strokeWidth={2} />
+          </button>
+        ) : (
+          <span className="prompt-hub__folder-spacer" />
+        )}
+        <span className="prompt-hub__folder-icon">{icon}</span>
+        <span className="prompt-hub__folder-name">{name}</span>
+        <span style={{ flex: 1 }} />
+        <span className="prompt-hub__folder-delete-label">Delete?</span>
+        <button
+          className="prompt-hub__folder-delete-confirm"
+          title="Confirm delete"
+          onClick={(e) => { e.stopPropagation(); setConfirming(false); onDelete?.(); }}
+        >
+          <Check size={11} strokeWidth={2.2} />
+        </button>
+        <button
+          className="prompt-hub__folder-delete-cancel"
+          title="Cancel"
+          onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+        >
+          <X size={11} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`prompt-hub__folder-row${selected ? ' prompt-hub__folder-row--selected' : ''}`}
@@ -203,6 +299,84 @@ function FolderRow({ id, name, depth, selected, onSelect, count, icon, hasChildr
       {count > 0 && (
         <span className="prompt-hub__folder-count">{count}</span>
       )}
+      {onCreateChild && (
+        <button
+          className="prompt-hub__folder-add-child"
+          title="New subfolder"
+          onClick={(e) => { e.stopPropagation(); onCreateChild(); }}
+        >
+          <Plus size={11} strokeWidth={2} />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          className="prompt-hub__folder-delete-btn"
+          title="Delete folder"
+          onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+        >
+          <Trash2 size={11} strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface FolderCreateRowProps {
+  depth: number;
+  onCommit: (name: string) => void;
+  onCancel: () => void;
+  validate: (name: string) => string | null;
+}
+
+function FolderCreateRow({ depth, onCommit, onCancel, validate }: FolderCreateRowProps) {
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const tryCommit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) { onCancel(); return; }
+    const err = validate(trimmed);
+    if (err) { setError(err); return; }
+    onCommit(trimmed);
+  };
+
+  return (
+    <div className="prompt-hub__folder-create-row" style={{ paddingLeft: 8 + depth * 14 }}>
+      <span className="prompt-hub__folder-spacer" />
+      <Folder size={13} strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 3, color: error ? 'var(--error, oklch(0.55 0.18 25))' : 'var(--fg-3)' }} />
+      <div className="prompt-hub__folder-create-wrap">
+        <div className="prompt-hub__folder-create-input-row">
+          <input
+            className={`prompt-hub__folder-create-input${error ? ' prompt-hub__folder-create-input--error' : ''}`}
+            value={name}
+            onChange={(e) => { setName(e.target.value); if (error) setError(null); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); tryCommit(); }
+              if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+            }}
+            onBlur={onCancel}
+            autoFocus
+            placeholder="Folder name"
+          />
+          <button
+            className="prompt-hub__folder-create-confirm"
+            title="Create folder"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={tryCommit}
+          >
+            <Check size={11} strokeWidth={2.2} />
+          </button>
+          <button
+            className="prompt-hub__folder-create-cancel-btn"
+            title="Cancel"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onCancel}
+          >
+            <X size={11} strokeWidth={2} />
+          </button>
+        </div>
+        {error && <span className="prompt-hub__folder-create-error">{error}</span>}
+      </div>
     </div>
   );
 }
@@ -261,6 +435,52 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
+// ── More options menu ─────────────────────────────────────────────────────────
+
+interface MoreOptionsMenuProps {
+  snippet: Snippet;
+  folders: FolderType[];
+  onDuplicate: () => void;
+  onMove: (folderId: string | undefined) => void;
+  onClose: () => void;
+}
+
+function MoreOptionsMenu({ snippet, folders, onDuplicate, onMove, onClose }: MoreOptionsMenuProps) {
+  const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
+  return (
+    <>
+      <div className="prompt-hub__more-backdrop" onClick={onClose} />
+      <div className="prompt-hub__more-dropdown">
+        <button className="prompt-hub__more-option" onClick={onDuplicate}>
+          <Copy size={12} /> Duplicate
+        </button>
+        {folders.length > 0 && (
+          <>
+            <div className="prompt-hub__more-divider" />
+            <div className="prompt-hub__more-section-label">Move to folder</div>
+            <button
+              className={`prompt-hub__more-folder-option${!snippet.folderId ? ' prompt-hub__more-folder-option--current' : ''}`}
+              onClick={() => onMove(undefined)}
+            >
+              No folder
+            </button>
+            {treeItems.map(({ folder, depth }) => (
+              <button
+                key={folder.id}
+                className={`prompt-hub__more-folder-option${snippet.folderId === folder.id ? ' prompt-hub__more-folder-option--current' : ''}`}
+                style={{ paddingLeft: 8 + depth * 12 }}
+                onClick={() => onMove(folder.id)}
+              >
+                <Folder size={11} /> {folder.name}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ── Prompt detail ──────────────────────────────────────────────────────────────
 
 interface PromptDetailProps {
@@ -273,12 +493,18 @@ interface PromptDetailProps {
   onSave: (title: string, text: string) => void;
   onDelete: (id: string) => void;
   onCopy: (text: string) => void;
+  onDuplicate: () => void;
+  onMove: (folderId: string | undefined) => void;
 }
 
-function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit, onSave, onDelete, onCopy }: PromptDetailProps) {
+type SendStatus = 'idle' | 'sending' | 'sent' | 'no_target' | 'failed';
+
+function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit, onSave, onDelete, onCopy, onDuplicate, onMove }: PromptDetailProps) {
   const [editTitle, setEditTitle] = useState(getSnippetTitle(snippet));
   const [editBody, setEditBody] = useState(snippet.text);
   const [copied, setCopied] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [sendStatus, setSendStatus] = useState<SendStatus>('idle');
 
   const breadcrumb = useMemo(() => {
     if (!snippet.folderId) return null;
@@ -291,6 +517,31 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleSendToChat = async () => {
+    setSendStatus('sending');
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) throw new Error('no_tab');
+      const resp = await chrome.tabs.sendMessage(tab.id, {
+        type: 'SEND_TO_CHAT',
+        text: snippet.text,
+      }) as { ok: boolean; error?: string };
+      if (resp.ok) {
+        setSendStatus('sent');
+        setTimeout(() => setSendStatus('idle'), 1500);
+      } else if (resp.error === 'no_target') {
+        setSendStatus('no_target');
+        setTimeout(() => setSendStatus('idle'), 3000);
+      } else {
+        throw new Error(resp.error);
+      }
+    } catch {
+      navigator.clipboard.writeText(snippet.text).catch(() => {});
+      setSendStatus('failed');
+      setTimeout(() => setSendStatus('idle'), 2500);
+    }
+  };
+
   return (
     <div className="prompt-hub__detail">
       <div className="prompt-hub__detail-bar">
@@ -300,6 +551,7 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
         {breadcrumb && (
           <div className="prompt-hub__detail-breadcrumb">{breadcrumb}</div>
         )}
+        <span className="prompt-hub__detail-bar-spacer" />
         <button
           className="prompt-hub__icon-btn"
           title={snippet.isFavorite ? 'Unstar' : 'Star'}
@@ -308,9 +560,24 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
         >
           <Star size={14} strokeWidth={1.8} fill={snippet.isFavorite ? 'currentColor' : 'none'} />
         </button>
-        <button className="prompt-hub__icon-btn" title="More options">
-          <MoreHorizontal size={14} />
-        </button>
+        <div className="prompt-hub__more-wrap">
+          <button
+            className={`prompt-hub__icon-btn${moreOpen ? ' prompt-hub__icon-btn--active' : ''}`}
+            title="More options"
+            onClick={() => setMoreOpen((o) => !o)}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          {moreOpen && (
+            <MoreOptionsMenu
+              snippet={snippet}
+              folders={folders}
+              onDuplicate={() => { setMoreOpen(false); onDuplicate(); }}
+              onMove={(folderId) => { setMoreOpen(false); onMove(folderId); }}
+              onClose={() => setMoreOpen(false)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="prompt-hub__detail-body">
@@ -379,12 +646,31 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
             >
               <Trash2 size={13} />
             </button>
-            <button className="prompt-hub__btn-primary" disabled title="Send to active AI tab (coming soon)">
-              <Send size={13} /> Send to chat
+            <button
+              className="prompt-hub__btn-primary"
+              onClick={handleSendToChat}
+              disabled={sendStatus === 'sending'}
+              title="Insert into active chat input"
+            >
+              {sendStatus === 'sending' ? (
+                <span className="prompt-hub__send-spinner" />
+              ) : sendStatus === 'sent' ? (
+                <Check size={13} />
+              ) : (
+                <Send size={13} />
+              )}
+              {sendStatus === 'sent' ? 'Sent!' : 'Send to chat'}
             </button>
           </>
         )}
       </div>
+      {(sendStatus === 'no_target' || sendStatus === 'failed') && (
+        <div className="prompt-hub__send-hint">
+          {sendStatus === 'no_target'
+            ? 'Click in the chat input first, then try again.'
+            : 'Copied to clipboard — paste with Ctrl+V.'}
+        </div>
+      )}
     </div>
   );
 }
@@ -394,10 +680,12 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
 interface ComposeCardProps {
   open: boolean;
   onToggle: () => void;
-  onCreate: (title: string, text: string, tags: string[]) => void;
+  folders: FolderType[];
+  defaultFolderId?: string;
+  onCreate: (title: string, text: string, tags: string[], folderId?: string) => void;
 }
 
-function ComposeCard({ open, onToggle, onCreate }: ComposeCardProps) {
+function ComposeCard({ open, onToggle, folders, defaultFolderId, onCreate }: ComposeCardProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -405,7 +693,10 @@ function ComposeCard({ open, onToggle, onCreate }: ComposeCardProps) {
 
   const handleSubmit = () => {
     if (!body.trim()) return;
-    onCreate(title.trim(), body.trim(), tags);
+    const finalTags = tagInput.trim()
+      ? [...tags, tagInput.trim().toLowerCase()]
+      : tags;
+    onCreate(title.trim(), body.trim(), finalTags, defaultFolderId);
     setTitle(''); setBody(''); setTags([]); setTagInput('');
   };
 
@@ -432,6 +723,11 @@ function ComposeCard({ open, onToggle, onCreate }: ComposeCardProps) {
     <div className="prompt-hub__compose-card">
       <div className="prompt-hub__compose-header">
         <span className="prompt-hub__compose-header-label">New prompt</span>
+        {defaultFolderId && (
+          <span className="prompt-hub__compose-folder-badge">
+            {getFolderPath(defaultFolderId, folders)}
+          </span>
+        )}
         <span className="prompt-hub__compose-header-spacer" />
         <button className="prompt-hub__compose-close" onClick={onToggle}>
           <X size={13} strokeWidth={2} />
@@ -482,6 +778,35 @@ function ComposeCard({ open, onToggle, onCreate }: ComposeCardProps) {
   );
 }
 
+// ── Sort dropdown ──────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'az',     label: 'A → Z' },
+  { value: 'za',     label: 'Z → A' },
+];
+
+function SortDropdown({ current, onSelect, onClose }: { current: SortOrder; onSelect: (o: SortOrder) => void; onClose: () => void }) {
+  return (
+    <>
+      <div className="prompt-hub__sort-backdrop" onClick={onClose} />
+      <div className="prompt-hub__sort-dropdown">
+        {SORT_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            className={`prompt-hub__sort-option${current === value ? ' prompt-hub__sort-option--active' : ''}`}
+            onClick={() => onSelect(value)}
+          >
+            {current === value && <Check size={11} strokeWidth={2.4} />}
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface PromptHubViewProps {
@@ -494,6 +819,9 @@ interface PromptHubViewProps {
   handleUpdateTags: (id: string, tags: string[]) => void;
   handleToggleFavorite: (id: string) => void;
   handleAddSnippet: (title: string, text: string, tags: string[], folderId?: string) => void;
+  handleCreateFolder: (name: string, parentId?: string) => void;
+  handleDeleteFolder: (id: string) => void;
+  handleMoveToFolder: (id: string, folderId: string | undefined) => void;
 }
 
 export default function PromptHubView({
@@ -505,6 +833,9 @@ export default function PromptHubView({
   handleDelete,
   handleToggleFavorite,
   handleAddSnippet,
+  handleCreateFolder,
+  handleDeleteFolder,
+  handleMoveToFolder,
 }: PromptHubViewProps) {
   const {
     selectedFolder,
@@ -525,6 +856,12 @@ export default function PromptHubView({
     activeTags,
     toggleTag,
     setActiveTags,
+    newFolderParentId,
+    setNewFolderParentId,
+    sortOrder,
+    setSortOrder,
+    sortOpen,
+    setSortOpen,
   } = usePromptHubView();
 
   const openSnippet = openPromptId ? snippets.find((s) => s.id === openPromptId) : null;
@@ -556,8 +893,13 @@ export default function PromptHubView({
       );
     }
 
-    return list;
-  }, [snippets, selectedFolder, folders, starredOnly, activeTags, searchQuery]);
+    const sorted = [...list];
+    if (sortOrder === 'newest') sorted.sort((a, b) => b.savedAt - a.savedAt);
+    else if (sortOrder === 'oldest') sorted.sort((a, b) => a.savedAt - b.savedAt);
+    else if (sortOrder === 'az') sorted.sort((a, b) => getSnippetTitle(a).localeCompare(getSnippetTitle(b)));
+    else sorted.sort((a, b) => getSnippetTitle(b).localeCompare(getSnippetTitle(a)));
+    return sorted;
+  }, [snippets, selectedFolder, folders, starredOnly, activeTags, searchQuery, sortOrder]);
 
   const listLabel = searchQuery
     ? 'Results'
@@ -593,6 +935,19 @@ export default function PromptHubView({
           onSave={handleSave}
           onDelete={(id) => { handleDelete(id); closeDetail(); }}
           onCopy={handleCopy}
+          onDuplicate={() => {
+            handleAddSnippet(
+              openSnippet.title ? `${openSnippet.title} (copy)` : '',
+              openSnippet.text,
+              openSnippet.tags ?? [],
+              openSnippet.folderId,
+            );
+            closeDetail();
+          }}
+          onMove={(folderId) => {
+            handleMoveToFolder(openSnippet.id, folderId);
+            closeDetail();
+          }}
         />
       ) : (
         <>
@@ -678,6 +1033,17 @@ export default function PromptHubView({
                   onSelectFolder={setSelectedFolder}
                   expandedFolders={expandedFolders}
                   onToggleFolder={toggleFolder}
+                  newFolderParentId={newFolderParentId}
+                  onStartCreateFolder={(parentId) => setNewFolderParentId(parentId)}
+                  onCommitCreateFolder={(name, parentId) => {
+                    handleCreateFolder(name, parentId || undefined);
+                    setNewFolderParentId(null);
+                  }}
+                  onCancelCreateFolder={() => setNewFolderParentId(null)}
+                  onDeleteFolder={(id) => {
+                    if (selectedFolder === id) setSelectedFolder('__all');
+                    handleDeleteFolder(id);
+                  }}
                 />
 
                 <hr className="prompt-hub__divider" />
@@ -686,9 +1052,22 @@ export default function PromptHubView({
                   <span className="prompt-hub__list-label">{listLabel}</span>
                   <span className="prompt-hub__list-count">· {visibleSnippets.length}</span>
                   <span className="prompt-hub__list-spacer" />
-                  <button className="prompt-hub__list-sort-btn" title="Sort">
-                    <SlidersHorizontal size={11} />
-                  </button>
+                  <div className="prompt-hub__sort-wrap">
+                    <button
+                      className={`prompt-hub__list-sort-btn${sortOpen ? ' prompt-hub__list-sort-btn--active' : ''}`}
+                      title="Sort"
+                      onClick={() => setSortOpen((o) => !o)}
+                    >
+                      <SlidersHorizontal size={11} />
+                    </button>
+                    {sortOpen && (
+                      <SortDropdown
+                        current={sortOrder}
+                        onSelect={(o) => { setSortOrder(o); setSortOpen(false); }}
+                        onClose={() => setSortOpen(false)}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="prompt-hub__cards">
@@ -713,8 +1092,14 @@ export default function PromptHubView({
           <ComposeCard
             open={composeOpen}
             onToggle={() => setComposeOpen(!composeOpen)}
-            onCreate={(title, text, tags) => {
-              handleAddSnippet(title, text, tags);
+            folders={folders}
+            defaultFolderId={
+              selectedFolder !== '__all' && selectedFolder !== '__starred'
+                ? selectedFolder
+                : undefined
+            }
+            onCreate={(title, text, tags, folderId) => {
+              handleAddSnippet(title, text, tags, folderId);
               setComposeOpen(false);
             }}
           />

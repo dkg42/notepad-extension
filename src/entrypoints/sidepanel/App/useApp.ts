@@ -79,6 +79,11 @@ export function useApp() {
     );
   };
 
+  const handleMoveToFolder = async (id: string, folderId: string | undefined) => {
+    await storageService.moveToFolder(id, folderId);
+    setSnippets((prev) => prev.map((s) => s.id === id ? { ...s, folderId } : s));
+  };
+
   const handleAddSnippet = async (
     title: string,
     text: string,
@@ -109,5 +114,6 @@ export function useApp() {
     handleDeleteFolder,
     handleToggleFavorite,
     handleAddSnippet,
+    handleMoveToFolder,
   };
 }

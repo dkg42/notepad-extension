@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 export type PromptHubFolder = '__all' | '__starred' | string;
+export type SortOrder = 'newest' | 'oldest' | 'az' | 'za';
 
 export function usePromptHubView() {
   const [selectedFolder, setSelectedFolder] = useState<PromptHubFolder>('__all');
@@ -12,6 +13,10 @@ export function usePromptHubView() {
   const [starredOnly, setStarredOnly] = useState(false);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  // null = not creating; '' = root level; folder id = subfolder under that folder
+  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [sortOpen, setSortOpen] = useState(false);
 
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
@@ -58,5 +63,11 @@ export function usePromptHubView() {
     setActiveTags,
     renamingFolderId,
     setRenamingFolderId,
+    newFolderParentId,
+    setNewFolderParentId,
+    sortOrder,
+    setSortOrder,
+    sortOpen,
+    setSortOpen,
   };
 }

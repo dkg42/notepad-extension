@@ -108,6 +108,9 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
           handleUpdateTags={appData.handleUpdateTags}
           handleToggleFavorite={appData.handleToggleFavorite}
           handleAddSnippet={appData.handleAddSnippet}
+          handleCreateFolder={appData.handleCreateFolder}
+          handleDeleteFolder={appData.handleDeleteFolder}
+          handleMoveToFolder={appData.handleMoveToFolder}
         />
       )}
 
