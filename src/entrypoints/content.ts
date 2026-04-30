@@ -2,7 +2,6 @@ import { defineContentScript } from 'wxt/sandbox';
 import { getAdapter } from '@/adapters/adapter-registry';
 import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
 import { isStudioPanelAdapter } from '@/adapters/studio-panel-adapter.interface';
-import { setupSelectionSave } from '@/content/selection-save';
 import { setupSendToChat } from '@/content/send-to-chat';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
 import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
@@ -20,9 +19,6 @@ export default defineContentScript({
   ],
   main() {
     console.log('[NLM-EXT] Content script loaded on:', location.hostname, location.href);
-
-    // Feature: floating "Save snippet" button on text selection
-    setupSelectionSave();
 
     // Feature: send saved prompts from sidebar into the active chat input
     setupSendToChat();
