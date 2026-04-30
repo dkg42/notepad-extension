@@ -19,6 +19,8 @@ export interface TagMeta {
 
 export interface Snippet {
   id: string;
+  /** Optional short title; if absent, derived from first ~60 chars of text */
+  title?: string;
   text: string;
   /** Full URL of the page where the snippet was saved */
   source: string;

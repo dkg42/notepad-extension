@@ -72,6 +72,23 @@ export function useApp() {
     });
   };
 
+  const handleToggleFavorite = async (id: string) => {
+    await storageService.toggleFavorite(id);
+    setSnippets((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)),
+    );
+  };
+
+  const handleAddSnippet = async (
+    title: string,
+    text: string,
+    tags: string[],
+    folderId?: string,
+  ) => {
+    const snippet = await storageService.saveWithMeta({ title, text, tags, folderId });
+    setSnippets((prev) => [snippet, ...prev]);
+  };
+
   return {
     snippets,
     folders,
@@ -90,5 +107,7 @@ export function useApp() {
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,
+    handleToggleFavorite,
+    handleAddSnippet,
   };
 }

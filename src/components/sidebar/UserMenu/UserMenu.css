@@ -1,0 +1,135 @@
+.user-menu__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+.user-menu__popover {
+  position: absolute;
+  top: 50px;
+  right: 12px;
+  z-index: 6;
+  width: 230px;
+  background: var(--bg);
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.user-menu__profile {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-menu__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-menu__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-menu__profile-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.user-menu__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.user-menu__email {
+  font-size: 11px;
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu__section {
+  padding: 6px;
+}
+
+.user-menu__section--bordered {
+  border-top: 1px solid var(--line);
+}
+
+.user-menu__plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+}
+
+.user-menu__plan-label {
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+
+.user-menu__plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  background: var(--accent-soft);
+  color: var(--accent-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-menu__plan-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fg);
+  font-size: 12.5px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  transition: background 0.1s;
+}
+
+.user-menu__item:hover {
+  background: var(--bg-3);
+}
+
+.user-menu__item--danger {
+  color: oklch(0.55 0.18 25);
+}
+
+.user-menu__item-label {
+  flex: 1;
+}

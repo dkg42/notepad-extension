@@ -14,7 +14,9 @@
       "WebFetch(domain:firebase.google.com)",
       "Bash(find /f/Work/git_clones/extension/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.json \\\\\\))",
       "Bash(xargs grep:*)",
-      "WebFetch(domain:developers.google.com)"
+      "WebFetch(domain:developers.google.com)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")"
     ]
   }
 }

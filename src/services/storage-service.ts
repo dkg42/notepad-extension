@@ -55,6 +55,28 @@ export const storageService = {
     return snippet;
   },
 
+  async saveWithMeta(opts: {
+    title?: string;
+    text: string;
+    source?: string;
+    tags?: string[];
+    folderId?: string;
+  }): Promise<Snippet> {
+    const snippet: Snippet = {
+      id: crypto.randomUUID(),
+      title: opts.title,
+      text: opts.text,
+      source: opts.source ?? 'notehublm',
+      savedAt: Date.now(),
+      folderId: opts.folderId,
+      tags: opts.tags,
+    };
+    const existing = await this.getAll();
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: [snippet, ...existing] });
+    void getDriveToken().then((t) => { if (t) void driveSyncService.saveSnippet(snippet, t); });
+    return snippet;
+  },
+
   /**
    * Saves multiple texts in a single read-write cycle to avoid race conditions.
    */

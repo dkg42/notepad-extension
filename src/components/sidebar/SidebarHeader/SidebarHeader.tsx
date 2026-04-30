@@ -1,0 +1,135 @@
+import React from 'react';
+import {
+  ArrowLeft,
+  LayoutDashboard,
+  ExternalLink,
+  Moon,
+  Sun,
+  User,
+} from 'lucide-react';
+import type { StoredAuthProfile } from '@/types';
+import './SidebarHeader.css';
+
+const VIEW_LABELS: Record<string, string> = {
+  home: 'Notehublm',
+  prompts: 'Prompt Hub',
+  snippets: 'Snippets',
+  history: 'Chat History',
+  screenshot: 'Screenshot',
+  tabs: 'Tab Manager',
+  notebook: 'Add to NotebookLM',
+};
+
+interface SidebarHeaderProps {
+  view: string;
+  dark: boolean;
+  user: StoredAuthProfile | null;
+  userMenuOpen: boolean;
+  onBack: () => void;
+  onToggleDark: () => void;
+  onOpenDashboard: () => void;
+  onUserClick: () => void;
+  onSignIn: () => void;
+}
+
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+}
+
+function getAvatarColor(uid: string | null): string {
+  if (!uid) return 'oklch(0.55 0.18 270)';
+  const hues = [270, 160, 30, 320, 220, 75];
+  const idx = uid.charCodeAt(0) % hues.length;
+  return `oklch(0.55 0.18 ${hues[idx]})`;
+}
+
+export default function SidebarHeader({
+  view,
+  dark,
+  user,
+  userMenuOpen,
+  onBack,
+  onToggleDark,
+  onOpenDashboard,
+  onUserClick,
+  onSignIn,
+}: SidebarHeaderProps) {
+  const isHome = view === 'home';
+
+  return (
+    <div className="sidebar-header">
+      {isHome ? (
+        <div className="sidebar-header__logo">
+          <div className="sidebar-header__logo-mark">n</div>
+          <div className="sidebar-header__wordmark">Notehublm</div>
+        </div>
+      ) : (
+        <div className="sidebar-header__back-btn">
+          <button
+            className="sidebar-header__icon-btn"
+            title="Back to home"
+            onClick={onBack}
+          >
+            <ArrowLeft size={15} />
+          </button>
+          <div className="sidebar-header__view-label">
+            {VIEW_LABELS[view] ?? view}
+          </div>
+        </div>
+      )}
+
+      <div className="sidebar-header__spacer" />
+
+      <button
+        className="sidebar-header__dashboard-btn"
+        title="Open dashboard in a new tab"
+        onClick={onOpenDashboard}
+      >
+        <LayoutDashboard size={12} strokeWidth={1.8} />
+        Dashboard
+        <ExternalLink size={10} strokeWidth={2} />
+      </button>
+
+      <button
+        className="sidebar-header__icon-btn"
+        title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+        onClick={onToggleDark}
+      >
+        {dark ? <Sun size={15} /> : <Moon size={15} />}
+      </button>
+
+      {user ? (
+        <button
+          className={`sidebar-header__avatar-btn${userMenuOpen ? ' sidebar-header__avatar-btn--menu-open' : ''}`}
+          title={user.displayName ?? user.email ?? 'Account'}
+          style={{ background: getAvatarColor(user.uid) }}
+          onClick={onUserClick}
+        >
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.displayName ?? ''}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            getInitials(user.displayName)
+          )}
+        </button>
+      ) : (
+        <button
+          className="sidebar-header__signin-btn"
+          title="Sign in to sync"
+          onClick={onSignIn}
+        >
+          <User size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
