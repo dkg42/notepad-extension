@@ -39,6 +39,8 @@ export function useClipboardTab() {
   const handleSaveAsSnippet = async (entry: ClipboardEntry) => {
     if (entry.type === 'text' && entry.text) {
       await storageService.save(entry.text, entry.source);
+      await clipboardSessionService.remove(entry.id);
+      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     }
   };
 

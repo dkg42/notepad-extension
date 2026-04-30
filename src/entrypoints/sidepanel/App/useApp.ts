@@ -18,6 +18,18 @@ export function useApp() {
         setFolders(loadedFolders);
       },
     );
+
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName === 'local' && 'snippets' in changes) {
+        setSnippets(changes['snippets'].newValue ?? []);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
   }, []);
 
   const hasUncategorized = useMemo(() => snippets.some((s) => !s.folderId), [snippets]);
