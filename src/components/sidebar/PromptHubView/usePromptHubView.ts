@@ -1,3 +1,9 @@
+/**
+ * @module usePromptHubView
+ * @description Custom hook centralising all UI state for the Prompt Hub view: selected folder, expanded folder tree nodes, open/editing prompt detail, compose panel, search focus, starred filter, active tag chips, folder rename/create, and sort order.
+ * @dependencies (none — React built-ins only)
+ * @public usePromptHubView, PromptHubFolder, SortOrder
+ */
 import { useState } from 'react';
 
 export type PromptHubFolder = '__all' | '__starred' | string;

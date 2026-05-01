@@ -1,3 +1,9 @@
+/**
+ * @module useTagManager
+ * @description Pure-computation hook that aggregates tag usage counts across snippets and notebook annotations, merges tag names from all three sources (snippets, annotations, meta), and enriches each tag with its metadata record.
+ * @dependencies @/types
+ * @public useTagManager
+ */
 import { useMemo } from 'react';
 import type { NotebookAnnotation, Snippet, TagMeta } from '@/types';
 

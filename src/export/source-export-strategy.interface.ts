@@ -1,3 +1,9 @@
+/**
+ * @module source-export-strategy.interface
+ * @description Defines the SourceExportStrategy contract for exporting NotebookLM source lists. Mirrors ExportStrategy but operates on SourceRecord[] instead of ChatMessage[], keeping source-export concerns cleanly separated from chat-export concerns.
+ * @dependencies types
+ * @public SourceExportStrategy
+ */
 import type { SourceRecord } from '@/types';
 
 /**

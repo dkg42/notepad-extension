@@ -1,3 +1,9 @@
+/**
+ * @module notebook-annotation-service
+ * @description Persists user-defined notebook annotations (tags, collection assignments, archived flag) and named collections in chrome.storage.sync. Kept intentionally separate from notebookSyncService so that periodic background API syncs which overwrite NotebookMeta can never clobber user-authored metadata. Each mutation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
+ * @dependencies token-lifecycle-service, drive/drive-sync-service
+ * @public notebookAnnotationService
+ */
 import type { NotebookAnnotation, NotebookCollection } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';

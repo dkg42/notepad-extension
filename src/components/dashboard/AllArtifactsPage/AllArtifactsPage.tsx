@@ -1,3 +1,9 @@
+/**
+ * @module AllArtifactsPage
+ * @description Renders a sortable, paginated table of all generated artifacts (e.g. Audio Overviews) across notebooks, with search, status labels, and notebook assignment display.
+ * @dependencies useAllArtifactsPage, SearchBar
+ * @public AllArtifactsPage
+ */
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Package } from 'lucide-react';
 import { useAllArtifactsPage } from './useAllArtifactsPage';

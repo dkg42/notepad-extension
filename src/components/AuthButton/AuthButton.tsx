@@ -1,3 +1,9 @@
+/**
+ * @module AuthButton
+ * @description Renders a full-screen sign-in gate that triggers the Firebase authentication flow via the background service worker; displays loading and error states during sign-in.
+ * @dependencies authService (@/services/auth-service)
+ * @public AuthButton
+ */
 import React, { useState } from 'react';
 import { authService } from '@/services/auth-service';
 import './AuthButton.css';

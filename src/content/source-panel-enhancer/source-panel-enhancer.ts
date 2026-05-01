@@ -1,3 +1,9 @@
+/**
+ * @module source-panel-enhancer
+ * @description Injects a search bar and type-filter chip row above the NotebookLM sources panel using a shadow-DOM host, enabling real-time filtering of source items without modifying the host page's DOM. Also exposes Export and Delete buttons that open their respective modals; re-injects after Angular SPA re-renders and watches for source list mutations to keep filters current.
+ * @dependencies @/utils/dom, @/adapters/source-panel-adapter.interface, @/content/source-export-modal/source-export-modal, @/content/source-delete-modal/source-delete-modal
+ * @public setupSourcePanelEnhancer
+ */
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 import type { SourcePanelAdapter, SourceType } from '@/adapters/source-panel-adapter.interface';
 import { showSourceExportModal } from '@/content/source-export-modal/source-export-modal';

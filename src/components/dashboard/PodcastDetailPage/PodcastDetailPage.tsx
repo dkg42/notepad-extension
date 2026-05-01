@@ -1,3 +1,9 @@
+/**
+ * @module PodcastDetailPage
+ * @description Renders the detail view for a single podcast episode, including a drag-to-reorder track list, artifact picker panel, custom audio upload, and episode rename functionality.
+ * @dependencies usePodcastDetailPage, @/types (EpisodeTrack)
+ * @public PodcastDetailPage
+ */
 import React, { useRef, useState } from 'react';
 import type { EpisodeTrack } from '@/types';
 import { usePodcastDetailPage } from './usePodcastDetailPage';

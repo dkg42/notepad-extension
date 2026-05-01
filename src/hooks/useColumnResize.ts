@@ -1,3 +1,9 @@
+/**
+ * @module useColumnResize
+ * @description React hook that adds draggable column-resize handles to an HTML table, persisting per-column widths in localStorage under a caller-supplied key. It handles mouse event cleanup on drag end and enforces a 60px minimum column width to prevent columns from becoming invisible.
+ * @dependencies none
+ * @public useColumnResize
+ */
 import { useCallback, useState } from 'react';
 
 type ColumnWidths = Record<string, number>;

@@ -1,3 +1,9 @@
+/**
+ * @module useAllArtifactsPage
+ * @description Hook for the All Artifacts dashboard page that fetches every artifact across all notebooks via the extension background, applies notebook/status filters and text search, sorts the result, and exposes CSV and JSON export handlers.
+ * @dependencies @/types
+ * @public useAllArtifactsPage
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedArtifact } from '@/types';
 

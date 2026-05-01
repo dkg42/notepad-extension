@@ -1,3 +1,9 @@
+/**
+ * @module StatChart
+ * @description Horizontal bar chart that visualises a ranked list of labelled numeric entries, capping display to a configurable number of visible rows.
+ * @dependencies (none from src/ — stateless presentational component)
+ * @public StatChart, StatChartEntry
+ */
 import React from 'react';
 import './StatChart.css';
 

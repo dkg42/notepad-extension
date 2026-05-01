@@ -1,3 +1,9 @@
+/**
+ * @module useChatHistoryDetailPage
+ * @description Hook for the conversation detail page that fetches a full conversation (messages + meta) from the background and exposes Markdown and JSON export handlers that trigger browser file downloads.
+ * @dependencies @/types
+ * @public useChatHistoryDetailPage
+ */
 import { useState, useEffect, useCallback } from 'react';
 import type { ChatPlatform, ConversationFull } from '@/types';
 

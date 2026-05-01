@@ -1,3 +1,9 @@
+/**
+ * @module ClipboardEntryItem
+ * @description Renders a single clipboard entry card displaying either text or an image preview, a relative timestamp, source hostname, and action buttons to copy, save as snippet, or delete.
+ * @dependencies @/types (ClipboardEntry)
+ * @public ClipboardEntryItem
+ */
 import React from 'react';
 import type { ClipboardEntry } from '@/types';
 import './ClipboardEntryItem.css';

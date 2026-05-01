@@ -1,3 +1,9 @@
+/**
+ * @module UserMenu
+ * @description Popover menu displayed when the user clicks their avatar in the sidebar header. Shows profile info, account/preferences links, plan badge, and a sign-out action. Closes on backdrop click or explicit sign-out.
+ * @dependencies @/types
+ * @public UserMenu (default export)
+ */
 import React from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';

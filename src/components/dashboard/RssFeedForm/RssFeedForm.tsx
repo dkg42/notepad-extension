@@ -1,3 +1,9 @@
+/**
+ * @module RssFeedForm
+ * @description Form that fetches an RSS/Atom feed by URL and renders a filterable, selectable list of articles so the user can choose which to bulk-import as notebook sources.
+ * @dependencies ./useRssFeedForm
+ * @public RssFeedForm
+ */
 import React from 'react';
 import { useRssFeedForm } from './useRssFeedForm';
 import './RssFeedForm.css';

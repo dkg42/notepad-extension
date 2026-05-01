@@ -1,3 +1,9 @@
+/**
+ * @module useTagFilter
+ * @description Custom hook managing open/close state and click-outside dismissal for the tag filter dropdown. Provides a toggle handler that adds or removes tags from the active filter set.
+ * @dependencies (none — React built-ins only)
+ * @public useTagFilter
+ */
 import { useEffect, useRef, useState } from 'react';
 
 export function useTagFilter(selectedTags: Set<string>, onChange: (tags: Set<string>) => void) {

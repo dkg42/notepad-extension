@@ -1,3 +1,9 @@
+/**
+ * @module useFolderManager
+ * @description Hook that manages UI state for creating, renaming, and creating subfolders — exposes form values, error messages, and action handlers consumed by FolderManager.
+ * @dependencies (none beyond React useState)
+ * @public useFolderManager
+ */
 import { useState } from 'react';
 import type { Folder } from '@/types';
 

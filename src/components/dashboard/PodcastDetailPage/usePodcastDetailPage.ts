@@ -1,3 +1,9 @@
+/**
+ * @module usePodcastDetailPage
+ * @description Hook for the podcast episode detail page that manages the track list (add artifact, upload custom audio, remove, drag-reorder), fetches available audio artifacts from the background, and persists every change to storage.
+ * @dependencies @/types, @/services/storage-service, @/services/podcast-audio-service
+ * @public usePodcastDetailPage
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AggregatedArtifact, EpisodeTrack, PodcastEpisode } from '@/types';
 import { storageService } from '@/services/storage-service';

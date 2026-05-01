@@ -1,4 +1,10 @@
 /**
+ * @module token-refresh-service
+ * @description Pure HTTP I/O layer for Google OAuth2 token operations with no dependency on chrome.storage or other extension services. Provides refreshAccessToken (exchanges a refresh token for a new access token via Google's token endpoint) and revokeToken (best-effort revocation). All orchestration — reading/writing storage, scheduling alarms, handling invalid_grant — lives in token-lifecycle-service; this module is solely responsible for the network calls.
+ * @dependencies (none — pure HTTP, no internal src/ imports)
+ * @public refreshAccessToken, revokeToken, TokenRefreshResult
+ */
+/**
  * token-refresh-service — pure HTTP I/O for Google OAuth2 token operations.
  *
  * Responsibilities:

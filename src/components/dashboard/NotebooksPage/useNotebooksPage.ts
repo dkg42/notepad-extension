@@ -1,3 +1,9 @@
+/**
+ * @module useNotebooksPage
+ * @description Hook for the Notebooks dashboard page managing notebook list, annotations, collections, row selection, and CRUD operations. Listens to chrome.storage.sync for live updates and auto-fetches source counts after the initial load.
+ * @dependencies @/types, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/export/source-export-registry
+ * @public useNotebooksPage, UNCOLLECTED_FILTER_ID
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NotebookAnnotation, NotebookCollection, NotebookMeta, SourceRecord } from '@/types';
 import { notebookSyncService, type SyncMeta } from '@/services/notebook-sync-service';

@@ -1,3 +1,9 @@
+/**
+ * @module pipeline-templates
+ * @description Static catalogue of pre-built pipeline rule templates displayed in the Template Gallery on the Pipelines page. Templates are not auto-installed; the user clicks "Install" which calls pipelineService.save() with a copy. Collection IDs, tag names, and URLs inside templates are placeholder values that must be filled in via the PipelineBuilder before the pipeline is activated.
+ * @dependencies (none — pure data, no internal src/ imports)
+ * @public PIPELINE_TEMPLATES
+ */
 import type { Pipeline } from '@/types';
 
 /**

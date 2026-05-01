@@ -1,3 +1,9 @@
+/**
+ * @module BulkImportProgress
+ * @description Displays a progress bar, per-URL status, and error list for a running or completed bulk source import, with Cancel and Done actions.
+ * @dependencies @/types
+ * @public BulkImportProgress
+ */
 import React from 'react';
 import type { BulkImportProgress as BulkImportProgressData } from '@/types';
 import './BulkImportProgress.css';

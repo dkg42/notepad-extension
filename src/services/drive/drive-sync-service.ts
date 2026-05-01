@@ -1,4 +1,16 @@
 /**
+ * @module drive-sync-service
+ * @description Domain-level read/write facade that abstracts Drive AppData behind
+ * typed per-domain methods (snippets, folders, tags, settings, pipelines, chat, etc.).
+ * Reads follow a cache-first pattern: session cache hit returns immediately; on miss
+ * the file is fetched from Drive and the cache is populated. Writes are local-first:
+ * the session cache is updated synchronously then a debounced Drive write is enqueued
+ * via drive-write-queue, ensuring the UI is never blocked by Drive API latency.
+ * @dependencies ./drive-cache-service, ./drive-manifest-service, ./drive-io-service, ./drive-write-queue, ./types/drive-schemas
+ * @public getSnippetsMeta, saveSnippetsMeta, getSnippetText, saveSnippet, deleteSnippet, saveAllSnippets, getFolders, saveFolders, getTags, saveTags, getSettings, saveSettings, getExportHistory, appendExportRecord, getAnnotations, saveAnnotations, getPipelines, savePipelines, getPipelineRuns, appendPipelineRun, getPodcastEpisodes, savePodcastEpisodes, getDomainRouterRules, saveDomainRouterRules, getChatConversationsMeta, saveChatConversationsMeta, getChatConversationContent, saveChatConversationContent, writeAllFromLocal, driveSyncService
+ */
+
+/**
  * drive-sync-service.ts
  *
  * Domain-level read/write facade for Drive AppData.

@@ -1,3 +1,9 @@
+/**
+ * @module DomainRouterSettings
+ * @description Settings panel for managing URL-pattern routing rules that auto-assign bulk-imported URLs to specific notebooks; supports domain, glob, and regex pattern types.
+ * @dependencies ./useDomainRouterSettings
+ * @public DomainRouterSettings
+ */
 import React, { useState } from 'react';
 import { useDomainRouterSettings } from './useDomainRouterSettings';
 import './DomainRouterSettings.css';

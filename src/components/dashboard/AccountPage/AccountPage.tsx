@@ -1,3 +1,9 @@
+/**
+ * @module AccountPage
+ * @description Dashboard account management page — shows a Google sign-in card when unauthenticated or a profile card with sign-out and a one-time local-data migration banner when signed in.
+ * @dependencies @/types, @/services/auth-service
+ * @public AccountPage
+ */
 import React, { useEffect, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';

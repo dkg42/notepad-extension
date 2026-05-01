@@ -1,3 +1,9 @@
+/**
+ * @module gemini.adapter
+ * @description Implements ChatSiteAdapter for gemini.google.com. Targets the .top-bar-actions right section for header injection and walks .conversation-container elements to pair user-query and model-response nodes, reconstructing conversation order from the DOM.
+ * @dependencies adapter.interface, types
+ * @public GeminiAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { ChatMessage } from '@/types';
 

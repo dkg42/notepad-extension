@@ -1,4 +1,10 @@
 /**
+ * @module token-crypto-service
+ * @description Provides AES-GCM encryption and decryption for OAuth tokens stored on disk, using a PBKDF2 key derived from the extension ID and a random per-install salt persisted in chrome.storage.local. This raises the bar against passive disk-scanning attacks on the browser profile without requiring user interaction. Available in all browser extension contexts (background, offscreen, popup, dashboard) since the Web Crypto API is universally supported.
+ * @dependencies (none — uses only Web Crypto API and chrome.storage.local)
+ * @public encryptToken, decryptToken, AudioCacheEntry
+ */
+/**
  * Token encryption service using the Web Crypto API (AES-GCM + PBKDF2).
  *
  * The encryption key is derived from the extension ID and a random per-install

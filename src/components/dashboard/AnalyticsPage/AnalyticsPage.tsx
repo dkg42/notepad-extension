@@ -1,3 +1,9 @@
+/**
+ * @module AnalyticsPage
+ * @description Renders an analytics dashboard with summary stat cards and bar charts breaking down saved prompts by source, folder, tag, and month.
+ * @dependencies useAnalyticsPage, StatChart, @/types (Snippet, Folder)
+ * @public AnalyticsPage
+ */
 import React from 'react';
 import type { Folder, Snippet } from '@/types';
 import StatChart from '@/components/dashboard/StatChart/StatChart';

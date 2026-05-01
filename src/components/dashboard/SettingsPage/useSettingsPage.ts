@@ -1,3 +1,9 @@
+/**
+ * @module useSettingsPage
+ * @description Hook for the Settings dashboard page providing data export (JSON download), JSON file import with validation, and a two-step clear-all flow that reloads the page after storage is wiped.
+ * @dependencies @/types/dashboard, @/services/storage-service
+ * @public useSettingsPage
+ */
 import { useState } from 'react';
 import type { DashboardSettings } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';

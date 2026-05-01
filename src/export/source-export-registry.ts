@@ -1,3 +1,9 @@
+/**
+ * @module source-export-registry
+ * @description Central registry of all available NotebookLM source-list export strategies, ordered as they appear in the modal format picker. Adding a new source export format requires only implementing SourceExportStrategy and appending an instance here.
+ * @dependencies source-export-strategy.interface, source-markdown.export, source-plain-text.export, source-pdf.export, source-google-doc.export
+ * @public sourceExportStrategies
+ */
 import type { SourceExportStrategy } from './source-export-strategy.interface';
 import { SourceMarkdownExportStrategy } from './source-markdown.export';
 import { SourcePlainTextExportStrategy } from './source-plain-text.export';

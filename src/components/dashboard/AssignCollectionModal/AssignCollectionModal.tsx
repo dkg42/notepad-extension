@@ -1,3 +1,9 @@
+/**
+ * @module AssignCollectionModal
+ * @description Renders a modal dialog for assigning one or more notebooks to an existing collection or creating a new collection inline before confirming.
+ * @dependencies @/types (NotebookCollection)
+ * @public AssignCollectionModal
+ */
 import React, { useState } from 'react';
 import type { NotebookCollection } from '@/types';
 import './AssignCollectionModal.css';

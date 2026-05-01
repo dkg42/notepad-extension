@@ -1,3 +1,9 @@
+/**
+ * @module header-injector
+ * @description Injects "Export chat" and "Save prompts" buttons into the host page's header using a shadow-DOM container to isolate styles. Re-injects after SPA navigation and after the host SPA discards injected nodes. The folder picker and format picker overlays are rendered inside the same shadow root.
+ * @dependencies @/adapters/adapter.interface, @/adapters/source-panel-adapter.interface, @/export/export-registry, @/content/format-picker, @/services/storage-service, @/types, @/utils/dom
+ * @public setupHeaderButtons
+ */
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
 import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
 import { exportStrategies } from '@/export/export-registry';

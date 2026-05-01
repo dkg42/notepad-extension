@@ -1,3 +1,9 @@
+/**
+ * @module source-pdf.export
+ * @description Implements SourceExportStrategy to render a NotebookLM source list as a paginated A4 PDF using jsPDF. Each row features an alternating-row background, a colour-coded type badge pill matching the modal UI colours, and a page-number footer. Type colours are defined per SourceType to match the in-extension badge palette.
+ * @dependencies source-export-strategy.interface, types
+ * @public SourcePdfExportStrategy
+ */
 import { jsPDF } from 'jspdf';
 import type { SourceExportStrategy } from './source-export-strategy.interface';
 import type { SourceRecord } from '@/types';

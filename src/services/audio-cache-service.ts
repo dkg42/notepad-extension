@@ -1,3 +1,9 @@
+/**
+ * @module audio-cache-service
+ * @description IndexedDB-backed cache for NotebookLM audio artifact blobs, providing get/put/remove/cleanup/clear operations with a 24-hour TTL enforced at read time. Using IndexedDB (rather than chrome.storage.local) avoids the 10 MB local storage quota and allows storing binary Blob data directly. The database is opened lazily on first use and the connection promise is memoised to prevent redundant open calls.
+ * @dependencies (none — pure IndexedDB, no internal src/ imports)
+ * @public audioCacheService, AudioCacheEntry
+ */
 const DB_NAME = 'nlm-audio-cache';
 const DB_VERSION = 1;
 const STORE_NAME = 'audio';

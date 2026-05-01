@@ -1,3 +1,9 @@
+/**
+ * @module TagManager
+ * @description Page that renders a grid of TagCards for all tags across prompts and notebooks, supporting rename, delete, and colour-change actions.
+ * @dependencies @/types, @/components/dashboard/TagCard/TagCard, ./useTagManager
+ * @public TagManager
+ */
 import React from 'react';
 import type { NotebookAnnotation, Snippet, TagMeta } from '@/types';
 import TagCard from '@/components/dashboard/TagCard/TagCard';

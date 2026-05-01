@@ -1,3 +1,9 @@
+/**
+ * @module useFolderFilterDropdown
+ * @description Custom hook managing open/close state and click-outside dismissal for the folder filter dropdown. Exposes a toggle handler that adds or removes a folder ID from the active selection set.
+ * @dependencies (none — React built-ins only)
+ * @public useFolderFilterDropdown
+ */
 import { useEffect, useRef, useState } from 'react';
 
 export function useFolderFilterDropdown(

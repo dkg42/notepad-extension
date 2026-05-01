@@ -1,3 +1,9 @@
+/**
+ * @module auth-service
+ * @description Thin UI-facing auth facade used by the popup, dashboard, and React components. Has zero Firebase SDK imports — all Firebase operations are delegated to the background service worker via chrome.runtime.sendMessage, keeping Firebase entirely out of the extension's UI bundle. Auth state is read from chrome.storage.local where the background writes it after sign-in or sign-out.
+ * @dependencies auth-storage-service
+ * @public authService
+ */
 import type { StoredAuthProfile } from '@/types';
 import { authStorageService } from './auth-storage-service';
 

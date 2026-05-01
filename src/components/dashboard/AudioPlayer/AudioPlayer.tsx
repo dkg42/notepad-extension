@@ -1,3 +1,9 @@
+/**
+ * @module AudioPlayer
+ * @description Persistent audio playback bar that renders play/pause, a seek slider, elapsed/total time, a playback speed selector, and a close button for notebook audio overviews.
+ * @dependencies ./useAudioPlayer
+ * @public AudioPlayer
+ */
 import React from 'react';
 import { useAudioPlayer } from './useAudioPlayer';
 import './AudioPlayer.css';

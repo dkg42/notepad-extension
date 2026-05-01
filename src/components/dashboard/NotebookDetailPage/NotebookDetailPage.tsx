@@ -1,3 +1,9 @@
+/**
+ * @module NotebookDetailPage
+ * @description Detail view for a single NotebookLM notebook — renders sections for brief generation, sources, notes, and artifacts (audio overviews) with an audio customization dialog.
+ * @dependencies ./useNotebookDetailPage, @/services/notebooklm-api, @/export/source-export-registry, @/components/dashboard/ImportSourcesModal/ImportSourcesModal, @/components/dashboard/AssignCollectionModal/AssignCollectionModal
+ * @public NotebookDetailPage
+ */
 import React, { useState } from 'react';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';

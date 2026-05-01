@@ -1,3 +1,9 @@
+/**
+ * @module useExportHistoryPage
+ * @description Hook for the Export History dashboard page that loads the persisted export log from storage on mount and exposes a clear handler that wipes the history and resets the local list.
+ * @dependencies @/types/dashboard, @/services/storage-service
+ * @public useExportHistoryPage
+ */
 import { useEffect, useState } from 'react';
 import type { ExportRecord } from '@/types/dashboard';
 import { storageService } from '@/services/storage-service';

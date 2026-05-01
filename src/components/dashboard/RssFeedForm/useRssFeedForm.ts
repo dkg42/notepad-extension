@@ -1,3 +1,9 @@
+/**
+ * @module useRssFeedForm
+ * @description React hook that fetches and manages RSS feed entries via the extension background (FETCH_RSS_FEED message). Supports date-based filtering (7d / 30d / all) and per-entry selection, exposing a getSelectedUrls helper for the parent form.
+ * @dependencies @/types
+ * @public useRssFeedForm
+ */
 import { useCallback, useState } from 'react';
 import type { RssFeedEntry } from '@/types';
 

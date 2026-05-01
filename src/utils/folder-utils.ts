@@ -1,6 +1,17 @@
+/**
+ * @module folder-utils
+ * @description Pure utility functions for traversing and displaying the nested folder hierarchy. All functions are side-effect-free and operate solely on the Folder[] array from storage, making them safe to use in both the popup and dashboard without coupling to any React or storage context.
+ * @dependencies @/types
+ * @public getFolderDescendantIds, getFolderSubtreeIds, getFolderPath, getFolderTreeItems
+ */
 import type { Folder } from '@/types';
 
-/** All descendant folder IDs (NOT including self). BFS traversal. */
+/**
+ * Returns all descendant folder IDs for the given folder via BFS, excluding the folder itself.
+ * @param folderId - The root folder whose descendants are collected.
+ * @param folders - The full flat list of all folders.
+ * @returns A Set of descendant folder IDs (does not include `folderId`).
+ */
 export function getFolderDescendantIds(folderId: string, folders: Folder[]): Set<string> {
   const result = new Set<string>();
   const queue = [folderId];
@@ -16,14 +27,24 @@ export function getFolderDescendantIds(folderId: string, folders: Folder[]): Set
   return result;
 }
 
-/** All descendant folder IDs INCLUDING self. */
+/**
+ * Returns all descendant folder IDs for the given folder, including the folder itself.
+ * @param folderId - The root folder whose subtree is collected.
+ * @param folders - The full flat list of all folders.
+ * @returns A Set containing `folderId` and all its descendant IDs.
+ */
 export function getFolderSubtreeIds(folderId: string, folders: Folder[]): Set<string> {
   const result = getFolderDescendantIds(folderId, folders);
   result.add(folderId);
   return result;
 }
 
-/** Full display path, e.g. "Work / Projects / AI" */
+/**
+ * Builds the full display path for a folder by walking up through ancestors, e.g. `"Work / Projects / AI"`.
+ * @param folderId - The ID of the folder whose path is resolved.
+ * @param folders - The full flat list of all folders.
+ * @returns A slash-separated string of ancestor and folder names, or an empty string if not found.
+ */
 export function getFolderPath(folderId: string, folders: Folder[]): string {
   const folderMap = new Map(folders.map((f) => [f.id, f]));
   const parts: string[] = [];
@@ -36,8 +57,10 @@ export function getFolderPath(folderId: string, folders: Folder[]): string {
 }
 
 /**
- * Returns all folders in depth-first tree order with their nesting depth.
- * Useful for rendering indented flat lists (e.g. filter dropdowns).
+ * Returns all folders in depth-first tree order with their nesting depth, sorted by `sortOrder` then name.
+ * Useful for rendering indented flat lists such as folder filter dropdowns.
+ * @param folders - The full flat list of all folders.
+ * @returns An array of `{ folder, depth }` objects in DFS order, where `depth` starts at 0 for root folders.
  */
 export function getFolderTreeItems(folders: Folder[]): Array<{ folder: Folder; depth: number }> {
   const result: Array<{ folder: Folder; depth: number }> = [];

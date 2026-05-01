@@ -1,3 +1,9 @@
+/**
+ * @module studio-panel-adapter.interface
+ * @description Defines the StudioPanelAdapter contract for sites (currently NotebookLM) that expose a studio/notes panel. Covers injection point discovery, note item enumeration, title extraction, and async note-content reading via DOM interaction — selectors are best-effort and noted for future updates.
+ * @dependencies site-adapter.interface, types
+ * @public StudioPanelAdapter, isStudioPanelAdapter
+ */
 import type { SiteAdapter } from './site-adapter.interface';
 import type { NoteRecord } from '@/types';
 

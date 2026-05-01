@@ -1,3 +1,9 @@
+/**
+ * @module useAllAudioPage
+ * @description Hook for the All Audio dashboard page that fetches artifacts and filters to audio-only entries (typeCode === 1). Supports notebook filter, text search, and multi-field sorting.
+ * @dependencies @/types
+ * @public useAllAudioPage
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedArtifact } from '@/types';
 

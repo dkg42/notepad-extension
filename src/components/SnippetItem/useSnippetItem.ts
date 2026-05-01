@@ -1,3 +1,9 @@
+/**
+ * @module useSnippetItem
+ * @description Custom hook encapsulating clipboard copy, tag add/remove, and inline tag-input state for a single snippet item. Provides keyboard-driven tag commit (Enter/comma) and auto-focus behaviour for the tag input field.
+ * @dependencies (none — React built-ins only)
+ * @public useSnippetItem, parseHostname, MAX_PREVIEW_LENGTH
+ */
 import { useRef, useState } from 'react';
 
 export const MAX_PREVIEW_LENGTH = 200;

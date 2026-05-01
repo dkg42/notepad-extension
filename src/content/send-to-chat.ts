@@ -1,3 +1,9 @@
+/**
+ * @module send-to-chat
+ * @description Tracks the last focused text input or contenteditable element on the page and inserts text into it when the background sends a SEND_TO_CHAT message. This enables the sidebar to push saved prompts or snippets directly into the active chat input without the user needing to copy-paste.
+ * @dependencies none
+ * @public setupSendToChat
+ */
 export function setupSendToChat() {
   let lastFocusedEditable: HTMLElement | null = null;
 

@@ -1,3 +1,9 @@
+/**
+ * @module NotebooksPage
+ * @description Page listing synced Google NotebookLM notebooks in a table with collection filtering, tag editing, source count display, source export, and bulk collection assignment.
+ * @dependencies ./useNotebooksPage, @/export/source-export-registry, @/components/dashboard/AssignCollectionModal/AssignCollectionModal
+ * @public NotebooksPage
+ */
 import React, { useRef, useState } from 'react';
 import { Trash2, Download, BookOpen, ExternalLink, Loader2 } from 'lucide-react';
 import { useNotebooksPage, UNCOLLECTED_FILTER_ID } from './useNotebooksPage';

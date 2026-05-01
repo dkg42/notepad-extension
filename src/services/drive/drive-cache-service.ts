@@ -1,4 +1,15 @@
 /**
+ * @module drive-cache-service
+ * @description Session-storage cache layer that sits in front of all Drive reads.
+ * Uses `chrome.storage.session` (MV3, volatile, 10 MB quota) to avoid redundant Drive
+ * API calls within a single browser session. Applies LRU eviction exclusively to
+ * `snippet-text-*` entries — the only unbounded-growth cache type — when estimated
+ * session storage exceeds 8 MB, evicting 25% of the oldest entries at a time.
+ * @dependencies (none — no internal src/ imports)
+ * @public CacheKeys, get, set, invalidate, invalidateAll, getVersion, setVersion, driveCacheService
+ */
+
+/**
  * drive-cache-service.ts
  *
  * Session-storage cache layer for Drive data.

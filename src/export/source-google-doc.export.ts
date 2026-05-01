@@ -1,3 +1,9 @@
+/**
+ * @module source-google-doc.export
+ * @description Implements SourceExportStrategy to produce an HTML-based .doc file containing a styled table of NotebookLM sources with colour-coded type badge pills, compatible with Microsoft Word and importable into Google Docs. Uses the same colour palette as the in-extension source modal badges.
+ * @dependencies source-export-strategy.interface, types
+ * @public SourceGoogleDocExportStrategy
+ */
 import type { SourceExportStrategy } from './source-export-strategy.interface';
 import type { SourceRecord } from '@/types';
 

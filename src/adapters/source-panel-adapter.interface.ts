@@ -1,3 +1,9 @@
+/**
+ * @module source-panel-adapter.interface
+ * @description Defines the SourcePanelAdapter contract for sites (currently NotebookLM) that expose a sources panel. Covers UI injection point discovery, source item enumeration, title/type extraction, and automated source deletion — all of which rely on live DOM selectors that may need updating when host sites change their markup.
+ * @dependencies site-adapter.interface
+ * @public SourceType, SourcePanelAdapter, isSourcePanelAdapter
+ */
 import type { SiteAdapter } from './site-adapter.interface';
 
 export type SourceType =

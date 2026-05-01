@@ -1,3 +1,9 @@
+/**
+ * @module usePipelinesPage
+ * @description Hook for the Pipelines dashboard page that loads pipelines, run history, and collections, then exposes handlers for toggle, delete, save, run-now, template installation, and run-history clearing. Stays reactive via a chrome.storage.local change listener.
+ * @dependencies @/types, @/services/pipeline-templates, @/services/notebook-annotation-service
+ * @public usePipelinesPage
+ */
 import { useCallback, useEffect, useState } from 'react';
 import type { NotebookCollection, Pipeline, PipelineRun } from '@/types';
 import { PIPELINE_TEMPLATES } from '@/services/pipeline-templates';

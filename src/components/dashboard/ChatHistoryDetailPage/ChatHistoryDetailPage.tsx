@@ -1,3 +1,9 @@
+/**
+ * @module ChatHistoryDetailPage
+ * @description Detail view for a single saved conversation — renders the message thread with role labels, platform badge, and export buttons for Markdown and JSON formats.
+ * @dependencies @/types, ./useChatHistoryDetailPage
+ * @public ChatHistoryDetailPage
+ */
 import React from 'react';
 import type { ChatPlatform } from '@/types';
 import { useChatHistoryDetailPage } from './useChatHistoryDetailPage';

@@ -1,3 +1,9 @@
+/**
+ * @module SidebarHeader
+ * @description Top bar of the sidebar that renders the Notehublm logo on the home view and a back button with view label on sub-views. Also surfaces the dashboard link, dark/light mode toggle, and a user avatar or sign-in button.
+ * @dependencies @/types
+ * @public SidebarHeader (default export)
+ */
 import React from 'react';
 import {
   ArrowLeft,

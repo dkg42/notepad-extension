@@ -1,3 +1,9 @@
+/**
+ * @module web-crawler-service
+ * @description BFS web crawler that discovers linked URLs starting from a seed page, designed to run in the background service worker where fetch() bypasses CORS for domains listed in the extension's host_permissions. Respects configurable depth, same-domain filtering, and a hard URL cap (max 200) to prevent runaway crawls. Pages that fail to fetch are silently skipped so a single unreachable page does not abort the entire crawl.
+ * @dependencies (none — pure fetch + DOMParser, no internal src/ imports)
+ * @public crawlUrls
+ */
 import type { CrawlConfig } from '@/types';
 
 /**

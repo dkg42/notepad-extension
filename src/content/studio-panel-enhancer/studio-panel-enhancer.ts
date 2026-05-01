@@ -1,3 +1,9 @@
+/**
+ * @module studio-panel-enhancer
+ * @description Injects an "Export notes" button into the NotebookLM Studio panel header via a shadow-DOM host. On click, it reads each note's content sequentially through the adapter (with progress shown in the button label), then delegates export to the user-selected format strategy from the format picker.
+ * @dependencies @/utils/dom, @/adapters/studio-panel-adapter.interface, @/content/format-picker, @/export/export-registry, @/types
+ * @public setupStudioPanelEnhancer
+ */
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 import type { StudioPanelAdapter } from '@/adapters/studio-panel-adapter.interface';
 import { showFormatPicker } from '@/content/format-picker';

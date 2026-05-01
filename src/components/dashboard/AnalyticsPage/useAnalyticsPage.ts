@@ -1,3 +1,9 @@
+/**
+ * @module useAnalyticsPage
+ * @description Pure-computation hook that derives chart datasets from snippet and folder data: saves by source hostname, by folder, by tag, and by calendar month (last 8 months). All data is memoized; no side effects or network calls are made.
+ * @dependencies @/types, @/components/dashboard/StatChart/StatChart
+ * @public useAnalyticsPage
+ */
 import { useMemo } from 'react';
 import type { Folder, Snippet } from '@/types';
 import type { StatChartEntry } from '@/components/dashboard/StatChart/StatChart';

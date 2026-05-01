@@ -1,3 +1,9 @@
+/**
+ * @module storage-service
+ * @description Central persistence layer for all extension user data (snippets, folders, tags, settings, export history, podcast episodes). Every chrome.storage.local read/write for user-authored content is channelled through this module so storage concerns stay isolated from UI code. Each mutating operation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
+ * @dependencies token-lifecycle-service, drive/drive-sync-service, utils/folder-utils
+ * @public storageService
+ */
 import type { Folder, PodcastEpisode, EpisodeTrack, Snippet, TagMeta } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
@@ -36,11 +42,23 @@ async function getDriveToken(): Promise<string | null> {
 export const storageService = {
   // ── Snippets ──────────────────────────────────────────────────────────────
 
+  /**
+   * Returns all stored snippets, newest first.
+   * @returns Array of Snippet objects; empty array if none saved.
+   */
   async getAll(): Promise<Snippet[]> {
     const result = await chrome.storage.local.get(SNIPPETS_KEY);
     return (result[SNIPPETS_KEY] as Snippet[]) ?? [];
   },
 
+  /**
+   * Persists a new snippet and syncs to Drive.
+   * @param text The raw text content to save.
+   * @param source Full URL of the source page.
+   * @param folderId Optional folder to place the snippet in.
+   * @returns The newly created Snippet with generated id and timestamp.
+   * @sideEffect Drive sync
+   */
   async save(text: string, source: string, folderId?: string): Promise<Snippet> {
     const snippet: Snippet = {
       id: crypto.randomUUID(),
@@ -55,6 +73,16 @@ export const storageService = {
     return snippet;
   },
 
+  /**
+   * Persists a new snippet with full metadata and syncs to Drive.
+   * @param opts.title Optional display title for the snippet.
+   * @param opts.text The raw text content to save.
+   * @param opts.source Source URL; defaults to `'notehublm'` if omitted.
+   * @param opts.tags Optional array of tag names to attach.
+   * @param opts.folderId Optional folder to place the snippet in.
+   * @returns The newly created Snippet with generated id and timestamp.
+   * @sideEffect Drive sync
+   */
   async saveWithMeta(opts: {
     title?: string;
     text: string;
@@ -78,7 +106,12 @@ export const storageService = {
   },
 
   /**
-   * Saves multiple texts in a single read-write cycle to avoid race conditions.
+   * Saves multiple texts in a single read-write cycle to avoid race conditions and syncs to Drive.
+   * @param texts Array of raw text strings to persist as individual snippets.
+   * @param source Full URL of the source page.
+   * @param folderId Optional folder to place all new snippets in.
+   * @returns Array of newly created Snippet objects.
+   * @sideEffect Drive sync
    */
   async saveMany(texts: string[], source: string, folderId?: string): Promise<Snippet[]> {
     const now = Date.now();
@@ -95,6 +128,11 @@ export const storageService = {
     return newSnippets;
   },
 
+  /**
+   * Removes a single snippet by id and syncs the deletion to Drive.
+   * @param id UUID of the snippet to delete.
+   * @sideEffect Drive sync
+   */
   async remove(id: string): Promise<void> {
     const existing = await this.getAll();
     await chrome.storage.local.set({
@@ -103,6 +141,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) void driveSyncService.deleteSnippet(id, t); });
   },
 
+  /**
+   * Assigns a snippet to a folder (or removes it from any folder) and syncs metadata to Drive.
+   * @param snippetId UUID of the snippet to move.
+   * @param folderId Target folder UUID, or `undefined` to place in the root.
+   * @sideEffect Drive sync
+   */
   async moveToFolder(snippetId: string, folderId: string | undefined): Promise<void> {
     const existing = await this.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, folderId } : s);
@@ -110,6 +154,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Replaces the tag list on a single snippet and syncs metadata to Drive.
+   * @param snippetId UUID of the snippet to update.
+   * @param tags New complete list of tag names (replaces existing tags).
+   * @sideEffect Drive sync
+   */
   async updateTags(snippetId: string, tags: string[]): Promise<void> {
     const existing = await this.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, tags } : s);
@@ -117,6 +167,11 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Flips the `isFavorite` flag on a snippet and syncs metadata to Drive.
+   * @param id UUID of the snippet whose favorite state should be toggled.
+   * @sideEffect Drive sync
+   */
   async toggleFavorite(id: string): Promise<void> {
     const existing = await this.getAll();
     const updated = existing.map((s) => s.id === id ? { ...s, isFavorite: !s.isFavorite } : s);
@@ -124,11 +179,18 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Deletes all snippets and syncs the empty list to Drive.
+   * @sideEffect Drive sync
+   */
   async clear(): Promise<void> {
     await chrome.storage.local.set({ [SNIPPETS_KEY]: [] });
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta([], t); });
   },
 
+  /**
+   * Removes all user data keys (snippets, folders, tags, export history, podcast episodes) from local storage. Does not touch settings.
+   */
   async clearAllData(): Promise<void> {
     await chrome.storage.local.remove([
       SNIPPETS_KEY,
@@ -141,6 +203,11 @@ export const storageService = {
 
   // ── Bulk Operations ────────────────────────────────────────────────────────
 
+  /**
+   * Removes multiple snippets by id in a single write and syncs metadata to Drive.
+   * @param ids Array of snippet UUIDs to delete.
+   * @sideEffect Drive sync
+   */
   async bulkDelete(ids: string[]): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
@@ -149,6 +216,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Moves multiple snippets to the given folder (or root) in a single write and syncs metadata to Drive.
+   * @param ids Array of snippet UUIDs to move.
+   * @param folderId Target folder UUID, or `undefined` to place in the root.
+   * @sideEffect Drive sync
+   */
   async bulkMoveToFolder(ids: string[], folderId: string | undefined): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
@@ -157,6 +230,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Merges the given tags into each targeted snippet (deduplicates) and syncs metadata to Drive.
+   * @param ids Array of snippet UUIDs to update.
+   * @param tags Tag names to add; duplicates within a snippet are ignored.
+   * @sideEffect Drive sync
+   */
   async bulkAddTags(ids: string[], tags: string[]): Promise<void> {
     const idSet = new Set(ids);
     const existing = await this.getAll();
@@ -169,6 +248,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t); });
   },
 
+  /**
+   * Strips the given tags from each targeted snippet and syncs metadata to Drive.
+   * @param ids Array of snippet UUIDs to update.
+   * @param tags Tag names to remove; tags not present on a snippet are silently skipped.
+   * @sideEffect Drive sync
+   */
   async bulkRemoveTags(ids: string[], tags: string[]): Promise<void> {
     const idSet = new Set(ids);
     const removeSet = new Set(tags);
@@ -183,11 +268,22 @@ export const storageService = {
 
   // ── Folders ───────────────────────────────────────────────────────────────
 
+  /**
+   * Returns all stored folders in insertion order.
+   * @returns Array of Folder objects; empty array if none saved.
+   */
   async getFolders(): Promise<Folder[]> {
     const result = await chrome.storage.local.get(FOLDERS_KEY);
     return (result[FOLDERS_KEY] as Folder[]) ?? [];
   },
 
+  /**
+   * Creates a new folder and syncs the folder list to Drive; throws if a sibling with the same name exists.
+   * @param name Display name for the folder (trimmed before saving).
+   * @param parentId UUID of the parent folder, or `undefined` for a root folder.
+   * @returns The newly created Folder with generated id and timestamp.
+   * @sideEffect Drive sync
+   */
   async createFolder(name: string, parentId?: string): Promise<Folder> {
     const trimmed = name.trim();
     const existing = await this.getFolders();
@@ -208,6 +304,12 @@ export const storageService = {
     return folder;
   },
 
+  /**
+   * Renames a folder and syncs the updated list to Drive; throws if a sibling already has the new name.
+   * @param id UUID of the folder to rename.
+   * @param name New display name (trimmed before saving).
+   * @sideEffect Drive sync
+   */
   async renameFolder(id: string, name: string): Promise<void> {
     const trimmed = name.trim();
     const existing = await this.getFolders();
@@ -220,6 +322,11 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
+  /**
+   * Deletes a folder and cascade-deletes all descendant folders and their snippets, then syncs both lists to Drive.
+   * @param id UUID of the root folder to delete.
+   * @sideEffect Drive sync
+   */
   async deleteFolder(id: string): Promise<void> {
     const [folders, snippets] = await Promise.all([this.getFolders(), this.getAll()]);
     const subtreeIds = getFolderSubtreeIds(id, folders);
@@ -238,6 +345,12 @@ export const storageService = {
     });
   },
 
+  /**
+   * Re-parents a folder to a new parent and syncs to Drive; throws if the target parent is within the folder's own subtree.
+   * @param id UUID of the folder to move.
+   * @param newParentId UUID of the destination parent folder, or `undefined` to promote to root.
+   * @sideEffect Drive sync
+   */
   async moveFolder(id: string, newParentId: string | undefined): Promise<void> {
     const existing = await this.getFolders();
     if (newParentId) {
@@ -251,6 +364,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
+  /**
+   * Sets or clears the accent color on a folder and syncs the folder list to Drive.
+   * @param id UUID of the folder to update.
+   * @param color CSS color string, or `undefined` to remove the custom color.
+   * @sideEffect Drive sync
+   */
   async updateFolderColor(id: string, color: string | undefined): Promise<void> {
     const existing = await this.getFolders();
     const updated = existing.map((f) => (f.id === id ? { ...f, color } : f));
@@ -258,6 +377,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
+  /**
+   * Updates the sort-order index of a single folder and syncs to Drive.
+   * @param id UUID of the folder to reorder.
+   * @param sortOrder New numeric sort position within its sibling group.
+   * @sideEffect Drive sync
+   */
   async updateFolderOrder(id: string, sortOrder: number): Promise<void> {
     const existing = await this.getFolders();
     const updated = existing.map((f) => (f.id === id ? { ...f, sortOrder } : f));
@@ -265,6 +390,11 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveFolders(updated, t); });
   },
 
+  /**
+   * Applies sort-order updates to multiple folders in a single write and syncs to Drive.
+   * @param updates Array of `{ id, sortOrder }` pairs; folders not in the array are left unchanged.
+   * @sideEffect Drive sync
+   */
   async bulkUpdateFolderSortOrders(
     updates: Array<{ id: string; sortOrder: number }>,
   ): Promise<void> {
@@ -279,11 +409,20 @@ export const storageService = {
 
   // ── Tags Metadata ─────────────────────────────────────────────────────────
 
+  /**
+   * Returns all stored tag metadata records.
+   * @returns Array of TagMeta objects; empty array if none saved.
+   */
   async getTagsMeta(): Promise<TagMeta[]> {
     const result = await chrome.storage.local.get(TAGS_META_KEY);
     return (result[TAGS_META_KEY] as TagMeta[]) ?? [];
   },
 
+  /**
+   * Upserts a tag metadata record (inserts if new, replaces if the tag name already exists) and syncs to Drive.
+   * @param meta The TagMeta object to save; matched by `meta.name`.
+   * @sideEffect Drive sync
+   */
   async saveTagMeta(meta: TagMeta): Promise<void> {
     const existing = await this.getTagsMeta();
     const updated = existing.some((t) => t.name === meta.name)
@@ -293,6 +432,11 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveTags(updated, t); });
   },
 
+  /**
+   * Removes a tag metadata record by name and syncs the updated list to Drive.
+   * @param name Exact tag name to delete.
+   * @sideEffect Drive sync
+   */
   async deleteTagMeta(name: string): Promise<void> {
     const existing = await this.getTagsMeta();
     const updated = existing.filter((t) => t.name !== name);
@@ -300,6 +444,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.saveTags(updated, t); });
   },
 
+  /**
+   * Renames a tag across all snippets and tag metadata in a single atomic write, then syncs both to Drive.
+   * @param oldName Current tag name to replace.
+   * @param newName Replacement tag name (trimmed before saving).
+   * @sideEffect Drive sync
+   */
   async renameTag(oldName: string, newName: string): Promise<void> {
     const trimmedNew = newName.trim();
     const [snippets, tagsMeta] = await Promise.all([this.getAll(), this.getTagsMeta()]);
@@ -323,11 +473,20 @@ export const storageService = {
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
+  /**
+   * Returns the current dashboard settings, merging stored values with defaults for any missing keys.
+   * @returns A complete DashboardSettings object; never returns undefined.
+   */
   async getSettings(): Promise<DashboardSettings> {
     const result = await chrome.storage.local.get(SETTINGS_KEY);
     return { ...DEFAULT_SETTINGS, ...(result[SETTINGS_KEY] as Partial<DashboardSettings>) };
   },
 
+  /**
+   * Merges partial settings over the current stored values and syncs the result to Drive.
+   * @param settings Partial DashboardSettings; only the provided keys are updated.
+   * @sideEffect Drive sync
+   */
   async saveSettings(settings: Partial<DashboardSettings>): Promise<void> {
     const current = await this.getSettings();
     const merged = { ...current, ...settings };
@@ -337,11 +496,20 @@ export const storageService = {
 
   // ── Export History ─────────────────────────────────────────────────────────
 
+  /**
+   * Returns all stored export records, newest first.
+   * @returns Array of ExportRecord objects; empty array if none saved.
+   */
   async getExportHistory(): Promise<ExportRecord[]> {
     const result = await chrome.storage.local.get(EXPORT_HISTORY_KEY);
     return (result[EXPORT_HISTORY_KEY] as ExportRecord[]) ?? [];
   },
 
+  /**
+   * Prepends a new export record (auto-assigning an id) and caps the list at 200 entries, then appends it to Drive.
+   * @param record ExportRecord fields excluding `id` (generated internally).
+   * @sideEffect Drive sync
+   */
   async addExportRecord(record: Omit<ExportRecord, 'id'>): Promise<void> {
     const existing = await this.getExportHistory();
     const newRecord: ExportRecord = { id: crypto.randomUUID(), ...record };
@@ -352,12 +520,19 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) void driveSyncService.appendExportRecord(newRecord, t); });
   },
 
+  /**
+   * Empties the export history list in local storage. No Drive sync is triggered.
+   */
   async clearExportHistory(): Promise<void> {
     await chrome.storage.local.set({ [EXPORT_HISTORY_KEY]: [] });
   },
 
   // ── Data Import / Export ──────────────────────────────────────────────────
 
+  /**
+   * Reads all persisted data stores and returns a versioned snapshot suitable for JSON export.
+   * @returns Plain object with `version`, `exportedAt` ISO timestamp, and all data arrays.
+   */
   async exportAllData(): Promise<object> {
     const [snippets, folders, tagsMeta, settings, exportHistory] = await Promise.all([
       this.getAll(),
@@ -379,11 +554,20 @@ export const storageService = {
 
   // ── Podcast Episodes ────────────────────────────────────────────────────────
 
+  /**
+   * Returns all stored podcast episodes.
+   * @returns Array of PodcastEpisode objects; empty array if none saved.
+   */
   async getPodcastEpisodes(): Promise<PodcastEpisode[]> {
     const result = await chrome.storage.local.get(PODCAST_EPISODES_KEY);
     return (result[PODCAST_EPISODES_KEY] as PodcastEpisode[]) ?? [];
   },
 
+  /**
+   * Upserts a podcast episode (replaces by id if it exists, appends if new) and syncs the full list to Drive.
+   * @param episode The PodcastEpisode to save or update; matched by `episode.id`.
+   * @sideEffect Drive sync
+   */
   async savePodcastEpisode(episode: PodcastEpisode): Promise<void> {
     const episodes = await this.getPodcastEpisodes();
     const idx = episodes.findIndex((e) => e.id === episode.id);
@@ -396,6 +580,11 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(episodes, t); });
   },
 
+  /**
+   * Removes a podcast episode by id and syncs the remaining list to Drive.
+   * @param id UUID of the episode to delete.
+   * @sideEffect Drive sync
+   */
   async deletePodcastEpisode(id: string): Promise<void> {
     const episodes = await this.getPodcastEpisodes();
     const filtered = episodes.filter((e) => e.id !== id);
@@ -403,6 +592,12 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(filtered, t); });
   },
 
+  /**
+   * Replaces the track list on an episode and bumps its `updatedAt` timestamp, then syncs to Drive. No-ops if the episode id is not found.
+   * @param id UUID of the episode to update.
+   * @param tracks New complete array of EpisodeTracks (replaces existing tracks).
+   * @sideEffect Drive sync
+   */
   async updateEpisodeTracks(id: string, tracks: EpisodeTrack[]): Promise<void> {
     const episodes = await this.getPodcastEpisodes();
     const idx = episodes.findIndex((e) => e.id === id);
@@ -412,6 +607,10 @@ export const storageService = {
     void getDriveToken().then((t) => { if (t) driveSyncService.savePodcastEpisodes(episodes, t); });
   },
 
+  /**
+   * Writes a validated backup payload into local storage, skipping any keys that are absent or the wrong type. Does not trigger Drive sync.
+   * @param data Parsed JSON object from an `exportAllData` snapshot; unknown or malformed keys are ignored.
+   */
   async importAllData(data: Record<string, unknown>): Promise<void> {
     const updates: Record<string, unknown> = {};
     if (Array.isArray(data.snippets)) updates[SNIPPETS_KEY] = data.snippets;

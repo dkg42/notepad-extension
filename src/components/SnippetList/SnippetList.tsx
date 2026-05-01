@@ -1,3 +1,9 @@
+/**
+ * @module SnippetList
+ * @description Renders an ordered list of saved prompt snippets, grouped by folder. Displays an empty-state message when no snippets exist and delegates per-item rendering to SnippetItem.
+ * @dependencies @/types, @/components/SnippetItem/SnippetItem, ./useSnippetList
+ * @public SnippetList (default export)
+ */
 import React from 'react';
 import type { Folder, Snippet } from '@/types';
 import SnippetItem from '@/components/SnippetItem/SnippetItem';

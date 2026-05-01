@@ -1,3 +1,9 @@
+/**
+ * @module useClipboardTab
+ * @description React hook that loads clipboard entries from session storage, listens for live storage changes, and provides handlers for deleting, clearing, copying, and saving entries as snippets.
+ * @dependencies clipboardSessionService (@/services/clipboard-session-service), storageService (@/services/storage-service)
+ * @public useClipboardTab
+ */
 import { useEffect, useState } from 'react';
 import type { ClipboardEntry } from '@/types';
 import { clipboardSessionService } from '@/services/clipboard-session-service';

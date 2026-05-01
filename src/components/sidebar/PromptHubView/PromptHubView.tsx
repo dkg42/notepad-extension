@@ -1,3 +1,9 @@
+/**
+ * @module PromptHubView
+ * @description Full-featured prompt management view with a nested folder tree, tag/star filters, sort dropdown, inline compose card, and a slide-in detail panel supporting edit, copy, send-to-chat, duplicate, and move operations. Highlights search matches inside card text.
+ * @dependencies @/types, @/utils/folder-utils, @/utils/filter-snippets, ./usePromptHubView
+ * @public PromptHubView (default export)
+ */
 import React, { useMemo, useState } from 'react';
 import {
   Search,

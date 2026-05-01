@@ -1,3 +1,9 @@
+/**
+ * @module source-plain-text.export
+ * @description Implements SourceExportStrategy to serialize a NotebookLM source list as a plain text (.txt) file with column-aligned index, padded type labels, and titles. Falls back to clipboard copy if the Blob download is blocked by the browser.
+ * @dependencies source-export-strategy.interface, types
+ * @public SourcePlainTextExportStrategy
+ */
 import type { SourceExportStrategy } from './source-export-strategy.interface';
 import type { SourceRecord } from '@/types';
 

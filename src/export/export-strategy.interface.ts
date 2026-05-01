@@ -1,3 +1,9 @@
+/**
+ * @module export-strategy.interface
+ * @description Defines the ExportStrategy contract that every chat-export format implementation must satisfy. Decouples the export trigger (header button) from format-specific logic so new formats (PDF, DOCX, etc.) can be added by implementing this interface and registering in export-registry without touching existing code.
+ * @dependencies types
+ * @public ExportStrategy
+ */
 import type { ChatMessage } from '@/types';
 
 /**

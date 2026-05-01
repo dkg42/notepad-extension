@@ -1,3 +1,9 @@
+/**
+ * @module chat-history-storage
+ * @description Persistence layer for synced chat conversation data across ChatGPT, Claude, and Gemini. Conversation metadata (titles, dates, message counts) is stored as a single sorted array for fast listing; full message content is stored per-conversation under isolated keys to avoid loading all messages into memory simultaneously. A composite platform+id key prevents collisions between conversations with the same ID on different platforms. Each write fires a best-effort Drive sync tail-call.
+ * @dependencies token-lifecycle-service, drive/drive-sync-service
+ * @public chatHistoryStorage
+ */
 import type { ChatPlatform, ChatSyncMeta, ConversationFull, ConversationMeta } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';

@@ -1,3 +1,9 @@
+/**
+ * @module useCsvUploadForm
+ * @description React hook that handles CSV file uploading, parsing, and column selection for URL extraction. Reads the file with FileReader, delegates parsing to csv-parser utilities, and exposes the selected URL list for downstream processing.
+ * @dependencies @/import/csv-parser
+ * @public useCsvUploadForm
+ */
 import { useCallback, useState } from 'react';
 import { parseCsv, extractUrlsFromColumn } from '@/import/csv-parser';
 import type { CsvParseResult } from '@/import/csv-parser';

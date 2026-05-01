@@ -1,3 +1,9 @@
+/**
+ * @module useNotebookDetailPage
+ * @description Hook for the notebook detail page that loads sources, notes, and artifacts via a single RPC call, and provides handlers for brief generation, audio overview creation, source add/delete, notebook delete, tag management, collection assignment, and source export.
+ * @dependencies @/types, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/export/source-export-registry, @/services/notebooklm-api
+ * @public useNotebookDetailPage
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArtifactRecord, NoteDetailRecord, NotebookAnnotation, NotebookCollection, NotebookMeta, SourceDetailRecord } from '@/types';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';

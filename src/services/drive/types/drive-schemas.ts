@@ -1,4 +1,11 @@
 /**
+ * @module drive-schemas
+ * @description Defines the TypeScript wire-format contracts (interfaces and enums) for every JSON and plain-text file persisted in Google Drive AppData. All Drive services must conform to these types when serializing or deserializing data; incrementing DRIVE_SCHEMA_VERSION and adding a migration path in drive-init-service.ts is required for any breaking field change. Audio Blob payloads are intentionally excluded from sync — only Drive-safe representations are defined here.
+ * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history
+ * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveFoldersFile, DriveTagsFile, DriveSettingsFile, DriveExportHistoryFile, DriveNotebookAnnotationsFile, DrivePipelinesFile, DrivePipelineRunsFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DrivePodcastEpisodesFile, DriveDomainRouterFile, DriveChatConversationsMetaFile, DriveConversationMetaLine, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
+ */
+
+/**
  * drive-schemas.ts
  *
  * TypeScript contracts (interfaces) for every file stored in Google Drive AppData.

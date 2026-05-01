@@ -1,3 +1,9 @@
+/**
+ * @module useBulkActionsBar
+ * @description Hook managing the mutually exclusive folder-picker and tag-input panels in the bulk actions toolbar. Parses comma-separated tag strings and delegates move/add-tags operations to the parent via callbacks.
+ * @dependencies (none — React built-ins only)
+ * @public useBulkActionsBar
+ */
 import { useState } from 'react';
 
 export function useBulkActionsBar(

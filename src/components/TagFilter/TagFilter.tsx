@@ -1,3 +1,9 @@
+/**
+ * @module TagFilter
+ * @description Dropdown filter control that renders a checkbox list of all available tags, allowing users to narrow displayed items to one or more selected tags.
+ * @dependencies ./useTagFilter
+ * @public TagFilter
+ */
 import React, { useEffect, useRef } from 'react';
 import { useTagFilter } from './useTagFilter';
 import './TagFilter.css';

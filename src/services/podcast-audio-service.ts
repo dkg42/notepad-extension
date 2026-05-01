@@ -1,3 +1,9 @@
+/**
+ * @module podcast-audio-service
+ * @description IndexedDB-backed store for user-uploaded custom audio entries in the podcast feature. Provides get/put/remove/clear operations against the 'podcast-audio-store' database, storing audio Blobs alongside metadata (filename, mimeType, addedAt) under a stable ID key. Kept separate from audioCacheService because custom uploads are user-owned and should not be subject to the 24-hour TTL eviction applied to cached NotebookLM artifacts.
+ * @dependencies (none — pure IndexedDB, no internal src/ imports)
+ * @public podcastAudioService
+ */
 import type { CustomAudioEntry } from '@/types';
 
 const DB_NAME = 'podcast-audio-store';

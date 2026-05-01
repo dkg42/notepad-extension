@@ -1,3 +1,9 @@
+/**
+ * @module BrowserTabsForm
+ * @description Renders a searchable list of currently open browser tabs with per-tab and select-all checkboxes, allowing users to import selected tab URLs as notebook sources.
+ * @dependencies useBrowserTabsForm, SearchBar
+ * @public BrowserTabsForm
+ */
 import React from 'react';
 import { useBrowserTabsForm } from './useBrowserTabsForm';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';

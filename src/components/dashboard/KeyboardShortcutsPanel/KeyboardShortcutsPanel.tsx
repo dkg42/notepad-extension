@@ -1,3 +1,9 @@
+/**
+ * @module KeyboardShortcutsPanel
+ * @description Renders an overlay panel listing all dashboard keyboard shortcuts; closes on Escape key or backdrop click.
+ * @dependencies none
+ * @public KeyboardShortcutsPanel
+ */
 import React, { useEffect } from 'react';
 import './KeyboardShortcutsPanel.css';
 

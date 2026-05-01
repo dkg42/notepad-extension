@@ -1,3 +1,9 @@
+/**
+ * @module clipboard-session-service
+ * @description Manages clipboard entries in chrome.storage.session (cleared when the browser closes), providing add (with duplicate suppression and a 50-entry cap), remove, getAll, and clear operations.
+ * @dependencies @/types (ClipboardEntry)
+ * @public clipboardSessionService
+ */
 import type { ClipboardEntry } from '@/types';
 
 const SESSION_KEY = 'clipboardEntries';

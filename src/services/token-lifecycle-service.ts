@@ -1,5 +1,11 @@
 /// <reference types="vite/client" />
 /**
+ * @module token-lifecycle-service
+ * @description Orchestrates the full Google OAuth token lifecycle for the extension: validating stored tokens, triggering just-in-time or proactive refreshes, scheduling Chrome alarms to pre-empt expiry, and handling invalid_grant by clearing auth state and notifying open pages. This is the single entry point for any code needing a valid access token; callers do not interact with refresh logic or alarm scheduling directly. A module-level deduplication guard prevents concurrent refresh races.
+ * @dependencies auth-storage-service, token-refresh-service
+ * @public getValidToken, scheduleRefreshAlarm, handleRefreshAlarm, cancelRefreshAlarm, revokeToken, TOKEN_REFRESH_ALARM, GetTokenResult
+ */
+/**
  * token-lifecycle-service — orchestrates token validity, proactive refresh, and alarm management.
  *
  * This is the single entry point for any code that needs a valid Google OAuth access token.

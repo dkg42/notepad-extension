@@ -1,3 +1,9 @@
+/**
+ * @module AllSourcesPage
+ * @description Page aggregating sources across all synced notebooks into a sortable, filterable table with bulk export and add-to-notebook actions.
+ * @dependencies ./useAllSourcesPage, @/export/source-export-registry, @/components/dashboard/SearchBar/SearchBar
+ * @public AllSourcesPage
+ */
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Database } from 'lucide-react';
 import { useAllSourcesPage } from './useAllSourcesPage';

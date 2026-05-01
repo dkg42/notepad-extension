@@ -1,3 +1,9 @@
+/**
+ * @module ChatHistoryPage
+ * @description Renders a sortable, searchable list of synced chat conversations across LLM platforms (ChatGPT, Claude, Gemini) with platform badges and last-sync status indicators.
+ * @dependencies useChatHistoryPage, SearchBar, @/types (ChatPlatform, ChatSyncMeta)
+ * @public ChatHistoryPage
+ */
 import React from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { ChatPlatform, ChatSyncMeta } from '@/types';

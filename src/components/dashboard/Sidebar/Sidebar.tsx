@@ -1,3 +1,9 @@
+/**
+ * @module Sidebar
+ * @description Dashboard navigation sidebar with primary nav items, animated collapsible groups for Notebooks, Chat History, and Podcasts, and a footer user card that navigates to the Account page.
+ * @dependencies @/types, @/types/dashboard, @/services/auth-service
+ * @public Sidebar
+ */
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

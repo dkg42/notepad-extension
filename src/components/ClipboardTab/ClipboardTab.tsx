@@ -1,3 +1,9 @@
+/**
+ * @module ClipboardTab
+ * @description Renders the clipboard history tab showing a session-scoped list of copied text and image entries with clear-all and per-entry action callbacks.
+ * @dependencies ClipboardEntryItem, @/types (ClipboardEntry)
+ * @public ClipboardTab
+ */
 import React from 'react';
 import type { ClipboardEntry } from '@/types';
 import ClipboardEntryItem from './ClipboardEntryItem/ClipboardEntryItem';

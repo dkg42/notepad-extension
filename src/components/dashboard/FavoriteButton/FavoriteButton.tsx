@@ -1,3 +1,9 @@
+/**
+ * @module FavoriteButton
+ * @description Small toggle button that renders a filled or outline star icon to mark or unmark a prompt as a favorite.
+ * @dependencies (none from src/ — stateless presentational component)
+ * @public FavoriteButton
+ */
 import React from 'react';
 import './FavoriteButton.css';
 

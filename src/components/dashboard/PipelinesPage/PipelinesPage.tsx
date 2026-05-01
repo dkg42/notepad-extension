@@ -1,3 +1,9 @@
+/**
+ * @module PipelinesPage
+ * @description Renders the pipelines management page listing automation pipelines with run history, status indicators, and controls to create, edit, run, or delete pipelines via PipelineBuilder.
+ * @dependencies usePipelinesPage, PipelineBuilder, @/types (Pipeline, PipelineRun, PipelineRunStatus)
+ * @public PipelinesPage
+ */
 import React from 'react';
 import { Zap, Play, Pencil, Trash2, CheckCircle, XCircle, AlertCircle, Plus } from 'lucide-react';
 import type { Pipeline, PipelineRun, PipelineRunStatus } from '@/types';

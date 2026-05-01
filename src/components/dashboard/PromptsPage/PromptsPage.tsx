@@ -1,3 +1,9 @@
+/**
+ * @module PromptsPage
+ * @description Full prompts management page that groups snippets by folder inside an accordion, with a search bar, animated tag filter menu, and bulk action support via nested PromptsTable.
+ * @dependencies @/types, @/components/ui/accordion, @/components/dashboard/PromptsTable/PromptsTable, @/components/dashboard/SearchBar/SearchBar, @/utils/filter-snippets, @/utils/folder-utils
+ * @public PromptsPage
+ */
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { ChevronRight, Folder as FolderIcon, Hash, Tag, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

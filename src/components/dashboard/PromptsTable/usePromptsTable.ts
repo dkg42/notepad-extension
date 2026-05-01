@@ -1,3 +1,9 @@
+/**
+ * @module usePromptsTable
+ * @description React hook that encapsulates all state and derived data for the PromptsTable, including search filtering, multi-column sorting, folder and tag filter sets, pagination, row selection, and keyboard row navigation. Delegates filtering to filterSnippets and folder path resolution to folder-utils.
+ * @dependencies @/types, @/types/dashboard, @/utils/filter-snippets, @/utils/folder-utils
+ * @public usePromptsTable
+ */
 import { useCallback, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';

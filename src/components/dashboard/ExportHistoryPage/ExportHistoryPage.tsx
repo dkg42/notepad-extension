@@ -1,3 +1,9 @@
+/**
+ * @module ExportHistoryPage
+ * @description Page displaying a chronological table of all past chat and prompt exports with format, item count, source, and filename columns, plus a clear-history action.
+ * @dependencies ./useExportHistoryPage
+ * @public ExportHistoryPage
+ */
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { useExportHistoryPage } from './useExportHistoryPage';

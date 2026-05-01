@@ -1,3 +1,9 @@
+/**
+ * @module domain-router-service
+ * @description Manages user-configured domain router rules that map URL patterns (domain, glob, or regex) to target NotebookLM notebooks. Provides CRUD operations persisted in chrome.storage.local with best-effort Drive sync on each write. Also exports pure utility functions matchUrl (finds the first matching rule for a URL) and routeUrls (groups a list of URLs by their target notebook, falling back to a default notebook ID) that run without any I/O and can be used synchronously in the background worker.
+ * @dependencies token-lifecycle-service, drive/drive-sync-service
+ * @public domainRouterService, matchUrl, routeUrls
+ */
 import type { DomainRouterRule } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';

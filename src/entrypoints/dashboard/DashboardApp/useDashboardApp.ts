@@ -1,3 +1,9 @@
+/**
+ * @module useDashboardApp
+ * @description Root React hook for the dashboard entrypoint that loads and synchronises all application state (snippets, folders, tags, notebooks, podcasts, pipelines, chat history). Triggers a background Drive sync on mount and listens to both local and sync storage change events to keep the UI up to date. Also exposes handlers for every CRUD operation across all entity types.
+ * @dependencies @/types, @/types/dashboard, @/utils/folder-utils, @/services/storage-service, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/hooks/useGlobalAudio, @/services/drive/drive-init-service
+ * @public useDashboardApp
+ */
 import { useEffect, useMemo, useState } from 'react';
 import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, Snippet, TagMeta } from '@/types';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';

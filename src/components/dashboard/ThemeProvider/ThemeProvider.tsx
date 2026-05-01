@@ -1,3 +1,9 @@
+/**
+ * @module ThemeProvider
+ * @description Context provider that applies a light/dark theme to the document root via a data attribute and exposes a toggle; syncs when the initialTheme prop changes from storage.
+ * @dependencies (none from src/ — self-contained React context)
+ * @public ThemeProvider, ThemeContext
+ */
 import React, { createContext, useEffect, useState } from 'react';
 
 interface ThemeContextValue {

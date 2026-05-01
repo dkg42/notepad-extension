@@ -1,4 +1,10 @@
 /**
+ * @module offscreen
+ * @description Firebase authentication iframe bridge running in Chrome's offscreen document. It embeds an externally hosted sign-in page in a hidden iframe, relays auth trigger messages from the background service worker to the iframe via postMessage, and forwards the resulting OAuth credential (or error) back to the background as a separate AUTH_RESULT message. The offscreen document is reused across auth flows to avoid race conditions on iframe load.
+ * @dependencies none
+ * @public none (side-effect module — wires chrome.runtime.onMessage listeners)
+ */
+/**
  * Offscreen document — Firebase auth iframe bridge.
  *
  * This document is created by the background service worker when sign-in is

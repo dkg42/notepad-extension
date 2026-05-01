@@ -1,3 +1,9 @@
+/**
+ * @module usePodcastsPage
+ * @description Hook for the Podcasts dashboard page that loads saved episodes from storage and exposes handlers to create new episodes (navigating directly to the detail page) and delete existing ones.
+ * @dependencies @/types, @/services/storage-service
+ * @public usePodcastsPage
+ */
 import { useCallback, useEffect, useState } from 'react';
 import type { PodcastEpisode } from '@/types';
 import { storageService } from '@/services/storage-service';

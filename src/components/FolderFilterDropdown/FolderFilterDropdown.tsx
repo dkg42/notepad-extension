@@ -1,3 +1,9 @@
+/**
+ * @module FolderFilterDropdown
+ * @description Dropdown filter control that renders a checkbox list of folders (with hierarchy indentation) and an "Uncategorized" option to narrow prompt listings.
+ * @dependencies @/types, @/utils/folder-utils, ./useFolderFilterDropdown
+ * @public FolderFilterDropdown
+ */
 import React from 'react';
 import type { Folder } from '@/types';
 import { UNCATEGORIZED_ID } from '@/types';

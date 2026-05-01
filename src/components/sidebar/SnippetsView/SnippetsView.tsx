@@ -1,3 +1,9 @@
+/**
+ * @module SnippetsView
+ * @description Clipboard-history view inside the sidebar, displaying up to 50 recent copies with type badges (text, image, url, code), relative timestamps, and per-entry copy/save/delete actions. Includes a usage bar tracking capacity.
+ * @dependencies @/types
+ * @public SnippetsView (default export)
+ */
 import React from 'react';
 import { Trash2, Copy, Bookmark } from 'lucide-react';
 import type { ClipboardEntry } from '@/types';

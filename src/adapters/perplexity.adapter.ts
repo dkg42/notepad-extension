@@ -1,3 +1,9 @@
+/**
+ * @module perplexity.adapter
+ * @description Implements ChatSiteAdapter for perplexity.ai. Extracts messages via data-testid conversation-turn selectors and includes a broad .break-words fallback for cases where the primary selectors yield no results, reflecting Perplexity's less stable DOM structure.
+ * @dependencies adapter.interface, types
+ * @public PerplexityAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { ChatMessage } from '@/types';
 

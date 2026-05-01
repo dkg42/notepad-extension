@@ -1,3 +1,9 @@
+/**
+ * @module AllAudioPage
+ * @description Renders a sortable, paginated table of all generated audio artifacts with search and inline playback controls; accepts an onPlayAudio callback to hand off audio to the global player.
+ * @dependencies useAllAudioPage, SearchBar
+ * @public AllAudioPage
+ */
 import React from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Music, Play as PlayIcon } from 'lucide-react';
 import { useAllAudioPage } from './useAllAudioPage';

@@ -1,3 +1,9 @@
+/**
+ * @module CsvUploadForm
+ * @description Renders a file-drop zone for CSV upload, a column selector to identify the URL column, a preview of the first five rows, and a confirm button to import the selected URLs.
+ * @dependencies useCsvUploadForm
+ * @public CsvUploadForm
+ */
 import React, { useRef } from 'react';
 import { useCsvUploadForm } from './useCsvUploadForm';
 import './CsvUploadForm.css';

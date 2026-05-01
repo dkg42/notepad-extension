@@ -1,3 +1,9 @@
+/**
+ * @module useKeyboardShortcuts
+ * @description React hook that registers a list of keyboard shortcut definitions for the lifetime of the calling component. It deliberately ignores events originating from input, textarea, or contenteditable elements to avoid interfering with user typing; callers should wrap the shortcuts array in useMemo to prevent unnecessary re-registration.
+ * @dependencies none
+ * @public ShortcutDef, useKeyboardShortcuts
+ */
 import { useEffect } from 'react';
 
 export interface ShortcutDef {

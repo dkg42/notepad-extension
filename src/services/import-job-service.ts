@@ -1,3 +1,9 @@
+/**
+ * @module import-job-service
+ * @description In-memory job manager for bulk URL import operations running in the background service worker. Each job adds a list of URLs to a NotebookLM notebook sequentially with 500 ms throttle delays and exponential-backoff retries on rate-limit errors, exposing progress polling and cancellation without persisting job state across service worker restarts. Callers fire-and-forget job creation then poll getProgress() for status updates.
+ * @dependencies notebooklm-api
+ * @public importJobService
+ */
 import type { BulkImportJob, BulkImportProgress } from '@/types';
 import { addSourceUrl } from '@/services/notebooklm-api';
 

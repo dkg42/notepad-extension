@@ -1,3 +1,9 @@
+/**
+ * @module useWebCrawlerForm
+ * @description React hook that manages web crawler configuration state (seed URL, depth, same-domain constraint, max URLs) and triggers a crawl via the CRAWL_URL background message. Tracks discovered URLs with per-URL selection state and exposes getSelectedUrls for form submission.
+ * @dependencies @/types
+ * @public useWebCrawlerForm
+ */
 import { useCallback, useState } from 'react';
 import type { CrawlConfig } from '@/types';
 

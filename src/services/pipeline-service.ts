@@ -1,3 +1,9 @@
+/**
+ * @module pipeline-service
+ * @description CRUD and run-log persistence for automation pipeline rules. Manages pipeline definitions, their execution run history (capped at 200 entries), and the polling baselines used by source-added and audio-generated triggers. All data lives in chrome.storage.local (not sync) because run logs are device-specific and pipeline configs can exceed sync item size limits. Each write also fires a best-effort Drive sync if the user has Drive scope.
+ * @dependencies token-lifecycle-service, drive/drive-sync-service
+ * @public pipelineService
+ */
 import type { Pipeline, PipelineRun } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';

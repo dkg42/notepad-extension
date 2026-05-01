@@ -1,4 +1,10 @@
 /**
+ * @module google-session-service
+ * @description Validates and caches the browser's active Google session state, and resolves the correct authuser index for multi-account Chrome profiles. All batchRPC calls to notebooklm.google.com depend on Google session cookies (SID, HSID, etc.) being present; this service is the single place that verifies their existence and maps a signed-in email to its authuser=N index via the accounts.google.com/ListAccounts API. Both results are cached for 5 minutes to avoid repeated cookie and network lookups.
+ * @dependencies (none — uses only chrome.cookies and fetch)
+ * @public validateGoogleSession, invalidateSessionCache, getSignedInGoogleAccountEmail, findAuthuserIndex, ensureGoogleSession, GOOGLE_COOKIE_DOMAIN
+ */
+/**
  * Google session service — validates that the browser has an active Google
  * session (i.e. the required cookies exist).
  *
@@ -175,5 +181,8 @@ export async function ensureGoogleSession(force = false): Promise<void> {
   throw new Error('No active Google session — please sign in to Google in your browser');
 }
 
-// Re-export GOOGLE_COOKIE_DOMAIN in case it's needed by other modules
+/**
+ * The cookie domain used for all Google session cookies (e.g. SID, HSID).
+ * Exported for use in cookie-lookup calls outside this module.
+ */
 export { GOOGLE_COOKIE_DOMAIN };

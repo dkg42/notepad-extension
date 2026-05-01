@@ -1,3 +1,9 @@
+/**
+ * @module useMoveFolderDialog
+ * @description React hook that tracks the destination selection for the MoveFolderDialog. Computes the set of disabled destination IDs (the folder being moved and all its descendants) to prevent invalid circular moves.
+ * @dependencies @/types, @/utils/folder-utils
+ * @public useMoveFolderDialog
+ */
 import { useMemo, useState } from 'react';
 import type { Folder } from '@/types';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';

@@ -1,3 +1,9 @@
+/**
+ * @module export-registry
+ * @description Central registry of all available chat export format strategies, ordered as they appear in the format picker UI. Adding a new chat export format requires only implementing ExportStrategy and appending an instance here — no other files need modification.
+ * @dependencies export-strategy.interface, markdown.export, plain-text.export, pdf.export, google-doc.export
+ * @public exportStrategies
+ */
 import type { ExportStrategy } from './export-strategy.interface';
 import { MarkdownExportStrategy } from './markdown.export';
 import { PlainTextExportStrategy } from './plain-text.export';

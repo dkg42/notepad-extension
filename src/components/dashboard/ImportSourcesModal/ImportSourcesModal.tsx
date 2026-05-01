@@ -1,3 +1,9 @@
+/**
+ * @module ImportSourcesModal
+ * @description Renders a tabbed modal dialog for importing sources into a notebook via URL, web crawler, CSV upload, RSS feed, browser tabs, or domain router configuration.
+ * @dependencies useImportSources, BulkImportProgress, CsvUploadForm, RssFeedForm, WebCrawlerForm, BrowserTabsForm, DomainRouterSettings
+ * @public ImportSourcesModal
+ */
 import React from 'react';
 import { useImportSources } from './useImportSources';
 import type { ImportTab } from './useImportSources';

@@ -1,3 +1,9 @@
+/**
+ * @module background
+ * @description The Manifest V3 background service worker — the single message-routing hub for the entire extension. Handles notebook sync (on install/startup/alarm), periodic pipeline evaluation, Firebase OAuth via offscreen document, Drive AppData sync, chat history storage, bulk source import, audio caching, and all CRUD operations exposed to the dashboard and content scripts.
+ * @dependencies @/services/notebooklm-api, @/services/storage-service, @/services/chat-history-storage, @/services/pipeline-service, @/services/pipeline-executor, @/services/auth-storage-service, @/services/token-lifecycle-service, @/services/drive/drive-init-service, @/services/drive/drive-sync-service, @/types
+ * @public default (WXT background definition)
+ */
 import { defineBackground } from 'wxt/sandbox';
 import {
   fetchNotebooks,
@@ -52,6 +58,11 @@ const AUDIO_CLEANUP_INTERVAL_MINUTES = 60;
 const PIPELINE_CHECK_ALARM = 'pipeline-check';
 const PIPELINE_CHECK_INTERVAL_MINUTES = 15;
 
+/**
+ * Fetches the current user's notebooks from NotebookLM and persists them via
+ * `notebookSyncService`, clearing stale data first when the stored owner UID
+ * does not match the signed-in user.
+ */
 async function syncNotebooks(): Promise<void> {
   const profile = await authStorageService.getAuthProfile();
   if (!profile) return;
@@ -229,10 +240,12 @@ async function runPipelineAnnotationTriggers(
 }
 
 
+/** Type guard that narrows an unknown runtime value to a typed message object. */
 function isMessage(value: unknown): value is { type: string } {
   return typeof value === 'object' && value !== null && 'type' in value;
 }
 
+/** Throws if there is no signed-in auth profile, acting as a pre-condition guard for handlers that require authentication. */
 async function ensureSignedIn(): Promise<void> {
   if (!await authStorageService.getAuthProfile()) throw new Error('Not signed in');
 }
@@ -273,6 +286,7 @@ async function sendMessageToTab<T = unknown>(
 // Global promise guards against concurrent createDocument calls
 let creatingOffscreenDocument: Promise<void> | null = null;
 
+/** Returns `true` when the offscreen document at `OFFSCREEN_DOCUMENT_PATH` is currently active. */
 async function hasDocument(): Promise<boolean> {
   // Use clients.matchAll() with an exact URL match — the pattern from the
   // official Firebase Chrome extension authentication guide.
@@ -284,6 +298,10 @@ async function hasDocument(): Promise<boolean> {
   );
 }
 
+/**
+ * Ensures the offscreen document at `path` is running, creating it only when
+ * absent and serialising concurrent creation attempts via a module-level guard.
+ */
 async function setupOffscreenDocument(path: string): Promise<void> {
   // Reuse the existing document if it's already running — the iframe inside it
   // will already be loaded, avoiding the race condition where postMessage to
@@ -308,6 +326,7 @@ async function setupOffscreenDocument(path: string): Promise<void> {
   }
 }
 
+/** Closes the offscreen document if one is currently active; no-ops otherwise. */
 async function closeOffscreenDocument(): Promise<void> {
   if (!(await hasDocument())) {
     return;
@@ -356,6 +375,14 @@ function requestFirebaseAuth(): Promise<OAuthCredentialPayload> {
   });
 }
 
+/**
+ * Orchestrates the full Firebase OAuth flow: creates the offscreen document,
+ * delegates to `requestFirebaseAuth`, and ensures the document is closed on
+ * both success and failure.
+ * @returns The resolved `OAuthCredentialPayload` from the Google sign-in popup.
+ * @throws `AuthError` when the popup is cancelled, blocked, or the provider is
+ *   not enabled in the Firebase console.
+ */
 async function firebaseAuth(): Promise<OAuthCredentialPayload> {
   await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
 
@@ -444,6 +471,8 @@ export default defineBackground(() => {
     (message: unknown, _sender, sendResponse: (r: unknown) => void) => {
       if (!isMessage(message)) return false;
 
+      // ── Drive ─────────────────────────────────────────────────────────────
+
       if (message.type === 'DRIVE_INITIALIZE') {
         (async () => {
           const [tokenResult, profile] = await Promise.all([
@@ -480,6 +509,8 @@ export default defineBackground(() => {
         );
         return true; // keep channel open for async response
       }
+
+      // ── Notebooks ─────────────────────────────────────────────────────────
 
       if (message.type === 'SYNC_NOTEBOOKS') {
         ensureSignedIn()
@@ -558,6 +589,8 @@ export default defineBackground(() => {
         return true;
       }
 
+      // ── Sources ───────────────────────────────────────────────────────────
+
       if (message.type === 'ADD_SOURCE_URL') {
         const { notebookId, url } = message as { type: string; notebookId: string; url: string };
         ensureSignedIn()
@@ -579,6 +612,8 @@ export default defineBackground(() => {
           );
         return true;
       }
+
+      // ── Audio / Artifacts ─────────────────────────────────────────────────
 
       if (message.type === 'CREATE_AUDIO_OVERVIEW') {
         const { notebookId, options } = message as {
@@ -643,7 +678,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Chat history sync handlers ─────────────────────────────────────────
+      // ── Chat History Sync ─────────────────────────────────────────────────
 
       if (message.type === 'SYNC_CHAT_CONVERSATIONS') {
         const { platform, conversations } = message as {
@@ -809,7 +844,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Aggregated sources/artifacts handlers ──────────────────────────────
+      // ── Sources (aggregated fetch + bulk import) ───────────────────────────
 
       if (message.type === 'FETCH_ALL_SOURCES') {
         (async () => {
@@ -880,7 +915,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Source import handlers ─────────────────────────────────────────────
+      // ── Import Jobs ───────────────────────────────────────────────────────
 
       if (message.type === 'BULK_ADD_SOURCES') {
         const { notebookId, urls } = message as { type: string; notebookId: string; urls: string[] };
@@ -955,7 +990,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Delete all sources (rate-limited, used by pipeline executor) ───────
+      // ── Sources (bulk delete, rate-limited, used by pipeline executor) ──────
 
       if (message.type === 'DELETE_ALL_SOURCES') {
         const { notebookId } = message as { type: string; notebookId: string };
@@ -975,7 +1010,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Pipeline CRUD handlers ─────────────────────────────────────────────
+      // ── Pipelines ─────────────────────────────────────────────────────────
 
       if (message.type === 'GET_PIPELINES') {
         pipelineService.getAll()
@@ -1061,7 +1096,7 @@ export default defineBackground(() => {
         return true;
       }
 
-      // ── Google session handler ────────────────────────────────────────────
+      // ── Auth / Session ────────────────────────────────────────────────────
 
       if (message.type === 'ensure-google-session') {
         ensureSignedIn()
@@ -1072,8 +1107,6 @@ export default defineBackground(() => {
           );
         return true;
       }
-
-      // ── Firebase auth handlers ─────────────────────────────────────────────
 
       if (message.type === 'firebase-auth') {
         console.log('[AUTH][BG] Received firebase-auth message from popup');
@@ -1211,6 +1244,8 @@ export default defineBackground(() => {
           .finally(() => void closeOffscreenDocument());
         return true;
       }
+
+      // ── Clipboard ─────────────────────────────────────────────────────────
 
       if (message.type === 'CLIPBOARD_COPY') {
         const { entry } = message as { type: string; entry: Parameters<typeof clipboardSessionService.add>[0] };

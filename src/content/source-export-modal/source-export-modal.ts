@@ -1,3 +1,9 @@
+/**
+ * @module source-export-modal
+ * @description Renders a full-page shadow-DOM modal that lets users select NotebookLM sources and export them in a chosen format (e.g. CSV, Markdown). Sources are read from the live DOM via the adapter, and the export is delegated to the selected SourceExportStrategy; hidden items remain counted but excluded from the visible selection.
+ * @dependencies @/adapters/source-panel-adapter.interface, @/types, @/export/source-export-strategy.interface, @/export/source-export-registry
+ * @public showSourceExportModal
+ */
 import type { SourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';
 import type { SourceRecord } from '@/types';
 import type { SourceExportStrategy } from '@/export/source-export-strategy.interface';

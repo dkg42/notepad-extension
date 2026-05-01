@@ -1,3 +1,9 @@
+/**
+ * @module useCommandPalette
+ * @description Hook for the command palette (Ctrl/Cmd+K) that merges navigation actions, folders, tags, and prompt search results into a unified filterable list. Supports keyboard navigation (arrows, Enter, Escape) and resets the active index on every query change.
+ * @dependencies @/types, @/types/dashboard
+ * @public useCommandPalette, PaletteItem
+ */
 import { useEffect, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 import type { DashboardView } from '@/types/dashboard';

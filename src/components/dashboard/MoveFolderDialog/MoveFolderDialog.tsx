@@ -1,3 +1,9 @@
+/**
+ * @module MoveFolderDialog
+ * @description Modal dialog that lets the user pick a destination for moving a folder — renders a root option and a full folder tree with disabled self/descendant nodes.
+ * @dependencies @/types, @/components/dashboard/FolderTree/FolderTree, ./useMoveFolderDialog
+ * @public MoveFolderDialog
+ */
 import React from 'react';
 import type { Folder } from '@/types';
 import FolderTree from '@/components/dashboard/FolderTree/FolderTree';

@@ -1,3 +1,9 @@
+/**
+ * @module FolderManager
+ * @description Renders a collapsible panel for creating, renaming, deleting, and nesting folders — each row supports inline edit and subfolder creation forms.
+ * @dependencies @/types, @/utils/folder-utils, ./useFolderManager
+ * @public FolderManager
+ */
 import React from 'react';
 import type { Folder } from '@/types';
 import { getFolderTreeItems } from '@/utils/folder-utils';

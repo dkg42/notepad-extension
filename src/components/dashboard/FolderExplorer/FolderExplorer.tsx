@@ -1,3 +1,9 @@
+/**
+ * @module FolderExplorer
+ * @description Full folder management page with switchable tree/grid views, drag-to-reorder in grid mode, inline create/rename/subfolder forms, and a move dialog for reparenting.
+ * @dependencies @/types, @/components/dashboard/FolderCard/FolderCard, @/components/dashboard/FolderTree/FolderTree, @/components/dashboard/MoveFolderDialog/MoveFolderDialog, ./useFolderExplorer
+ * @public FolderExplorer
+ */
 import React from 'react';
 import type { Folder, Snippet } from '@/types';
 import FolderCard from '@/components/dashboard/FolderCard/FolderCard';

@@ -1,3 +1,9 @@
+/**
+ * @module useImportSources
+ * @description Hook for the Import Sources modal managing tabbed import modes (URL, crawler, CSV, RSS, tabs, router). Handles single-URL adds, bulk imports with 500 ms progress polling, domain-router rule application to split URLs across notebooks, and job cancellation.
+ * @dependencies @/types, @/services/domain-router-service
+ * @public useImportSources, ImportTab
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BulkImportProgress, DomainRouterRule } from '@/types';
 import { domainRouterService, routeUrls } from '@/services/domain-router-service';

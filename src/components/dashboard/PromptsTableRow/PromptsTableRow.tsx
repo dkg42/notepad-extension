@@ -1,3 +1,9 @@
+/**
+ * @module PromptsTableRow
+ * @description Renders a single row in the prompts table with snippet text preview, source, folder, inline tag editing, date, favorite toggle, and delete action.
+ * @dependencies @/types, @/types/dashboard, @/components/dashboard/FavoriteButton/FavoriteButton, ./usePromptsTableRow
+ * @public PromptsTableRow
+ */
 import React from 'react';
 import { Folder, Trash2, Plus, X } from 'lucide-react';
 import type { Snippet } from '@/types';

@@ -1,3 +1,9 @@
+/**
+ * @module source-delete-modal
+ * @description Renders a full-page shadow-DOM modal that lets users select and bulk-delete NotebookLM sources with search and type-filter controls. Deletion is performed sequentially via the adapter's triggerSourceDelete, with live progress feedback; the modal closes automatically when all sources have been deleted.
+ * @dependencies @/adapters/source-panel-adapter.interface
+ * @public showSourceDeleteModal
+ */
 import type { SourcePanelAdapter, SourceType } from '@/adapters/source-panel-adapter.interface';
 import modalHtml from './source-delete-modal.html?raw';
 import modalCss from './source-delete-modal.css?raw';

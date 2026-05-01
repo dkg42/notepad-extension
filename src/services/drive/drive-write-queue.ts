@@ -1,4 +1,17 @@
 /**
+ * @module drive-write-queue
+ * @description Debounced, semaphore-gated write queue for Drive AppData files.
+ * Each filename gets its own debounce timer; re-enqueueing within the window replaces
+ * the pending payload so only the latest state is written. A semaphore caps concurrent
+ * outbound Drive HTTP calls at three. `flushAll()` drains pending writes immediately
+ * on `chrome.runtime.onSuspend`; `cancelAll()` discards them on sign-out. The queue
+ * is paused (no-op) while `driveInitService.initialize()` runs to prevent empty local
+ * data from overwriting Drive before `applyDriveData()` has populated local storage.
+ * @dependencies ./drive-io-service, ./drive-manifest-service, ./types/drive-schemas
+ * @public enqueue, flush, flushAll, cancelAll, hasPending, setInitializing, driveWriteQueue
+ */
+
+/**
  * drive-write-queue.ts
  *
  * Debounced write queue for Drive AppData files.

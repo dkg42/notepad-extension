@@ -1,3 +1,9 @@
+/**
+ * @module PipelineBuilder
+ * @description Renders a multi-step wizard for creating or editing automation pipelines, covering trigger configuration, action sequencing, and scope selection.
+ * @dependencies @/types (Pipeline, PipelineAction, PipelineScope, PipelineTrigger, TriggerType, ActionType, NotebookCollection)
+ * @public PipelineBuilder
+ */
 import React, { useState, useCallback } from 'react';
 import { X, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type {

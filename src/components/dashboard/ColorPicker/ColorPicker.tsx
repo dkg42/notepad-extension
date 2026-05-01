@@ -1,3 +1,9 @@
+/**
+ * @module ColorPicker
+ * @description Renders a grid of preset color swatches plus a "no color" option, calling onChange with the selected hex string or undefined when cleared.
+ * @dependencies none
+ * @public ColorPicker
+ */
 import React from 'react';
 import './ColorPicker.css';
 

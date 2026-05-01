@@ -1,4 +1,15 @@
 /**
+ * @module drive-io-service
+ * @description Raw Google Drive REST API primitives — the single point of contact
+ * between the extension and https://www.googleapis.com/drive/v3/. All methods return
+ * a discriminated union `DriveIOResult<T>` and never throw; callers must handle the
+ * `ok: false` case. Files are stored in the Drive AppData space (app-private,
+ * invisible to the user) unless `USE_VISIBLE_DEBUG_FOLDER` is enabled for local QA.
+ * @dependencies ./types/drive-schemas (DriveFileRef)
+ * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles
+ */
+
+/**
  * drive-io-service.ts
  *
  * Raw Google Drive REST API primitives.

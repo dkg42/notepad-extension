@@ -1,3 +1,9 @@
+/**
+ * @module accordion
+ * @description Thin styled wrappers around Radix UI Accordion primitives — renders collapsible accordion sections with header triggers and animated content panels.
+ * @dependencies (none — wraps @radix-ui/react-accordion directly)
+ * @public Accordion, AccordionItem, AccordionTrigger, AccordionContent
+ */
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import React from 'react';
 import './accordion.css';

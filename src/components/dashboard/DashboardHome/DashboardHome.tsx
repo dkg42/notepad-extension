@@ -1,3 +1,9 @@
+/**
+ * @module DashboardHome
+ * @description Landing page of the dashboard showing summary stat cards (total prompts, folders, tags), a recent-prompts list, and quick-action buttons for navigating to key views.
+ * @dependencies @/types, @/types/dashboard, ./useDashboardHome
+ * @public DashboardHome
+ */
 import React from 'react';
 import type { Folder, Snippet } from '@/types';
 import type { DashboardView } from '@/types/dashboard';

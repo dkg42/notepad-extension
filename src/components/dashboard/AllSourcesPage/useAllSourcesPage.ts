@@ -1,3 +1,9 @@
+/**
+ * @module useAllSourcesPage
+ * @description Hook for the All Sources dashboard page that loads every source across notebooks, supports type/notebook filters, text search, multi-column sorting, row selection, bulk add-to-notebook, and pluggable export strategies.
+ * @dependencies @/types, @/services/notebook-sync-service, @/export/source-export-registry
+ * @public useAllSourcesPage
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedSource, NotebookMeta } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';

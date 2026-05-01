@@ -1,3 +1,9 @@
+/**
+ * @module pipeline
+ * @description Type definitions for the automation pipeline system — discriminated union types for triggers (e.g. notebook-tag-added, min-sources) and actions (e.g. add-tag, generate-audio), the Pipeline record that composes them with a scope and scheduling metadata, and run-log types for auditing execution history.
+ * @dependencies none
+ * @public TriggerType, PipelineTrigger, ActionType, PipelineAction, PipelineScope, Pipeline, PipelineRunStatus, PipelineActionResult, PipelineRun
+ */
 // ── Trigger types ──────────────────────────────────────────────────────────────
 
 export type TriggerType =

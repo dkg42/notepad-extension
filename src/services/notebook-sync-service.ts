@@ -1,3 +1,9 @@
+/**
+ * @module notebook-sync-service
+ * @description Persists NotebookLM notebook metadata (titles, URLs, sync timestamps) in chrome.storage.sync so data propagates automatically across all of the user's signed-in Chrome devices. Enforces a cap of 150 notebooks and trims the payload to under 90 KB to stay within Chrome's sync storage quota. Notebook metadata is stored separately from user annotations so that background API syncs cannot overwrite user-authored tags or collection assignments.
+ * @dependencies (none — uses only chrome.storage.sync)
+ * @public notebookSyncService, SyncMeta
+ */
 import type { NotebookMeta } from '@/types';
 
 const NOTEBOOKS_KEY = 'notebooksMeta';

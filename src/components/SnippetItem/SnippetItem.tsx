@@ -1,3 +1,9 @@
+/**
+ * @module SnippetItem
+ * @description Renders a single saved prompt snippet as a list item with copy, delete, and tag management actions. Truncates long text to a configurable preview length and displays the source hostname and save time.
+ * @dependencies @/types, ./useSnippetItem
+ * @public SnippetItem (default export)
+ */
 import React from 'react';
 import type { Snippet } from '@/types';
 import { MAX_PREVIEW_LENGTH, parseHostname, useSnippetItem } from './useSnippetItem';

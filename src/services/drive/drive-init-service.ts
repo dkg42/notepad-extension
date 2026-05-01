@@ -1,4 +1,17 @@
 /**
+ * @module drive-init-service
+ * @description Bootstrap, migration, and conflict-resolution orchestrator for Google
+ * Drive AppData sync. Called once from background.ts after a successful sign-in with
+ * `hasDriveScope: true`. Handles three distinct paths: first-time migration from
+ * `chrome.storage.local` to Drive (Path A), returning-user first-login conflict
+ * detection that may pause for a user merge/overwrite decision (Path B first-login),
+ * and subsequent device sync using last-write-wins per file (Path B returning). The
+ * `driveInitialized` flag in `chrome.storage.local` distinguishes the latter two paths.
+ * @dependencies ./drive-manifest-service, ./drive-sync-service, ./drive-cache-service, ./drive-write-queue, ./drive-io-service, @/services/storage-service, @/services/notebook-annotation-service, @/services/pipeline-service, @/services/chat-history-storage, @/services/domain-router-service
+ * @public initialize, migrateLocalDataToDrive, teardown, InitResult, ConflictSummary, driveInitService
+ */
+
+/**
  * drive-init-service.ts
  *
  * Bootstrap, migration, and conflict resolution for Google Drive AppData sync.

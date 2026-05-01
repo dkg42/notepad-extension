@@ -1,3 +1,9 @@
+/**
+ * @module chatgpt.adapter
+ * @description Implements ChatSiteAdapter for chatgpt.com and chat.openai.com. Locates the sticky main-area header (explicitly scoped to <main> to avoid the sidebar), and extracts messages via the data-message-author-role attribute pattern used by ChatGPT's React-rendered DOM.
+ * @dependencies adapter.interface, types
+ * @public ChatGPTAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { ChatMessage } from '@/types';
 

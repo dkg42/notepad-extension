@@ -1,3 +1,9 @@
+/**
+ * @module PromptsTable
+ * @description Renders a feature-rich data table for saved prompts with resizable columns, multi-sort, row selection, bulk actions, keyboard navigation, and animated row transitions.
+ * @dependencies usePromptsTable, useColumnResize, useKeyboardShortcuts, BulkActionsBar, PromptsTableRow, SearchBar, Pagination
+ * @public PromptsTable
+ */
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Columns3, Check, FileText, Tag } from 'lucide-react';

@@ -1,6 +1,8 @@
 /**
- * Parses a CSV string and auto-detects the URL column.
- * Handles quoted fields with embedded commas and newlines.
+ * @module csv-parser
+ * @description RFC 4180-compliant CSV parser with automatic delimiter detection (comma, semicolon, tab), BOM stripping, and intelligent URL column detection by both header name heuristics and value density sampling. Designed for the bulk URL import flow where users paste or upload a spreadsheet export containing a column of URLs to add to NotebookLM.
+ * @dependencies none
+ * @public CsvParseResult, parseCsv, extractUrlsFromColumn
  */
 
 const URL_PATTERN = /^https?:\/\/.+/i;

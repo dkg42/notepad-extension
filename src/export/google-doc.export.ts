@@ -1,3 +1,9 @@
+/**
+ * @module google-doc.export
+ * @description Implements ExportStrategy to produce an HTML-based .doc file that Microsoft Word and Google Docs open natively, letting users import it into Google Drive as a live Google Doc. Includes a detailed roadmap comment for wiring up direct Google Drive API sync when OAuth is added to the extension.
+ * @dependencies export-strategy.interface, types, services/storage-service
+ * @public GoogleDocExportStrategy
+ */
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
 import { storageService } from '@/services/storage-service';

@@ -1,3 +1,9 @@
+/**
+ * @module format-picker
+ * @description Renders a transient format-selection panel inside a shadow DOM root, letting the user pick an export strategy (e.g. Markdown, JSON) and optionally include notebook sources. The panel is promise-based — it resolves with the chosen strategy and options on confirm, or null on cancel/Escape.
+ * @dependencies @/export/export-strategy.interface
+ * @public FormatPickerResult, showFormatPicker
+ */
 import type { ExportStrategy } from '@/export/export-strategy.interface';
 import pickerHtml from './format-picker.html?raw';
 

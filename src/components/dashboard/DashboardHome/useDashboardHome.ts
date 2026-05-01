@@ -1,3 +1,9 @@
+/**
+ * @module useDashboardHome
+ * @description Pure-computation hook for the Dashboard Home page that derives summary statistics: total unique tag count, the five most recent snippets, a folder id-to-name map, and per-folder snippet counts.
+ * @dependencies @/types
+ * @public useDashboardHome
+ */
 import { useMemo } from 'react';
 import type { Folder, Snippet } from '@/types';
 

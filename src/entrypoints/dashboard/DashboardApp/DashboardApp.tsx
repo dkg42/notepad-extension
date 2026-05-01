@@ -1,3 +1,9 @@
+/**
+ * @module DashboardApp
+ * @description Root component for the full-page dashboard; orchestrates page routing, global audio playback, command palette, keyboard shortcuts, drive conflict dialogs, and theme provisioning.
+ * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, and all dashboard page components
+ * @public DashboardApp
+ */
 import React, { useMemo } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
 import DashboardHome from '@/components/dashboard/DashboardHome/DashboardHome';

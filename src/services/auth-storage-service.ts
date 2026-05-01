@@ -1,4 +1,10 @@
 /**
+ * @module auth-storage-service
+ * @description Single source of truth for all auth-related chrome.storage reads and writes, spanning three storage areas: authProfile (plaintext user identity) in chrome.storage.local, the AES-GCM encrypted Google OAuth refresh token in chrome.storage.local, and the volatile session access token in chrome.storage.session (cleared on browser close). Centralising storage here ensures the token encryption contract and storage-area split are enforced consistently across background, popup, and dashboard contexts.
+ * @dependencies token-crypto-service
+ * @public authStorageService, OAuthCredentialPayload
+ */
+/**
  * Auth storage service — single source of truth for all auth-related storage.
  *
  * Storage split:

@@ -1,3 +1,9 @@
+/**
+ * @module DriveConflictDialog
+ * @description Modal dialog shown when local and Google Drive data diverge — presents a side-by-side comparison of snippet/folder/tag counts and offers "Merge" or "Use Drive data" resolution actions.
+ * @dependencies @/services/drive/drive-init-service
+ * @public DriveConflictDialog
+ */
 import React from 'react';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
 import './DriveConflictDialog.css';

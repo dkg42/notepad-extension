@@ -1,3 +1,9 @@
+/**
+ * @module rss-parser-service
+ * @description Fetches and parses RSS 2.0 and Atom feeds, returning a normalised list of entries (title, URL, publishedAt). Designed to run in the background service worker where fetch() has broader access. Detects feed format by presence of <item> vs <entry> elements and delegates to dedicated parsers for each format. All network and XML parse errors are surfaced as thrown Errors so callers can handle them appropriately.
+ * @dependencies (none — pure fetch + DOMParser, no internal src/ imports)
+ * @public fetchAndParseRssFeed
+ */
 import type { RssFeedEntry } from '@/types';
 
 /**

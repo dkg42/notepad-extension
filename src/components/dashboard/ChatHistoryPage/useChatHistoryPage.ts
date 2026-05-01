@@ -1,3 +1,9 @@
+/**
+ * @module useChatHistoryPage
+ * @description Hook for the Chat History dashboard page that loads conversations and sync metadata from the background, listens for real-time storage changes, and provides platform filtering, multi-field sorting, and search over conversation titles.
+ * @dependencies @/types
+ * @public useChatHistoryPage
+ */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ChatPlatform, ConversationMeta, ChatSyncMeta } from '@/types';
 

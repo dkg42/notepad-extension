@@ -1,4 +1,15 @@
 /**
+ * @module drive-manifest-service
+ * @description Sole owner of `manifest.json` in Drive AppData — the file-ID registry
+ * that maps every known AppData filename to its Drive file ID, version, and last-synced
+ * timestamp. The manifest is held in a module-level variable for the service-worker
+ * lifetime and backed by session-storage cache; manifest writes are never debounced
+ * because the manifest must stay consistent with Drive file state after every write.
+ * @dependencies ./drive-cache-service, ./drive-io-service, ./types/drive-schemas
+ * @public load, save, upsertEntry, getEntry, getManifest, initialize, clearInMemory, driveManifestService
+ */
+
+/**
  * drive-manifest-service.ts
  *
  * Single owner of the `manifest.json` file in Drive AppData.

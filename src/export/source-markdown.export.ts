@@ -1,3 +1,9 @@
+/**
+ * @module source-markdown.export
+ * @description Implements SourceExportStrategy to serialize a NotebookLM source list as a Markdown (.md) file with a GFM-compatible table of index, type, and title columns. Falls back to clipboard copy if the Blob download is blocked by the browser.
+ * @dependencies source-export-strategy.interface, types
+ * @public SourceMarkdownExportStrategy
+ */
 import type { SourceExportStrategy } from './source-export-strategy.interface';
 import type { SourceRecord } from '@/types';
 

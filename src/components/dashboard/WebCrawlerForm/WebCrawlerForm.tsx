@@ -1,3 +1,9 @@
+/**
+ * @module WebCrawlerForm
+ * @description Renders a URL crawling form where users can enter a seed URL, configure depth and domain constraints, preview discovered URLs, and select them for import.
+ * @dependencies useWebCrawlerForm
+ * @public WebCrawlerForm
+ */
 import React from 'react';
 import { useWebCrawlerForm } from './useWebCrawlerForm';
 import './WebCrawlerForm.css';

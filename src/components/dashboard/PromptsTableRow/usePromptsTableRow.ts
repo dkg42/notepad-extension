@@ -1,3 +1,9 @@
+/**
+ * @module usePromptsTableRow
+ * @description React hook that manages inline tag editing state for a single row in the PromptsTable. Handles showing/hiding the tag input, committing comma-separated tag entries on Enter or blur, and removing individual tags via the optional onUpdateTags callback.
+ * @dependencies @/types
+ * @public usePromptsTableRow
+ */
 import { useCallback, useRef, useState } from 'react';
 import type { Snippet } from '@/types';
 

@@ -1,3 +1,9 @@
+/**
+ * @module PodcastsPage
+ * @description Renders the list of podcast episodes with creation and deletion controls; delegates to usePodcastsPage for episode data management and navigation to detail view.
+ * @dependencies usePodcastsPage
+ * @public PodcastsPage
+ */
 import React, { useState } from 'react';
 import { usePodcastsPage } from './usePodcastsPage';
 import './PodcastsPage.css';

@@ -1,3 +1,9 @@
+/**
+ * @module claude.adapter
+ * @description Implements ChatSiteAdapter for claude.ai. Injects into the flex-1 title div inside the page header (using its 100 px right-padding safe zone) to avoid colliding with the native Share button, and extracts messages from data-testid="user-message" and data-is-streaming elements in a single DOM pass.
+ * @dependencies adapter.interface, types
+ * @public ClaudeAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { ChatMessage } from '@/types';
 

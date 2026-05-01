@@ -1,3 +1,9 @@
+/**
+ * @module FolderTree
+ * @description Renders a recursive, collapsible folder tree with per-node snippet counts and optional context-menu actions for creating subfolders, renaming, deleting, or moving folders.
+ * @dependencies @/types (Folder)
+ * @public FolderTree
+ */
 import React, { useState } from 'react';
 import type { Folder } from '@/types';
 import './FolderTree.css';

@@ -1,7 +1,22 @@
+/**
+ * @module notebooklm.adapter
+ * @description Implements ChatSiteAdapter, SourcePanelAdapter, and StudioPanelAdapter for notebooklm.google.com — the only adapter that satisfies all three interfaces. Handles chat message extraction (including notebook summary), source panel enumeration with Material Symbols icon-to-type mapping, async source deletion via Angular overlay menus, and studio note reading via programmatic click-and-read. All Angular component selectors are documented inline for maintenance.
+ * @dependencies adapter.interface, source-panel-adapter.interface, studio-panel-adapter.interface, types
+ * @public NotebookLMAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { SourcePanelAdapter, SourceType } from './source-panel-adapter.interface';
 import type { StudioPanelAdapter } from './studio-panel-adapter.interface';
 import type { ChatMessage, NoteRecord } from '@/types';
+
+// ── Async timing constants ─────────────────────────────────────────────────────
+const HOVER_REVEAL_DELAY_MS = 150; // wait for Angular to finish showing the hidden overflow-menu button after mouseenter/mouseover
+const CONFIRM_DIALOG_DELAY_MS = 400; // wait for the delete-confirmation overlay to mount after clicking "Remove source"
+const POST_DELETE_SETTLE_MS = 400; // wait for NotebookLM to animate and process the deletion before the caller continues
+const NOTE_EDITOR_RENDER_MS = 800; // wait for the note editor panel to render after programmatic click on a note
+const MENU_PANEL_TIMEOUT_MS = 2000; // MutationObserver hard timeout for the Angular menu panel to appear
+const NOTE_EDITOR_TIMEOUT_MS = 1500; // MutationObserver hard timeout for the note editor element to appear
+const NOTE_EDITOR_CLOSE_MS = 400; // wait for the editor to close / animate back to the notes list after dismiss
 
 /**
  * Maps NotebookLM's Material Symbols icon names (read from mat-icon.source-item-source-icon
@@ -170,7 +185,7 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
     // Dispatch hover events so Angular reveals the hidden overflow menu button.
     item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     item.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-    await this.delay(150);
+    await this.delay(HOVER_REVEAL_DELAY_MS);
 
     const moreBtn = this.findSourceMoreButton(item);
     if (!moreBtn) {
@@ -180,7 +195,7 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
 
     moreBtn.click();
 
-    const menuPanel = await this.waitForMenuPanel(2000);
+    const menuPanel = await this.waitForMenuPanel(MENU_PANEL_TIMEOUT_MS);
     if (!menuPanel) {
       console.warn('[NLM Enhancer] Source menu panel did not appear');
       return;
@@ -204,11 +219,11 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
     removeBtn.click();
 
     // Auto-confirm any confirmation dialog (e.g. "Are you sure?").
-    await this.delay(400);
+    await this.delay(CONFIRM_DIALOG_DELAY_MS);
     this.autoConfirmDeleteDialog();
 
     // Allow NotebookLM time to animate and process the deletion.
-    await this.delay(400);
+    await this.delay(POST_DELETE_SETTLE_MS);
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────────
@@ -300,8 +315,8 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
     // Wait for the note editor to render.
     // NOTE: These selectors are best-effort — update once the note editor DOM
     // is confirmed from DevTools on notebooklm.google.com.
-    await this.delay(800);
-    const editorContent = await this.waitForNoteEditor(1500);
+    await this.delay(NOTE_EDITOR_RENDER_MS);
+    const editorContent = await this.waitForNoteEditor(NOTE_EDITOR_TIMEOUT_MS);
     const content = editorContent?.textContent?.trim() ?? '';
 
     // Navigate back to the notes list.
@@ -314,7 +329,7 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
     } else {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     }
-    await this.delay(400);
+    await this.delay(NOTE_EDITOR_CLOSE_MS);
 
     return { title, content };
   }

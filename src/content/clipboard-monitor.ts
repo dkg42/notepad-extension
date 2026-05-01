@@ -1,3 +1,9 @@
+/**
+ * @module clipboard-monitor
+ * @description Listens for browser copy events on LLM chat pages and forwards copied text or image thumbnails to the background service worker for clipboard history tracking. Images are downscaled to a 280px-wide JPEG thumbnail via OffscreenCanvas before transmission to keep storage usage manageable.
+ * @dependencies @/types
+ * @public setupClipboardMonitor
+ */
 import type { ClipboardEntry } from '@/types';
 
 const TAG = '[clipboard-monitor]';

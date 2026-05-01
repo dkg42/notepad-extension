@@ -1,3 +1,9 @@
+/**
+ * @module content
+ * @description Thin content-script orchestrator that runs on all supported LLM and NotebookLM pages. It bootstraps platform-specific features (send-to-chat, source panel enhancer, studio panel enhancer, chat history sync) by resolving the correct adapter from the registry and delegating setup to the appropriate feature modules.
+ * @dependencies @/adapters/adapter-registry, @/adapters/source-panel-adapter.interface, @/adapters/studio-panel-adapter.interface, @/content/send-to-chat, @/content/source-panel-enhancer/source-panel-enhancer, @/content/studio-panel-enhancer/studio-panel-enhancer, @/content/chat-history-sync
+ * @public default (WXT content script definition)
+ */
 import { defineContentScript } from 'wxt/sandbox';
 import { getAdapter } from '@/adapters/adapter-registry';
 import { isSourcePanelAdapter } from '@/adapters/source-panel-adapter.interface';

@@ -1,3 +1,9 @@
+/**
+ * @module chat-history-sync
+ * @description Automatically syncs conversation lists and message content from ChatGPT, Claude, and Gemini to the extension's background storage. Detects the current platform, batch-fetches recent conversations via platform-specific session APIs, and re-syncs on SPA navigation. Also registers an on-demand fetch listener so the dashboard can lazily load individual conversation content without a full re-sync.
+ * @dependencies @/types, @/utils/dom, @/services/chatgpt-session-api, @/services/claude-session-api, @/services/gemini-session-api
+ * @public setupChatHistorySync
+ */
 import type { ChatPlatform, ConversationFull, ConversationMessage, ConversationMeta } from '@/types';
 import { onUrlChange } from '@/utils/dom';
 import {
@@ -16,8 +22,32 @@ import {
   getGeminiCurrentConversationId,
 } from '@/services/gemini-session-api';
 
+// Number of the most-recent conversations for which full message content is
+// eagerly fetched on each sync. Kept small (10) to avoid hammering the
+// platform APIs on page load — the dashboard can lazy-load older conversations
+// on demand via the FETCH_CONVERSATION_FOR_SYNC message.
 const RECENT_CONTENT_BATCH = 10;
+
+// Minimum pause between successive content-fetch requests within a batch.
+// Prevents triggering platform-side rate limiting (ChatGPT / Claude impose
+// per-second request quotas on their session APIs).
 const BATCH_DELAY_MS = 500;
+
+// How long to wait after the Gemini page loads before reading the conversation
+// list from the DOM. Gemini is a heavy Angular SPA — the sidebar needs time to
+// complete its initial render before the conversation elements are present.
+const GEMINI_SIDEBAR_SETTLE_MS = 2000;
+
+// Delay before triggering the initial full conversation-list sync on page load.
+// Allows the platform's own scripts (auth, session restore, SPA bootstrap) to
+// finish so that session cookies / access tokens are available when we call the
+// session APIs.
+const INITIAL_SYNC_DELAY_MS = 2000;
+
+// How long to wait after a SPA URL change before syncing the newly-opened
+// conversation. The conversation component needs time to mount and fetch its
+// messages from the platform backend before our extractor can read the DOM.
+const SPA_NAV_SYNC_DELAY_MS = 3000;
 
 function detectPlatform(): ChatPlatform | null {
   const h = location.hostname;
@@ -119,7 +149,7 @@ async function syncConversationList(platform: ChatPlatform): Promise<void> {
       context.orgId = result.orgId;
     } else if (platform === 'gemini') {
       // Wait for sidebar to render
-      await delay(2000);
+      await delay(GEMINI_SIDEBAR_SETTLE_MS);
       conversations = extractGeminiConversationListFromDom();
     }
 
@@ -256,14 +286,14 @@ export function setupChatHistorySync(): void {
   registerFetchOnDemandListener(platform);
 
   // Sync conversation list after page initializes
-  setTimeout(() => void syncConversationList(platform), 2000);
+  setTimeout(() => void syncConversationList(platform), INITIAL_SYNC_DELAY_MS);
 
   // Watch for SPA navigation to new conversations
   onUrlChange((url) => {
     const id = getConversationIdFromUrl(platform, url);
     if (id) {
       // Wait for conversation to fully render
-      setTimeout(() => void syncCurrentConversation(platform, url), 3000);
+      setTimeout(() => void syncCurrentConversation(platform, url), SPA_NAV_SYNC_DELAY_MS);
     }
   });
 }

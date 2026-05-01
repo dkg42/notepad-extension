@@ -1,3 +1,9 @@
+/**
+ * @module useDomainRouterSettings
+ * @description React hook that manages CRUD operations for domain-to-notebook routing rules. Loads existing rules and notebooks on mount, and exposes handlers to add, edit, delete, and toggle rules via domainRouterService.
+ * @dependencies @/types, @/services/domain-router-service, @/services/notebook-sync-service
+ * @public useDomainRouterSettings
+ */
 import { useCallback, useEffect, useState } from 'react';
 import type { DomainRouterRule, NotebookMeta } from '@/types';
 import { domainRouterService } from '@/services/domain-router-service';

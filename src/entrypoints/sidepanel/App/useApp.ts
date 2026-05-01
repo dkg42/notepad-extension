@@ -1,3 +1,9 @@
+/**
+ * @module useApp
+ * @description Root React hook for the sidepanel entrypoint that loads snippets and folders from local storage on mount and keeps them in sync via chrome.storage.onChanged. Exposes search, folder, and tag filter state alongside handlers for all snippet and folder CRUD operations.
+ * @dependencies @/types, @/services/storage-service, @/utils/filter-snippets, @/utils/folder-utils
+ * @public useApp
+ */
 import { useEffect, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 import { storageService } from '@/services/storage-service';

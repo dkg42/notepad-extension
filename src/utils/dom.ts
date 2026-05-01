@@ -1,4 +1,10 @@
 /**
+ * @module dom
+ * @description Provides lightweight DOM observation utilities used throughout the content scripts to cope with SPA-driven page changes. All three helpers use MutationObserver internally and return cleanup functions, ensuring that callers never need to manage observer lifecycles directly.
+ * @dependencies none
+ * @public waitForElement, onElementRemoved, onUrlChange
+ */
+/**
  * Resolves with the first element matching selector once it appears in the DOM.
  * Resolves with null if the timeout elapses before a match is found.
  */

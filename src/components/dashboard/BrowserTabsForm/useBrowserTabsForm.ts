@@ -1,3 +1,9 @@
+/**
+ * @module useBrowserTabsForm
+ * @description React hook that fetches open browser tabs via the extension background, supports filtering by search query, and tracks per-tab selection state. Communicates with the background via chrome.runtime.sendMessage using the GET_BROWSER_TABS message type.
+ * @dependencies @/types
+ * @public useBrowserTabsForm
+ */
 import { useCallback, useEffect, useState } from 'react';
 import type { BrowserTab } from '@/types';
 

@@ -1,3 +1,9 @@
+/**
+ * @module usePagination
+ * @description Pure computation hook that derives pagination display values (totalPages, startIndex, endIndex, canGoPrev, canGoNext, showingFrom, showingTo) from current page, total item count, and rows-per-page. Contains no side effects or internal state.
+ * @dependencies (none)
+ * @public usePagination, PaginationState
+ */
 export interface PaginationState {
   currentPage: number;
   totalItems: number;

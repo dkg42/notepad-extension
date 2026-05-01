@@ -1,8 +1,20 @@
+/**
+ * @module claude-session-api
+ * @description HTTP client for Claude.ai's private REST API, used to list and fetch full conversation content for the chat history sync feature. Authenticates by first resolving the user's active organization ID, which is required as a path parameter for all conversation endpoints. All requests use credentials: 'include' so no separate login is required — the user must be signed in to Claude.ai in the same browser profile.
+ * @dependencies (none — pure HTTP, no internal src/ imports)
+ * @public getClaudeOrganizationId, fetchClaudeConversationList, fetchClaudeConversationContent
+ */
 import type { ConversationMessage, ConversationMeta } from '@/types';
 
 const CLAUDE_ORIGIN = 'https://claude.ai';
 
-/** Fetches the active organization ID for the signed-in Claude user. */
+/**
+ * Resolves the active organization UUID for the signed-in Claude user by
+ * calling the `/api/organizations` endpoint with browser cookies.
+ * @returns The UUID string of the first organization, or `null` when the user
+ *   is not signed in or the endpoint returns a non-OK status.
+ * @remarks Never throws — all errors are caught and coerced to `null`.
+ */
 export async function getClaudeOrganizationId(): Promise<string | null> {
   try {
     const res = await fetch(`${CLAUDE_ORIGIN}/api/organizations`, {
@@ -16,7 +28,15 @@ export async function getClaudeOrganizationId(): Promise<string | null> {
   }
 }
 
-/** Fetches the user's conversation list from Claude. */
+/**
+ * Fetches all conversations for the given Claude organization, returning them
+ * as `ConversationMeta` objects with a `claude` platform tag.
+ * @param orgId - The organization UUID obtained from `getClaudeOrganizationId`.
+ * @returns An array of `ConversationMeta` objects, filtered to exclude items
+ *   with empty IDs. Returns an empty array when the response body is not an array.
+ * @throws `Error` with the HTTP status code when the conversations endpoint
+ *   returns a non-OK response.
+ */
 export async function fetchClaudeConversationList(orgId: string): Promise<ConversationMeta[]> {
   const res = await fetch(
     `${CLAUDE_ORIGIN}/api/organizations/${orgId}/chat_conversations`,
@@ -43,7 +63,18 @@ export async function fetchClaudeConversationList(orgId: string): Promise<Conver
   })).filter((c) => c.id);
 }
 
-/** Fetches the full message content of a single Claude conversation. */
+/**
+ * Fetches the full message history for a single Claude conversation and
+ * normalises it to an array of user/assistant `ConversationMessage` objects.
+ * @param orgId - The organization UUID obtained from `getClaudeOrganizationId`.
+ * @param uuid - The conversation UUID.
+ * @returns An ordered array of non-empty `ConversationMessage` objects; only
+ *   `human` and `assistant` sender roles are included.
+ * @throws `Error` with the HTTP status code when the conversation endpoint
+ *   returns a non-OK response.
+ * @remarks Content may be provided as a plain `text` string or as a structured
+ *   `content` array; both forms are handled transparently.
+ */
 export async function fetchClaudeConversationContent(
   orgId: string,
   uuid: string,

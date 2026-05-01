@@ -1,3 +1,9 @@
+/**
+ * @module Pagination
+ * @description Renders prev/next page controls, a current-page indicator, and a rows-per-page selector for paginated table views.
+ * @dependencies ./usePagination
+ * @public Pagination
+ */
 import React from 'react';
 import { usePagination } from './usePagination';
 import './Pagination.css';

@@ -1,3 +1,9 @@
+/**
+ * @module App
+ * @description Root component for the browser side panel; handles auth state resolution and renders the appropriate sidebar view (Home, PromptHub, or Snippets) behind an auth gate.
+ * @dependencies authService, useClipboardTab, useApp, SidebarHeader, HomeView, PromptHubView, SnippetsView, UserMenu
+ * @public App
+ */
 import React, { useEffect, useState } from 'react';
 import SidebarHeader from '@/components/sidebar/SidebarHeader/SidebarHeader';
 import HomeView from '@/components/sidebar/HomeView/HomeView';

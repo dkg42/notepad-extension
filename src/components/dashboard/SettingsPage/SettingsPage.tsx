@@ -1,3 +1,9 @@
+/**
+ * @module SettingsPage
+ * @description Renders the dashboard settings panel allowing users to configure table preferences, toggle dark mode, and perform data import/export or clear operations.
+ * @dependencies useSettingsPage, useTheme, DomainRouterSettings
+ * @public SettingsPage
+ */
 import React, { useRef } from 'react';
 import type { DashboardSettings, SortColumn, SortDirection } from '@/types/dashboard';
 import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';

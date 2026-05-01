@@ -1,3 +1,9 @@
+/**
+ * @module HomeView
+ * @description Home launcher grid of the sidebar showing all available tools (Prompt Hub, Snippets, etc.) with accent icons, plan badges, and coming-soon overlays. Displays a sign-in nudge for anonymous users and a current-page strip with a capture button.
+ * @dependencies @/types
+ * @public HomeView (default export)
+ */
 import React, { useEffect, useState } from 'react';
 import {
   Sparkles,

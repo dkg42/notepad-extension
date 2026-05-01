@@ -1,3 +1,9 @@
+/**
+ * @module useAudioPlayer
+ * @description React hook that encapsulates all audio playback state and controls for the AudioPlayer component. Manages play/pause toggling, seek, playback rate, and auto-starts playback on mount.
+ * @dependencies (none — React only)
+ * @public useAudioPlayer, UseAudioPlayerReturn
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface UseAudioPlayerReturn {

@@ -1,3 +1,9 @@
+/**
+ * @module pipeline-executor
+ * @description Pure execution engine for the automation pipeline system. Given a set of Pipeline rules and an ExecutionContext snapshot, it evaluates each pipeline's scope and trigger conditions then sequentially executes all matching actions, returning PipelineRun records for every fired (pipeline, notebook) pair. Annotation mutations are applied via the annotation service directly; API-heavy actions (generate-audio, add-source-url, delete-all-sources) are dispatched to the background worker via chrome.runtime.sendMessage so auth and rate-limiting stay centralised.
+ * @dependencies notebook-annotation-service
+ * @public evaluateAndRun, ExecutionContext
+ */
 import type {
   NotebookAnnotation,
   NotebookCollection,
@@ -37,6 +43,17 @@ export interface ExecutionContext {
 
 // ── Scope resolution ───────────────────────────────────────────────────────────
 
+/**
+ * Returns the subset of notebooks from `ctx.notebooks` that fall within the
+ * pipeline's configured scope.
+ *
+ * @param pipeline - The pipeline whose `scope` field is evaluated.
+ * @param ctx - Current execution context containing the full notebook list and annotations.
+ * @returns Notebooks matching the scope: all notebooks (`all`), a single notebook by ID
+ *   (`notebook`), or all notebooks whose annotation belongs to a given collection (`collection`).
+ * @remarks The `collection` scope resolves membership via `ctx.annotations`, so any
+ *   annotation changes made earlier in the same cycle are already reflected.
+ */
 function notebooksInScope(pipeline: Pipeline, ctx: ExecutionContext): NotebookMeta[] {
   const { scope } = pipeline;
   switch (scope.kind) {
@@ -58,8 +75,18 @@ function notebooksInScope(pipeline: Pipeline, ctx: ExecutionContext): NotebookMe
 // ── Trigger evaluation ─────────────────────────────────────────────────────────
 
 /**
- * Returns the subset of notebookIds in `candidates` for which this pipeline's
- * trigger fires given the current ExecutionContext.
+ * Returns the IDs of notebooks within `candidates` for which the pipeline's
+ * trigger condition is satisfied in the current execution cycle.
+ *
+ * @param pipeline - Pipeline containing the `trigger` to evaluate.
+ * @param candidates - Notebooks already filtered by `notebooksInScope`.
+ * @param ctx - Execution context snapshot; change-driven triggers inspect `changedAnnotation`
+ *   / `previousAnnotation`; poll-driven triggers inspect `sourceCounts` / `artifactIds`.
+ * @returns Array of notebookIds that should have the pipeline's actions executed.
+ *   An empty array means no notebooks fired this cycle.
+ * @remarks Trigger types: `notebook-tag-added`, `moved-to-collection` (annotation-change events);
+ *   `title-contains` (static match, fires every cycle the title qualifies);
+ *   `source-added`, `audio-generated` (poll deltas); `min-sources` (one-shot threshold).
  */
 function evaluateTrigger(
   pipeline: Pipeline,
@@ -129,14 +156,17 @@ function evaluateTrigger(
 // ── Action execution ───────────────────────────────────────────────────────────
 
 /**
- * Executes a single action for a given notebook.
+ * Executes a single action against a target notebook and returns a result record.
  *
- * Annotation mutations (add-tag, remove-tag, move-to-collection, archive-notebook)
- * call the annotation service directly — these are local storage writes.
- *
- * API-heavy actions (generate-audio, add-source-url, delete-all-sources) dispatch
- * via chrome.runtime.sendMessage to the background worker so that auth token
- * extraction and rate-limiting are handled in one place.
+ * @param action - The action descriptor; its `type` discriminator selects the execution path.
+ * @param notebookId - Drive notebook ID to act upon.
+ * @param ctx - Execution context providing the current annotation state for mutation actions.
+ * @returns `{ actionType, ok: true }` on success or `{ actionType, ok: false, error }` on failure;
+ *   never throws — all exceptions are caught and surfaced in the result.
+ * @remarks Annotation mutations (`add-tag`, `remove-tag`, `move-to-collection`, `archive-notebook`)
+ *   write directly to `notebookAnnotationService` (local storage). API-heavy actions
+ *   (`generate-audio`, `add-source-url`, `delete-all-sources`) are dispatched to the background
+ *   worker via `chrome.runtime.sendMessage` so auth-token handling stays centralised.
  */
 async function executeAction(
   action: PipelineAction,
@@ -234,11 +264,18 @@ function deriveRunStatus(results: PipelineActionResult[]): PipelineRunStatus {
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Evaluates all provided pipelines against the current execution context and
- * runs actions for any triggered notebook + pipeline combinations.
+ * Main entry point — evaluates all pipelines against the execution context snapshot
+ * and runs every matching (pipeline, notebook) combination sequentially.
  *
- * Returns a PipelineRun for every (pipeline, notebook) pair that fired.
- * Callers are responsible for persisting runs via pipelineService.appendRun().
+ * @param pipelines - Full list of persisted pipelines; disabled pipelines are skipped immediately.
+ * @param ctx - Immutable snapshot of notebooks, annotations, and change-delta fields for this cycle.
+ * @returns One `PipelineRun` record per (pipeline, notebook) pair that fired, including
+ *   per-action results and a derived `status` of `'success'`, `'partial'`, or `'error'`.
+ *   An empty array is returned when no triggers matched.
+ * @remarks The caller is responsible for persisting the returned runs via
+ *   `pipelineService.appendRun()` and updating `pipeline.lastFiredAt` for one-shot triggers.
+ *   Actions within a single notebook run are executed in declaration order; a failure in one
+ *   action does not abort subsequent actions for the same notebook.
  */
 export async function evaluateAndRun(
   pipelines: Pipeline[],

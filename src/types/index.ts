@@ -1,3 +1,9 @@
+/**
+ * @module index
+ * @description Central type barrel for the extension — re-exports all domain types from their sub-modules and defines the core shared interfaces (Snippet, Folder, ChatMessage, ClipboardEntry, auth tokens, podcast structures, and NotebookLM records) that are consumed across content scripts, background, and the dashboard UI.
+ * @dependencies @/types/dashboard, @/types/import, @/types/chat-history, @/types/pipeline
+ * @public Folder, TagMeta, Snippet, ClipboardEntry, ChatMessage, UNCATEGORIZED_ID, SourceRecord, SourceDetailRecord, ArtifactRecord, NoteRecord, NoteDetailRecord, NotebookCollection, NotebookAnnotation, EpisodeTrackSource, EpisodeTrack, PodcastEpisode, CustomAudioEntry, StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, StsTokenManager, FirebaseUserData, FirebaseTokenResponse, OAuthCredentialPayload, GoogleTokenRefreshResponse, NotebookMeta
+ */
 export * from './dashboard';
 export * from './import';
 export * from './chat-history';

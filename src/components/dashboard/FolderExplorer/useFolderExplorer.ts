@@ -1,3 +1,9 @@
+/**
+ * @module useFolderExplorer
+ * @description React hook that manages all UI interaction state for the FolderExplorer component, including grid/tree view mode, drag-to-reorder, inline subfolder creation, inline renaming, and the move-folder dialog. Derives sorted folders and per-folder snippet counts via memoization.
+ * @dependencies @/types
+ * @public useFolderExplorer, FolderViewMode
+ */
 import { useCallback, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 

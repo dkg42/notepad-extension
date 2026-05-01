@@ -1,3 +1,9 @@
+/**
+ * @module AccountSwitcher
+ * @description Compact identity widget that shows an avatar/name trigger opening a profile dropdown with sign-out when signed in, or a sign-in button when signed out.
+ * @dependencies @/types, @/services/auth-service
+ * @public AccountSwitcher
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';

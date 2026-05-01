@@ -1,3 +1,9 @@
+/**
+ * @module copilot.adapter
+ * @description Implements ChatSiteAdapter for copilot.microsoft.com. Targets the .cib-header element for injection and extracts messages by walking .cib-chat-turn containers, querying the .cib-chat-message-user and .cib-chat-message-bot children used by Microsoft's Copilot web shell.
+ * @dependencies adapter.interface, types
+ * @public CopilotAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import type { ChatMessage } from '@/types';
 

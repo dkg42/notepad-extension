@@ -1,3 +1,9 @@
+/**
+ * @module BulkActionsBar
+ * @description Renders a contextual action bar that appears when table rows are selected, providing bulk delete, move-to-folder, and add-tags operations.
+ * @dependencies useBulkActionsBar, @/types (Folder)
+ * @public BulkActionsBar
+ */
 import React from 'react';
 import type { Folder } from '@/types';
 import { useBulkActionsBar } from './useBulkActionsBar';

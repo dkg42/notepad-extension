@@ -1,3 +1,9 @@
+/**
+ * @module markdown.export
+ * @description Implements ExportStrategy to serialize a chat session as a Markdown (.md) file. Attempts a direct Blob download and falls back to clipboard copy if the browser blocks the download. Also records the export event in chrome.storage via storageService for audit/history purposes.
+ * @dependencies export-strategy.interface, types, services/storage-service
+ * @public MarkdownExportStrategy
+ */
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
 import { storageService } from '@/services/storage-service';

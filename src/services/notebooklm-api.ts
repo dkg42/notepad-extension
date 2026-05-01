@@ -1,3 +1,9 @@
+/**
+ * @module notebooklm-api
+ * @description Adapter layer for the undocumented NotebookLM internal batchexecute RPC API. Handles CSRF/session token extraction from the NotebookLM homepage (using account-specific authuser indices), constructs and parses batchexecute envelopes, and exposes typed functions for listing/deleting notebooks, fetching sources/notes/artifacts, adding source URLs, creating audio overviews, and downloading audio blobs. Auth failures trigger a session cache invalidation and a single automatic retry.
+ * @dependencies google-session-service, auth-storage-service
+ * @public fetchNotebooks, deleteNotebook, fetchNotebookSources, fetchSourceCounts, fetchNotebookFullData, fetchNotebookSourcesDetailed, summarizeNotebook, addSourceUrl, deleteSource, createAudioOverview, fetchAudioBlob, listArtifacts, fetchNotebookNotes, NotebookFullData, AudioOverviewOptions
+ */
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
 import { ensureGoogleSession, findAuthuserIndex, invalidateSessionCache } from './google-session-service';
 import { authStorageService } from './auth-storage-service';

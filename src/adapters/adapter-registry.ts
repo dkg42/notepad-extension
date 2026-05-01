@@ -1,3 +1,9 @@
+/**
+ * @module adapter-registry
+ * @description Single registration point that maps LLM site hostnames to their concrete adapter instances. Consumers call getAdapter(hostname) to retrieve the correct adapter without knowing which sites are supported; adding a new site only requires registering it here (Open/Closed principle).
+ * @dependencies adapter.interface, chatgpt.adapter, claude.adapter, gemini.adapter, perplexity.adapter, copilot.adapter, notebooklm.adapter
+ * @public getAdapter
+ */
 import type { ChatSiteAdapter } from './adapter.interface';
 import { ChatGPTAdapter } from './chatgpt.adapter';
 import { ClaudeAdapter } from './claude.adapter';

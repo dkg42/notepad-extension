@@ -1,3 +1,9 @@
+/**
+ * @module plain-text.export
+ * @description Implements ExportStrategy to serialize a chat session as a plain text (.txt) file with ASCII dividers for readability. Falls back to clipboard copy on download failure and logs the export to chrome.storage via storageService for history tracking.
+ * @dependencies export-strategy.interface, types, services/storage-service
+ * @public PlainTextExportStrategy
+ */
 import type { ExportStrategy } from './export-strategy.interface';
 import type { ChatMessage } from '@/types';
 import { storageService } from '@/services/storage-service';

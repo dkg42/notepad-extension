@@ -1,11 +1,23 @@
+/**
+ * @module filter-snippets
+ * @description Provides the single shared snippet-filtering function used by both the popup and the dashboard to ensure consistent search, folder, and tag filtering behaviour. Selecting a folder automatically expands the filter to include all descendant folders via getFolderDescendantIds.
+ * @dependencies @/types, @/utils/folder-utils
+ * @public filterSnippets
+ */
 import type { Folder, Snippet } from '@/types';
 import { UNCATEGORIZED_ID } from '@/types';
 import { getFolderDescendantIds } from '@/utils/folder-utils';
 
 /**
- * Filters snippets by search query, selected folder IDs, and selected tags.
- * When folders are provided, selecting a folder also includes snippets from
- * all its descendant folders. Shared by both the popup and the dashboard.
+ * Filters snippets by full-text search (against `snippet.text`), selected folder IDs, and selected tags.
+ * Folder selection is automatically expanded to include all descendant folders via BFS.
+ * Shared by both the popup and the dashboard to ensure consistent filtering behaviour.
+ * @param snippets - The full list of snippets to filter.
+ * @param searchQuery - Case-insensitive substring matched against each snippet's text.
+ * @param selectedFolderIds - Set of folder IDs to include; pass an empty Set to skip folder filtering.
+ * @param selectedTags - Set of tag strings; a snippet matches if it has at least one of these tags.
+ * @param folders - The full flat folder list, required for descendant expansion (defaults to `[]`).
+ * @returns The filtered subset of `snippets` matching all active criteria.
  */
 export function filterSnippets(
   snippets: Snippet[],

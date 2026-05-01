@@ -1,3 +1,9 @@
+/**
+ * @module import
+ * @description Type definitions for the bulk URL import and web-crawl features — crawler configuration, RSS feed entries, browser tabs for selection, domain-routing rules, bulk import job progress tracking, and the aggregated source/artifact views that span multiple notebooks in the dashboard.
+ * @dependencies none
+ * @public CrawlConfig, RssFeedEntry, BrowserTab, DomainRouterRule, BulkImportProgress, AggregatedSource, AggregatedArtifact, BulkImportJob
+ */
 /** Configuration for the web crawler import. */
 export interface CrawlConfig {
   seedUrl: string;

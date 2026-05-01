@@ -1,3 +1,9 @@
+/**
+ * @module SearchBar
+ * @description Controlled text input with an animated icon that switches between a search indicator and a clear button depending on whether the field has a value.
+ * @dependencies (none from src/ — stateless controlled component)
+ * @public SearchBar
+ */
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

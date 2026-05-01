@@ -1,3 +1,9 @@
+/**
+ * @module CommandPalette
+ * @description Renders a keyboard-driven command palette overlay with fuzzy search input and an arrow-key-navigable results list; auto-focuses on open and scrolls the active item into view.
+ * @dependencies useCommandPalette (PaletteItem type)
+ * @public CommandPalette
+ */
 import React, { useEffect, useRef } from 'react';
 import type { PaletteItem } from './useCommandPalette';
 import './CommandPalette.css';

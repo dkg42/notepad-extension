@@ -1,3 +1,9 @@
+/**
+ * @module useGlobalAudio
+ * @description React hook that manages a single global audio playback session for the dashboard — covering NotebookLM artifact audio (fetched and cached in IndexedDB via the background), user-uploaded custom audio (read from IndexedDB directly), and ordered podcast playlist navigation. Blob URLs are revoked on track change and unmount to prevent memory leaks.
+ * @dependencies @/types, @/services/audio-cache-service, @/services/podcast-audio-service
+ * @public UseGlobalAudioReturn, useGlobalAudio
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EpisodeTrack } from '@/types';
 import { audioCacheService } from '@/services/audio-cache-service';
