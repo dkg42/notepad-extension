@@ -17,6 +17,10 @@ async function getDriveToken(): Promise<string | null> {
   return result.accessToken;
 }
 
+function syncToDrive(callback: (token: string) => void | Promise<void>): void {
+  void getDriveToken().then((t) => { if (t) void callback(t); });
+}
+
 /** Storage key for a single conversation's full content. */
 function contentKey(platform: ChatPlatform, id: string): string {
   return `chatContent_${platform}_${id}`;
@@ -53,8 +57,7 @@ export const chatHistoryStorage = {
 
     const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: merged });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       const syncMeta = await this.getSyncMeta();
       driveSyncService.saveChatConversationsMeta(merged, syncMeta, t);
     });
@@ -81,8 +84,7 @@ export const chatHistoryStorage = {
         : c,
     );
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: updated });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       void driveSyncService.saveChatConversationContent(full, t);
       const syncMeta = await this.getSyncMeta();
       driveSyncService.saveChatConversationsMeta(updated, syncMeta, t);
@@ -109,8 +111,7 @@ export const chatHistoryStorage = {
       all.push(updated);
     }
     await chrome.storage.local.set({ [SYNC_META_KEY]: all });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       const conversations = await this.getConversations();
       driveSyncService.saveChatConversationsMeta(conversations, all, t);
     });

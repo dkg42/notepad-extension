@@ -22,6 +22,10 @@ async function getDriveToken(): Promise<string | null> {
   return result.accessToken;
 }
 
+function syncToDrive(callback: (token: string) => void): void {
+  void getDriveToken().then((t) => { if (t) callback(t); });
+}
+
 /**
  * Manages pipeline rules, their run log, and polling baselines.
  * All data is persisted in chrome.storage.local (not sync — run logs are
@@ -45,14 +49,14 @@ export const pipelineService = {
       existing.push(pipeline);
     }
     await chrome.storage.local.set({ [PIPELINES_KEY]: existing });
-    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(existing, t); });
+    syncToDrive((t) => driveSyncService.savePipelines(existing, t));
   },
 
   async remove(id: string): Promise<void> {
     const existing = await this.getAll();
     const updated = existing.filter((p) => p.id !== id);
     await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
+    syncToDrive((t) => driveSyncService.savePipelines(updated, t));
   },
 
   async toggleEnabled(id: string): Promise<void> {
@@ -61,7 +65,7 @@ export const pipelineService = {
       p.id === id ? { ...p, enabled: !p.enabled, updatedAt: Date.now() } : p,
     );
     await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
+    syncToDrive((t) => driveSyncService.savePipelines(updated, t));
   },
 
   /**
@@ -78,7 +82,7 @@ export const pipelineService = {
       };
     });
     await chrome.storage.local.set({ [PIPELINES_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) driveSyncService.savePipelines(updated, t); });
+    syncToDrive((t) => driveSyncService.savePipelines(updated, t));
   },
 
   // ── Run log ──────────────────────────────────────────────────────────────
@@ -95,7 +99,7 @@ export const pipelineService = {
     const existing = (result[PIPELINE_RUNS_KEY] as PipelineRun[]) ?? [];
     const updated = [run, ...existing].slice(0, MAX_RUNS);
     await chrome.storage.local.set({ [PIPELINE_RUNS_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) void driveSyncService.appendPipelineRun(run, t); });
+    syncToDrive((t) => driveSyncService.appendPipelineRun(run, t));
   },
 
   async clearRuns(): Promise<void> {

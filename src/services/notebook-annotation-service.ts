@@ -17,6 +17,10 @@ async function getDriveToken(): Promise<string | null> {
   return result.accessToken;
 }
 
+function syncToDrive(callback: (token: string) => void | Promise<void>): void {
+  void getDriveToken().then((t) => { if (t) void callback(t); });
+}
+
 /**
  * Service for persisting user-defined notebook annotations (tags, collection
  * assignments) and collections in chrome.storage.sync.
@@ -41,8 +45,7 @@ export const notebookAnnotationService = {
       all.push(annotation);
     }
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: all });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       const collections = await this.getAllCollections();
       driveSyncService.saveAnnotations(all, collections, t);
     });
@@ -52,8 +55,7 @@ export const notebookAnnotationService = {
     const all = await this.getAllAnnotations();
     const filtered = all.filter((a) => a.notebookId !== notebookId);
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: filtered });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       const collections = await this.getAllCollections();
       driveSyncService.saveAnnotations(filtered, collections, t);
     });
@@ -75,8 +77,7 @@ export const notebookAnnotationService = {
       all.push(collection);
     }
     await chrome.storage.sync.set({ [COLLECTIONS_KEY]: all });
-    void getDriveToken().then(async (t) => {
-      if (!t) return;
+    syncToDrive(async (t) => {
       const annotations = await this.getAllAnnotations();
       driveSyncService.saveAnnotations(annotations, all, t);
     });
@@ -99,9 +100,7 @@ export const notebookAnnotationService = {
       [COLLECTIONS_KEY]: updatedCollections,
       [ANNOTATIONS_KEY]: updatedAnnotations,
     });
-    void getDriveToken().then((t) => {
-      if (t) driveSyncService.saveAnnotations(updatedAnnotations, updatedCollections, t);
-    });
+    syncToDrive((t) => driveSyncService.saveAnnotations(updatedAnnotations, updatedCollections, t));
   },
 
   async clearAllData(): Promise<void> {

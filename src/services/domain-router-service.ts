@@ -16,6 +16,10 @@ async function getDriveToken(): Promise<string | null> {
   return result.accessToken;
 }
 
+function syncToDrive(callback: (token: string) => void): void {
+  void getDriveToken().then((t) => { if (t) callback(t); });
+}
+
 /**
  * Manages domain router rules — user-configured URL pattern → notebook mappings.
  * Rules are persisted in chrome.storage.local.
@@ -35,14 +39,14 @@ export const domainRouterService = {
       existing.push(rule);
     }
     await chrome.storage.local.set({ [STORAGE_KEY]: existing });
-    void getDriveToken().then((t) => { if (t) driveSyncService.saveDomainRouterRules(existing, t); });
+    syncToDrive((t) => driveSyncService.saveDomainRouterRules(existing, t));
   },
 
   async deleteRule(ruleId: string): Promise<void> {
     const existing = await this.getRules();
     const updated = existing.filter((r) => r.id !== ruleId);
     await chrome.storage.local.set({ [STORAGE_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) driveSyncService.saveDomainRouterRules(updated, t); });
+    syncToDrive((t) => driveSyncService.saveDomainRouterRules(updated, t));
   },
 
   async toggleRule(ruleId: string): Promise<void> {
@@ -51,7 +55,7 @@ export const domainRouterService = {
       r.id === ruleId ? { ...r, enabled: !r.enabled } : r,
     );
     await chrome.storage.local.set({ [STORAGE_KEY]: updated });
-    void getDriveToken().then((t) => { if (t) driveSyncService.saveDomainRouterRules(updated, t); });
+    syncToDrive((t) => driveSyncService.saveDomainRouterRules(updated, t));
   },
 
   async clearAllData(): Promise<void> {
