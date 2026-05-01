@@ -1,22 +1,18 @@
 /**
  * @module DashboardHome
  * @description Landing page of the dashboard showing summary stat cards (total prompts, folders, tags), a recent-prompts list, and quick-action buttons for navigating to key views.
- * @dependencies @/types, @/types/dashboard, ./useDashboardHome
+ * @dependencies @/types, @/types/dashboard, ./useDashboardHome, @/contexts/SnippetsContext, @/contexts/NavigationContext
  * @public DashboardHome
  */
 import React from 'react';
-import type { Folder, Snippet } from '@/types';
-import type { DashboardView } from '@/types/dashboard';
 import { useDashboardHome } from './useDashboardHome';
+import { useSnippets } from '@/contexts/SnippetsContext';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './DashboardHome.css';
 
-interface DashboardHomeProps {
-  snippets: Snippet[];
-  folders: Folder[];
-  onNavigate: (view: DashboardView) => void;
-}
-
-export default function DashboardHome({ snippets, folders, onNavigate }: DashboardHomeProps) {
+export default function DashboardHome() {
+  const { snippets, folders } = useSnippets();
+  const { setCurrentView: onNavigate } = useNavigation();
   const { totalTags, recentSnippets, folderMap } = useDashboardHome(snippets, folders);
 
   return (

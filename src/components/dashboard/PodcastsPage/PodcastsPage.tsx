@@ -1,16 +1,13 @@
 /**
  * @module PodcastsPage
  * @description Renders the list of podcast episodes with creation and deletion controls; delegates to usePodcastsPage for episode data management and navigation to detail view.
- * @dependencies usePodcastsPage
+ * @dependencies usePodcastsPage, @/contexts/NavigationContext
  * @public PodcastsPage
  */
 import React, { useState } from 'react';
 import { usePodcastsPage } from './usePodcastsPage';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './PodcastsPage.css';
-
-interface PodcastsPageProps {
-  onOpenEpisode: (id: string) => void;
-}
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString(undefined, {
@@ -20,7 +17,8 @@ function formatDate(timestamp: number): string {
   });
 }
 
-export default function PodcastsPage({ onOpenEpisode }: PodcastsPageProps) {
+export default function PodcastsPage() {
+  const { handleOpenPodcastDetail: onOpenEpisode } = useNavigation();
   const { episodes, isLoading, handleCreateEpisode, handleDeleteEpisode } =
     usePodcastsPage(onOpenEpisode);
 

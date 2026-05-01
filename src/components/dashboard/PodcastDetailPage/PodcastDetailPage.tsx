@@ -1,29 +1,25 @@
 /**
  * @module PodcastDetailPage
  * @description Renders the detail view for a single podcast episode, including a drag-to-reorder track list, artifact picker panel, custom audio upload, and episode rename functionality.
- * @dependencies usePodcastDetailPage, @/types (EpisodeTrack)
+ * @dependencies usePodcastDetailPage, @/types (EpisodeTrack), @/contexts/NavigationContext
  * @public PodcastDetailPage
  */
 import React, { useRef, useState } from 'react';
-import type { EpisodeTrack } from '@/types';
 import { usePodcastDetailPage } from './usePodcastDetailPage';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './PodcastDetailPage.css';
 
-interface PodcastDetailPageProps {
-  episodeId: string;
-  onBack: () => void;
-  onPlayTrack: (track: EpisodeTrack, playlist: EpisodeTrack[], index: number) => void;
-  isLoadingAudio: boolean;
-  activeTrackIndex: number;
-}
+export default function PodcastDetailPage() {
+  const {
+    selectedEpisodeId: episodeId,
+    handleBackToPodcasts: onBack,
+    playTrack: onPlayTrack,
+    isLoadingAudio,
+    podcastContext,
+  } = useNavigation();
 
-export default function PodcastDetailPage({
-  episodeId,
-  onBack,
-  onPlayTrack,
-  isLoadingAudio,
-  activeTrackIndex,
-}: PodcastDetailPageProps) {
+  const activeTrackIndex = podcastContext?.currentIndex ?? -1;
+
   const {
     episode,
     isLoading,
@@ -38,7 +34,7 @@ export default function PodcastDetailPage({
     handleRemoveTrack,
     handleReorderTracks,
     handleRenameEpisode,
-  } = usePodcastDetailPage(episodeId);
+  } = usePodcastDetailPage(episodeId!);
 
   const [artifactsPanelOpen, setArtifactsPanelOpen] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -153,7 +149,7 @@ export default function PodcastDetailPage({
                   className="track-item__play-btn"
                   disabled={isLoadingAudio}
                   title="Play"
-                  onClick={() => onPlayTrack(track, episode.tracks, idx)}
+                  onClick={() => void onPlayTrack(track, episode.tracks, idx)}
                 >
                   {activeTrackIndex === idx ? '❚❚' : (isLoadingAudio ? '…' : '▶')}
                 </button>

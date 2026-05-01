@@ -1,7 +1,7 @@
 /**
  * @module NotebooksPage
  * @description Page listing synced Google NotebookLM notebooks in a table with collection filtering, tag editing, source count display, source export, and bulk collection assignment.
- * @dependencies ./useNotebooksPage, @/export/source-export-registry, @/components/dashboard/AssignCollectionModal/AssignCollectionModal
+ * @dependencies ./useNotebooksPage, @/export/source-export-registry, @/components/dashboard/AssignCollectionModal/AssignCollectionModal, @/contexts/NavigationContext
  * @public NotebooksPage
  */
 import React, { useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import { Trash2, Download, BookOpen, ExternalLink, Loader2 } from 'lucide-react'
 import { useNotebooksPage, UNCOLLECTED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import AssignCollectionModal from '@/components/dashboard/AssignCollectionModal/AssignCollectionModal';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './NotebooksPage.css';
 
 function formatRelativeTime(timestamp: number): string {
@@ -30,11 +31,9 @@ function formatDate(timestamp: number): string {
   });
 }
 
-interface NotebooksPageProps {
-  onOpenNotebook: (id: string) => void;
-}
+export default function NotebooksPage() {
+  const { handleOpenNotebookDetail: onOpenNotebook } = useNavigation();
 
-export default function NotebooksPage({ onOpenNotebook }: NotebooksPageProps) {
   const {
     notebooks,
     filteredNotebooks,

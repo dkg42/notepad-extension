@@ -1,32 +1,25 @@
 /**
  * @module TagManager
  * @description Page that renders a grid of TagCards for all tags across prompts and notebooks, supporting rename, delete, and colour-change actions.
- * @dependencies @/types, @/components/dashboard/TagCard/TagCard, ./useTagManager
+ * @dependencies @/types, @/components/dashboard/TagCard/TagCard, ./useTagManager, @/contexts/SnippetsContext
  * @public TagManager
  */
 import React from 'react';
-import type { NotebookAnnotation, Snippet, TagMeta } from '@/types';
 import TagCard from '@/components/dashboard/TagCard/TagCard';
 import { useTagManager } from './useTagManager';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './TagManager.css';
 
-interface TagManagerProps {
-  snippets: Snippet[];
-  tagsMeta: TagMeta[];
-  notebookAnnotations: NotebookAnnotation[];
-  onRenameTag: (oldName: string, newName: string) => void;
-  onDeleteTag: (name: string) => void;
-  onTagColorChange: (name: string, color: string | undefined) => void;
-}
+export default function TagManager() {
+  const {
+    snippets,
+    tagsMeta,
+    notebookAnnotations,
+    handleRenameTag: onRenameTag,
+    handleDeleteTag: onDeleteTag,
+    handleTagColorChange: onTagColorChange,
+  } = useSnippets();
 
-export default function TagManager({
-  snippets,
-  tagsMeta,
-  notebookAnnotations,
-  onRenameTag,
-  onDeleteTag,
-  onTagColorChange,
-}: TagManagerProps) {
   const { enrichedTags, usageCounts } = useTagManager(snippets, tagsMeta, notebookAnnotations);
 
   return (

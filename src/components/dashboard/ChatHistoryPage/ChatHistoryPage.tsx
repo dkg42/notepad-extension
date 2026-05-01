@@ -1,7 +1,7 @@
 /**
  * @module ChatHistoryPage
  * @description Renders a sortable, searchable list of synced chat conversations across LLM platforms (ChatGPT, Claude, Gemini) with platform badges and last-sync status indicators.
- * @dependencies useChatHistoryPage, SearchBar, @/types (ChatPlatform, ChatSyncMeta)
+ * @dependencies useChatHistoryPage, SearchBar, @/types (ChatPlatform, ChatSyncMeta), @/contexts/NavigationContext
  * @public ChatHistoryPage
  */
 import React from 'react';
@@ -9,6 +9,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { ChatPlatform, ChatSyncMeta } from '@/types';
 import { useChatHistoryPage } from './useChatHistoryPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './ChatHistoryPage.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -62,11 +63,9 @@ function SyncStatusBar({ syncMeta }: { syncMeta: ChatSyncMeta[] }) {
   );
 }
 
-interface ChatHistoryPageProps {
-  onOpenConversation: (platform: ChatPlatform, id: string) => void;
-}
+export default function ChatHistoryPage() {
+  const { handleOpenChatDetail: onOpenConversation } = useNavigation();
 
-export default function ChatHistoryPage({ onOpenConversation }: ChatHistoryPageProps) {
   const {
     conversations,
     totalCount,

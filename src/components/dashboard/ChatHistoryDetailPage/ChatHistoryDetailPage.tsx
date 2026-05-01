@@ -1,12 +1,13 @@
 /**
  * @module ChatHistoryDetailPage
  * @description Detail view for a single saved conversation — renders the message thread with role labels, platform badge, and export buttons for Markdown and JSON formats.
- * @dependencies @/types, ./useChatHistoryDetailPage
+ * @dependencies @/types, ./useChatHistoryDetailPage, @/contexts/NavigationContext
  * @public ChatHistoryDetailPage
  */
 import React from 'react';
 import type { ChatPlatform } from '@/types';
 import { useChatHistoryDetailPage } from './useChatHistoryDetailPage';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './ChatHistoryDetailPage.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -22,17 +23,13 @@ function formatDate(ts: number): string {
   });
 }
 
-interface ChatHistoryDetailPageProps {
-  platform: ChatPlatform;
-  conversationId: string;
-  onBack: () => void;
-}
+export default function ChatHistoryDetailPage() {
+  const {
+    selectedChatPlatform: platform,
+    selectedChatId: conversationId,
+    handleBackToChatHistory: onBack,
+  } = useNavigation();
 
-export default function ChatHistoryDetailPage({
-  platform,
-  conversationId,
-  onBack,
-}: ChatHistoryDetailPageProps) {
   const {
     conversation,
     isLoading,
@@ -40,7 +37,7 @@ export default function ChatHistoryDetailPage({
     handleExportMarkdown,
     handleExportJson,
     handleRetry,
-  } = useChatHistoryDetailPage(platform, conversationId);
+  } = useChatHistoryDetailPage(platform!, conversationId!);
 
   return (
     <div className="chat-history-detail">
@@ -54,7 +51,7 @@ export default function ChatHistoryDetailPage({
             <h1 className="chat-history-detail__title">{conversation.meta.title}</h1>
             <div className="chat-history-detail__info">
               <span className={`chat-history-detail__platform-badge chat-history-detail__platform-badge--${platform}`}>
-                {PLATFORM_LABELS[platform]}
+                {PLATFORM_LABELS[platform!]}
               </span>
               <span className="chat-history-detail__date">
                 Updated {formatDate(conversation.meta.updatedAt)}
@@ -65,7 +62,7 @@ export default function ChatHistoryDetailPage({
                 target="_blank"
                 rel="noreferrer"
               >
-                Open in {PLATFORM_LABELS[platform]} &#x2197;
+                Open in {PLATFORM_LABELS[platform!]} &#x2197;
               </a>
             </div>
           </div>
@@ -104,7 +101,7 @@ export default function ChatHistoryDetailPage({
               className={`chat-history-detail__message chat-history-detail__message--${msg.role}`}
             >
               <div className="chat-history-detail__message-label">
-                {msg.role === 'user' ? 'You' : PLATFORM_LABELS[platform]}
+                {msg.role === 'user' ? 'You' : PLATFORM_LABELS[platform!]}
               </div>
               <div className="chat-history-detail__message-content">{msg.content}</div>
               {msg.createdAt && (

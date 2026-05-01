@@ -1,7 +1,7 @@
 /**
  * @module NotebookDetailPage
  * @description Detail view for a single NotebookLM notebook — renders sections for brief generation, sources, notes, and artifacts (audio overviews) with an audio customization dialog.
- * @dependencies ./useNotebookDetailPage, @/services/notebooklm-api, @/export/source-export-registry, @/components/dashboard/ImportSourcesModal/ImportSourcesModal, @/components/dashboard/AssignCollectionModal/AssignCollectionModal
+ * @dependencies ./useNotebookDetailPage, @/services/notebooklm-api, @/export/source-export-registry, @/components/dashboard/ImportSourcesModal/ImportSourcesModal, @/components/dashboard/AssignCollectionModal/AssignCollectionModal, @/contexts/NavigationContext
  * @public NotebookDetailPage
  */
 import React, { useState } from 'react';
@@ -10,14 +10,8 @@ import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
 import AssignCollectionModal from '@/components/dashboard/AssignCollectionModal/AssignCollectionModal';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './NotebookDetailPage.css';
-
-interface NotebookDetailPageProps {
-  notebookId: string;
-  onBack: () => void;
-  onPlayAudio: (mediaUrl: string, artifactId: string, title: string) => void;
-  isLoadingAudio: boolean;
-}
 
 const AUDIO_FORMATS = [
   { value: 1, label: 'Deep Dive', desc: 'A lively conversation between two hosts, unpacking and connecting topics in your sources' },
@@ -56,7 +50,17 @@ function formatDate(timestamp: number): string {
 }
 
 
-export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, isLoadingAudio }: NotebookDetailPageProps) {
+export default function NotebookDetailPage() {
+  const {
+    selectedNotebookId: notebookId,
+    handleBackToNotebooks: onBack,
+    playArtifact,
+    isLoadingAudio,
+  } = useNavigation();
+
+  const onPlayAudio = (mediaUrl: string, artifactId: string, title: string) =>
+    void playArtifact(mediaUrl, artifactId, title);
+
   const {
     notebook,
     annotation,
@@ -90,7 +94,7 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
     handleDeleteNotebook,
     handleExportSources,
     handleRefreshAll,
-  } = useNotebookDetailPage(notebookId, onBack);
+  } = useNotebookDetailPage(notebookId!, onBack);
 
   // ── Local UI state ──────────────────────────────────────────────────────────
   const [showCollectionModal, setShowCollectionModal] = useState(false);
@@ -345,7 +349,7 @@ export default function NotebookDetailPage({ notebookId, onBack, onPlayAudio, is
         )}
         {showImportModal && (
           <ImportSourcesModal
-            notebookId={notebookId}
+            notebookId={notebookId!}
             onClose={() => setShowImportModal(false)}
             onSourcesChanged={() => void handleRefreshAll()}
           />

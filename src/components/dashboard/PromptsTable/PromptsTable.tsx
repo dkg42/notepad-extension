@@ -1,13 +1,13 @@
 /**
  * @module PromptsTable
  * @description Renders a feature-rich data table for saved prompts with resizable columns, multi-sort, row selection, bulk actions, keyboard navigation, and animated row transitions.
- * @dependencies usePromptsTable, useColumnResize, useKeyboardShortcuts, BulkActionsBar, PromptsTableRow, SearchBar, Pagination
+ * @dependencies usePromptsTable, useColumnResize, useKeyboardShortcuts, BulkActionsBar, PromptsTableRow, SearchBar, Pagination, @/contexts/SnippetsContext
  * @public PromptsTable
  */
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Columns3, Check, FileText, Tag } from 'lucide-react';
-import type { Folder, Snippet } from '@/types';
+import type { Snippet } from '@/types';
 import type { SortColumn } from '@/types/dashboard';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import Pagination from '@/components/dashboard/Pagination/Pagination';
@@ -17,6 +17,7 @@ import { usePromptsTable } from './usePromptsTable';
 import { useColumnResize } from '@/hooks/useColumnResize';
 import { getFolderPath } from '@/utils/folder-utils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './PromptsTable.css';
 
 interface Column {
@@ -38,13 +39,6 @@ const RESIZE_STORAGE_KEY = 'prompts-table-col-widths';
 
 interface PromptsTableProps {
   snippets: Snippet[];
-  folders: Folder[];
-  onDelete: (id: string) => void;
-  onUpdateTags: (id: string, tags: string[]) => void;
-  onToggleFavorite: (id: string) => void;
-  onBulkDelete: (ids: string[]) => Promise<void>;
-  onBulkMoveToFolder: (ids: string[], folderId: string | undefined) => Promise<void>;
-  onBulkAddTags: (ids: string[], tags: string[]) => Promise<void>;
   /** Hide the search/filter toolbar — used when parent controls filtering (e.g. accordion view) */
   hideToolbar?: boolean;
   /** Extra class applied to the outermost wrapper div */
@@ -55,17 +49,20 @@ interface PromptsTableProps {
 
 export default function PromptsTable({
   snippets,
-  folders,
-  onDelete,
-  onToggleFavorite,
-  onBulkDelete,
-  onBulkMoveToFolder,
-  onBulkAddTags,
-  onUpdateTags,
   hideToolbar = false,
   className = '',
   initialHiddenColumns = [],
 }: PromptsTableProps) {
+  const {
+    folders,
+    handleDelete: onDelete,
+    handleUpdateTags: onUpdateTags,
+    handleToggleFavorite: onToggleFavorite,
+    handleBulkDelete: onBulkDelete,
+    handleBulkMoveToFolder: onBulkMoveToFolder,
+    handleBulkAddTags: onBulkAddTags,
+  } = useSnippets();
+
   const {
     searchQuery,
     setSearchQuery,

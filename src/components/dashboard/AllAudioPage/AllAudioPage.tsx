@@ -1,13 +1,14 @@
 /**
  * @module AllAudioPage
- * @description Renders a sortable, paginated table of all generated audio artifacts with search and inline playback controls; accepts an onPlayAudio callback to hand off audio to the global player.
- * @dependencies useAllAudioPage, SearchBar
+ * @description Renders a sortable, paginated table of all generated audio artifacts with search and inline playback controls; reads audio playback state from NavigationContext.
+ * @dependencies useAllAudioPage, SearchBar, @/contexts/NavigationContext
  * @public AllAudioPage
  */
 import React from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Music, Play as PlayIcon } from 'lucide-react';
 import { useAllAudioPage } from './useAllAudioPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './AllAudioPage.css';
 
 const STATUS_LABELS: Record<number, string> = {
@@ -32,12 +33,11 @@ function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }
     : <ChevronDown size={11} className="all-audio-sort-icon all-audio-sort-icon--active" />;
 }
 
-interface AllAudioPageProps {
-  onPlayAudio: (mediaUrl: string, artifactId: string, title: string) => void;
-  isLoadingAudio: boolean;
-}
+export default function AllAudioPage() {
+  const { playArtifact, isLoadingAudio } = useNavigation();
+  const onPlayAudio = (mediaUrl: string, artifactId: string, title: string) =>
+    void playArtifact(mediaUrl, artifactId, title);
 
-export default function AllAudioPage({ onPlayAudio, isLoadingAudio }: AllAudioPageProps) {
   const {
     artifacts,
     totalCount,

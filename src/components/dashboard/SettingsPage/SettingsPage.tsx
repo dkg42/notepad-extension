@@ -1,20 +1,16 @@
 /**
  * @module SettingsPage
  * @description Renders the dashboard settings panel allowing users to configure table preferences, toggle dark mode, and perform data import/export or clear operations.
- * @dependencies useSettingsPage, useTheme, DomainRouterSettings
+ * @dependencies useSettingsPage, useTheme, DomainRouterSettings, @/contexts/NavigationContext
  * @public SettingsPage
  */
 import React, { useRef } from 'react';
-import type { DashboardSettings, SortColumn, SortDirection } from '@/types/dashboard';
+import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
 import { useSettingsPage } from './useSettingsPage';
 import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './SettingsPage.css';
-
-interface SettingsPageProps {
-  settings: DashboardSettings;
-  onSettingsChange: (s: Partial<DashboardSettings>) => void;
-}
 
 const ROWS_OPTIONS = [10, 25, 50, 100];
 const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
@@ -24,7 +20,8 @@ const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
   { value: 'folder', label: 'Folder' },
 ];
 
-export default function SettingsPage({ settings, onSettingsChange }: SettingsPageProps) {
+export default function SettingsPage() {
+  const { settings, handleSettingsChange: onSettingsChange } = useNavigation();
   const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -60,7 +57,7 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
               onClick={() => {
                 toggleTheme();
                 const next = theme === 'light' ? 'dark' : 'light';
-                onSettingsChange({ theme: next });
+                void onSettingsChange({ theme: next });
               }}
             >
               {theme === 'light' ? '☀ Light' : '☽ Dark'}
@@ -78,7 +75,7 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
             <select
               className="settings-page__select"
               value={settings.rowsPerPage}
-              onChange={(e) => onSettingsChange({ rowsPerPage: Number(e.target.value) })}
+              onChange={(e) => void onSettingsChange({ rowsPerPage: Number(e.target.value) })}
             >
               {ROWS_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -95,7 +92,7 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
               className="settings-page__select"
               value={settings.defaultSortColumn}
               onChange={(e) =>
-                onSettingsChange({ defaultSortColumn: e.target.value as SortColumn })
+                void onSettingsChange({ defaultSortColumn: e.target.value as SortColumn })
               }
             >
               {SORT_COLUMNS.map((c) => (
@@ -113,7 +110,7 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
               className="settings-page__select"
               value={settings.defaultSortDirection}
               onChange={(e) =>
-                onSettingsChange({ defaultSortDirection: e.target.value as SortDirection })
+                void onSettingsChange({ defaultSortDirection: e.target.value as SortDirection })
               }
             >
               <option value="asc">Ascending</option>

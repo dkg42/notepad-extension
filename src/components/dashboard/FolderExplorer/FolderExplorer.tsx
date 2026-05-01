@@ -1,40 +1,30 @@
 /**
  * @module FolderExplorer
  * @description Full folder management page with switchable tree/grid views, drag-to-reorder in grid mode, inline create/rename/subfolder forms, and a move dialog for reparenting.
- * @dependencies @/types, @/components/dashboard/FolderCard/FolderCard, @/components/dashboard/FolderTree/FolderTree, @/components/dashboard/MoveFolderDialog/MoveFolderDialog, ./useFolderExplorer
+ * @dependencies @/types, @/components/dashboard/FolderCard/FolderCard, @/components/dashboard/FolderTree/FolderTree, @/components/dashboard/MoveFolderDialog/MoveFolderDialog, ./useFolderExplorer, @/contexts/SnippetsContext
  * @public FolderExplorer
  */
 import React from 'react';
-import type { Folder, Snippet } from '@/types';
 import FolderCard from '@/components/dashboard/FolderCard/FolderCard';
 import FolderTree from '@/components/dashboard/FolderTree/FolderTree';
 import MoveFolderDialog from '@/components/dashboard/MoveFolderDialog/MoveFolderDialog';
 import { useFolderExplorer } from './useFolderExplorer';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './FolderExplorer.css';
 
-interface FolderExplorerProps {
-  folders: Folder[];
-  snippets: Snippet[];
-  onCreateFolder: (name: string, parentId?: string) => Promise<void>;
-  onRenameFolder: (id: string, name: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onFolderColorChange: (id: string, color: string | undefined) => void;
-  onViewFolderPrompts: (folderId: string) => void;
-  onReorderFolders: (updates: Array<{ id: string; sortOrder: number }>) => Promise<void>;
-  onMoveFolder: (id: string, newParentId: string | undefined) => void;
-}
+export default function FolderExplorer() {
+  const {
+    folders,
+    snippets,
+    handleCreateFolder: onCreateFolder,
+    handleRenameFolder: onRenameFolder,
+    handleDeleteFolder: onDeleteFolder,
+    handleFolderColorChange: onFolderColorChange,
+    handleViewFolderPrompts: onViewFolderPrompts,
+    handleFolderReorder: onReorderFolders,
+    handleMoveFolder: onMoveFolder,
+  } = useSnippets();
 
-export default function FolderExplorer({
-  folders,
-  snippets,
-  onCreateFolder,
-  onRenameFolder,
-  onDeleteFolder,
-  onFolderColorChange,
-  onViewFolderPrompts,
-  onReorderFolders,
-  onMoveFolder,
-}: FolderExplorerProps) {
   const {
     newFolderName,
     setNewFolderName,

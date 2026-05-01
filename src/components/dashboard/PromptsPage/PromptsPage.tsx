@@ -1,7 +1,7 @@
 /**
  * @module PromptsPage
  * @description Full prompts management page that groups snippets by folder inside an accordion, with a search bar, animated tag filter menu, and bulk action support via nested PromptsTable.
- * @dependencies @/types, @/components/ui/accordion, @/components/dashboard/PromptsTable/PromptsTable, @/components/dashboard/SearchBar/SearchBar, @/utils/filter-snippets, @/utils/folder-utils
+ * @dependencies @/types, @/components/ui/accordion, @/components/dashboard/PromptsTable/PromptsTable, @/components/dashboard/SearchBar/SearchBar, @/utils/filter-snippets, @/utils/folder-utils, @/contexts/SnippetsContext
  * @public PromptsPage
  */
 import React, { useMemo, useRef, useState, useEffect } from 'react';
@@ -13,38 +13,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { Folder, Snippet } from '@/types';
+import type { Snippet } from '@/types';
 import { UNCATEGORIZED_ID } from '@/types';
 import type { SortColumn } from '@/types/dashboard';
 import PromptsTable from '@/components/dashboard/PromptsTable/PromptsTable';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import { filterSnippets } from '@/utils/filter-snippets';
 import { getFolderPath } from '@/utils/folder-utils';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './PromptsPage.css';
-
-interface PromptsPageProps {
-  snippets: Snippet[];
-  folders: Folder[];
-  onDelete: (id: string) => void;
-  onUpdateTags: (id: string, tags: string[]) => void;
-  onToggleFavorite: (id: string) => void;
-  onBulkDelete: (ids: string[]) => Promise<void>;
-  onBulkMoveToFolder: (ids: string[], folderId: string | undefined) => Promise<void>;
-  onBulkAddTags: (ids: string[], tags: string[]) => Promise<void>;
-}
 
 const HIDDEN_IN_FOLDER: SortColumn[] = ['folder'];
 
-export default function PromptsPage({
-  snippets,
-  folders,
-  onDelete,
-  onUpdateTags,
-  onToggleFavorite,
-  onBulkDelete,
-  onBulkMoveToFolder,
-  onBulkAddTags,
-}: PromptsPageProps) {
+export default function PromptsPage() {
+  const { snippets, folders } = useSnippets();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [tagMenuOpen, setTagMenuOpen] = useState(false);
@@ -99,13 +82,6 @@ export default function PromptsPage({
   const uncategorizedSnippets = groupedByFolder.get(UNCATEGORIZED_ID) ?? [];
 
   const sharedTableProps = {
-    folders,
-    onDelete,
-    onUpdateTags,
-    onToggleFavorite,
-    onBulkDelete,
-    onBulkMoveToFolder,
-    onBulkAddTags,
     hideToolbar: true as const,
     className: 'prompts-page__inner-table',
     initialHiddenColumns: HIDDEN_IN_FOLDER,

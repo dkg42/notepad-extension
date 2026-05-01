@@ -1,21 +1,17 @@
 /**
  * @module AnalyticsPage
  * @description Renders an analytics dashboard with summary stat cards and bar charts breaking down saved prompts by source, folder, tag, and month.
- * @dependencies useAnalyticsPage, StatChart, @/types (Snippet, Folder)
+ * @dependencies useAnalyticsPage, StatChart, @/types (Snippet, Folder), @/contexts/SnippetsContext
  * @public AnalyticsPage
  */
 import React from 'react';
-import type { Folder, Snippet } from '@/types';
 import StatChart from '@/components/dashboard/StatChart/StatChart';
 import { useAnalyticsPage } from './useAnalyticsPage';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './AnalyticsPage.css';
 
-interface AnalyticsPageProps {
-  snippets: Snippet[];
-  folders: Folder[];
-}
-
-export default function AnalyticsPage({ snippets, folders }: AnalyticsPageProps) {
+export default function AnalyticsPage() {
+  const { snippets, folders } = useSnippets();
   const { bySource, byFolder, byTag, byMonth } = useAnalyticsPage(snippets, folders);
 
   const uniqueSources = new Set(snippets.map((s) => {

@@ -1,7 +1,7 @@
 /**
  * @module DashboardApp
  * @description Root component for the full-page dashboard; orchestrates page routing, global audio playback, command palette, keyboard shortcuts, drive conflict dialogs, and theme provisioning.
- * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, and all dashboard page components
+ * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, SnippetsContext, NavigationContext, and all dashboard page components
  * @public DashboardApp
  */
 import React, { useMemo } from 'react';
@@ -32,6 +32,8 @@ import DriveConflictDialog from '@/components/dashboard/DriveConflictDialog/Driv
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
 import { useCommandPalette } from '@/components/dashboard/CommandPalette/useCommandPalette';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { SnippetsProvider } from '@/contexts/SnippetsContext';
+import { NavigationProvider } from '@/contexts/NavigationContext';
 import { useDashboardApp } from './useDashboardApp';
 import './DashboardApp.css';
 
@@ -64,6 +66,8 @@ export default function DashboardApp() {
     selectedChatPlatform,
     showShortcuts,
     setShowShortcuts,
+    showCommandPalette,
+    setShowCommandPalette,
     setCurrentView,
     selectedNotebookId,
     handleOpenNotebookDetail,
@@ -114,6 +118,128 @@ export default function DashboardApp() {
 
   useKeyboardShortcuts(shortcuts);
 
+  const snippetsValue = useMemo(
+    () => ({
+      snippets,
+      folders,
+      tagsMeta,
+      notebookAnnotations,
+      favoritesCount,
+      handleDelete,
+      handleUpdateTags,
+      handleToggleFavorite,
+      handleBulkDelete,
+      handleBulkMoveToFolder,
+      handleBulkAddTags,
+      handleCreateFolder,
+      handleRenameFolder,
+      handleDeleteFolder,
+      handleMoveFolder,
+      handleFolderColorChange,
+      handleFolderReorder,
+      handleViewFolderPrompts,
+      handleRenameTag,
+      handleDeleteTag,
+      handleTagColorChange,
+    }),
+    [
+      snippets,
+      folders,
+      tagsMeta,
+      notebookAnnotations,
+      favoritesCount,
+      handleDelete,
+      handleUpdateTags,
+      handleToggleFavorite,
+      handleBulkDelete,
+      handleBulkMoveToFolder,
+      handleBulkAddTags,
+      handleCreateFolder,
+      handleRenameFolder,
+      handleDeleteFolder,
+      handleMoveFolder,
+      handleFolderColorChange,
+      handleFolderReorder,
+      handleViewFolderPrompts,
+      handleRenameTag,
+      handleDeleteTag,
+      handleTagColorChange,
+    ],
+  );
+
+  const navigationValue = useMemo(
+    () => ({
+      currentView,
+      setCurrentView,
+      isLoading,
+      settings,
+      handleSettingsChange,
+      showShortcuts,
+      setShowShortcuts,
+      showCommandPalette,
+      setShowCommandPalette,
+      notebooksCount,
+      chatHistoryCount,
+      podcastsCount,
+      pipelinesCount,
+      selectedNotebookId,
+      handleOpenNotebookDetail,
+      handleBackToNotebooks,
+      selectedEpisodeId,
+      handleOpenPodcastDetail,
+      handleBackToPodcasts,
+      selectedChatId,
+      selectedChatPlatform,
+      handleOpenChatDetail,
+      handleBackToChatHistory,
+      driveConflict,
+      handleConflictResolution,
+      audioUrl,
+      audioTitle,
+      isLoadingAudio,
+      podcastContext,
+      playArtifact,
+      playTrack,
+      playNext,
+      stopAudio,
+    }),
+    [
+      currentView,
+      setCurrentView,
+      isLoading,
+      settings,
+      handleSettingsChange,
+      showShortcuts,
+      setShowShortcuts,
+      showCommandPalette,
+      setShowCommandPalette,
+      notebooksCount,
+      chatHistoryCount,
+      podcastsCount,
+      pipelinesCount,
+      selectedNotebookId,
+      handleOpenNotebookDetail,
+      handleBackToNotebooks,
+      selectedEpisodeId,
+      handleOpenPodcastDetail,
+      handleBackToPodcasts,
+      selectedChatId,
+      selectedChatPlatform,
+      handleOpenChatDetail,
+      handleBackToChatHistory,
+      driveConflict,
+      handleConflictResolution,
+      audioUrl,
+      audioTitle,
+      isLoadingAudio,
+      podcastContext,
+      playArtifact,
+      playTrack,
+      playNext,
+      stopAudio,
+    ],
+  );
+
   const renderContent = () => {
     if (isLoading) {
       return <div className="dashboard-app__loading">Loading…</div>;
@@ -121,87 +247,31 @@ export default function DashboardApp() {
 
     switch (currentView) {
       case 'home':
-        return (
-          <DashboardHome
-            snippets={snippets}
-            folders={folders}
-            onNavigate={setCurrentView}
-          />
-        );
+        return <DashboardHome />;
 
       case 'prompts':
-        return (
-          <PromptsPage
-            snippets={snippets}
-            folders={folders}
-            onDelete={handleDelete}
-            onUpdateTags={handleUpdateTags}
-            onToggleFavorite={handleToggleFavorite}
-            onBulkDelete={handleBulkDelete}
-            onBulkMoveToFolder={handleBulkMoveToFolder}
-            onBulkAddTags={handleBulkAddTags}
-          />
-        );
+        return <PromptsPage />;
 
       case 'favorites':
-        return (
-          <PromptsTable
-            snippets={snippets.filter((s) => s.isFavorite)}
-            folders={folders}
-            onDelete={handleDelete}
-            onUpdateTags={handleUpdateTags}
-            onToggleFavorite={handleToggleFavorite}
-            onBulkDelete={handleBulkDelete}
-            onBulkMoveToFolder={handleBulkMoveToFolder}
-            onBulkAddTags={handleBulkAddTags}
-          />
-        );
+        return <PromptsTable snippets={snippets.filter((s) => s.isFavorite)} />;
 
       case 'folders':
-        return (
-          <FolderExplorer
-            folders={folders}
-            snippets={snippets}
-            onCreateFolder={handleCreateFolder}
-            onRenameFolder={handleRenameFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onFolderColorChange={handleFolderColorChange}
-            onViewFolderPrompts={handleViewFolderPrompts}
-            onReorderFolders={handleFolderReorder}
-            onMoveFolder={handleMoveFolder}
-          />
-        );
+        return <FolderExplorer />;
 
       case 'tags':
-        return (
-          <TagManager
-            snippets={snippets}
-            tagsMeta={tagsMeta}
-            notebookAnnotations={notebookAnnotations}
-            onRenameTag={handleRenameTag}
-            onDeleteTag={handleDeleteTag}
-            onTagColorChange={handleTagColorChange}
-          />
-        );
+        return <TagManager />;
 
       case 'analytics':
-        return <AnalyticsPage snippets={snippets} folders={folders} />;
+        return <AnalyticsPage />;
 
       case 'export-history':
         return <ExportHistoryPage />;
 
       case 'notebooks':
-        return <NotebooksPage onOpenNotebook={handleOpenNotebookDetail} />;
+        return <NotebooksPage />;
 
       case 'notebook-detail':
-        return selectedNotebookId ? (
-          <NotebookDetailPage
-            notebookId={selectedNotebookId}
-            onBack={handleBackToNotebooks}
-            onPlayAudio={(mediaUrl, artifactId, title) => void playArtifact(mediaUrl, artifactId, title)}
-            isLoadingAudio={isLoadingAudio}
-          />
-        ) : null;
+        return selectedNotebookId ? <NotebookDetailPage /> : null;
 
       case 'all-sources':
         return <AllSourcesPage />;
@@ -210,46 +280,25 @@ export default function DashboardApp() {
         return <AllArtifactsPage />;
 
       case 'podcasts':
-        return <PodcastsPage onOpenEpisode={handleOpenPodcastDetail} />;
+        return <PodcastsPage />;
 
       case 'podcast-detail':
-        return selectedEpisodeId ? (
-          <PodcastDetailPage
-            episodeId={selectedEpisodeId}
-            onBack={handleBackToPodcasts}
-            onPlayTrack={(track, playlist, idx) => void playTrack(track, playlist, idx)}
-            isLoadingAudio={isLoadingAudio}
-            activeTrackIndex={podcastContext?.currentIndex ?? -1}
-          />
-        ) : null;
+        return selectedEpisodeId ? <PodcastDetailPage /> : null;
 
       case 'all-audio':
-        return (
-          <AllAudioPage
-            onPlayAudio={(mediaUrl, artifactId, title) => void playArtifact(mediaUrl, artifactId, title)}
-            isLoadingAudio={isLoadingAudio}
-          />
-        );
+        return <AllAudioPage />;
 
       case 'chat-history':
-        return <ChatHistoryPage onOpenConversation={handleOpenChatDetail} />;
+        return <ChatHistoryPage />;
 
       case 'chat-history-detail':
-        return selectedChatPlatform && selectedChatId ? (
-          <ChatHistoryDetailPage
-            platform={selectedChatPlatform}
-            conversationId={selectedChatId}
-            onBack={handleBackToChatHistory}
-          />
-        ) : null;
+        return selectedChatPlatform && selectedChatId ? <ChatHistoryDetailPage /> : null;
 
       case 'pipelines':
         return <PipelinesPage />;
 
       case 'settings':
-        return (
-          <SettingsPage settings={settings} onSettingsChange={handleSettingsChange} />
-        );
+        return <SettingsPage />;
 
       case 'account':
         return <AccountPage />;
@@ -266,55 +315,50 @@ export default function DashboardApp() {
       initialTheme={settings.theme}
       onThemeChange={(theme) => handleSettingsChange({ theme })}
     >
-      <div className="dashboard-app">
-        <Sidebar
-          currentView={currentView}
-          onNavigate={setCurrentView}
-          promptCount={snippets.length}
-          favoritesCount={favoritesCount}
-          notebooksCount={notebooksCount}
-          chatHistoryCount={chatHistoryCount}
-          podcastsCount={podcastsCount}
-          pipelinesCount={pipelinesCount}
-        />
-        <div className="dashboard-app__content">
-          <main className="dashboard-app__main">{renderContent()}</main>
-        </div>
-      </div>
+      <NavigationProvider value={navigationValue}>
+        <SnippetsProvider value={snippetsValue}>
+          <div className="dashboard-app">
+            <Sidebar />
+            <div className="dashboard-app__content">
+              <main className="dashboard-app__main">{renderContent()}</main>
+            </div>
+          </div>
 
-      <CommandPalette
-        isOpen={palette.isOpen}
-        query={palette.query}
-        items={palette.items}
-        activeIndex={palette.activeIndex}
-        onQueryChange={palette.setQuery}
-        onSelectItem={(item) => item.onSelect()}
-        onSetActiveIndex={palette.setActiveIndex}
-        onClose={palette.close}
-        onKeyDown={palette.handleKeyDown}
-      />
+          <CommandPalette
+            isOpen={palette.isOpen}
+            query={palette.query}
+            items={palette.items}
+            activeIndex={palette.activeIndex}
+            onQueryChange={palette.setQuery}
+            onSelectItem={(item) => item.onSelect()}
+            onSetActiveIndex={palette.setActiveIndex}
+            onClose={palette.close}
+            onKeyDown={palette.handleKeyDown}
+          />
 
-      {showShortcuts && (
-        <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
-      )}
+          {showShortcuts && (
+            <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
+          )}
 
-      {audioUrl && (
-        <AudioPlayer
-          key={audioUrl}
-          audioUrl={audioUrl}
-          title={audioTitle}
-          onClose={stopAudio}
-          onEnded={() => void playNext()}
-        />
-      )}
+          {audioUrl && (
+            <AudioPlayer
+              key={audioUrl}
+              audioUrl={audioUrl}
+              title={audioTitle}
+              onClose={stopAudio}
+              onEnded={() => void playNext()}
+            />
+          )}
 
-      {driveConflict && (
-        <DriveConflictDialog
-          summary={driveConflict}
-          onMerge={() => void handleConflictResolution('merge')}
-          onOverwrite={() => void handleConflictResolution('overwrite')}
-        />
-      )}
+          {driveConflict && (
+            <DriveConflictDialog
+              summary={driveConflict}
+              onMerge={() => void handleConflictResolution('merge')}
+              onOverwrite={() => void handleConflictResolution('overwrite')}
+            />
+          )}
+        </SnippetsProvider>
+      </NavigationProvider>
     </ThemeProvider>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * @module Sidebar
  * @description Dashboard navigation sidebar with primary nav items, animated collapsible groups for Notebooks, Chat History, and Podcasts, and a footer user card that navigates to the Account page.
- * @dependencies @/types, @/types/dashboard, @/services/auth-service
+ * @dependencies @/types, @/types/dashboard, @/services/auth-service, @/contexts/NavigationContext, @/contexts/SnippetsContext
  * @public Sidebar
  */
 import React, { useEffect, useState } from 'react';
@@ -31,6 +31,8 @@ import {
 import type { StoredAuthProfile } from '@/types';
 import type { DashboardView } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { useSnippets } from '@/contexts/SnippetsContext';
 import './Sidebar.css';
 
 type IconComponent = LucideIcon;
@@ -93,17 +95,6 @@ const SECONDARY_NAV: NavItem[] = [
 const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
 const CHAT_HISTORY_VIEWS: DashboardView[] = ['chat-history', 'chat-history-detail'];
 const PODCASTS_VIEWS: DashboardView[] = ['podcasts', 'podcast-detail', 'all-audio'];
-
-interface SidebarProps {
-  currentView: DashboardView;
-  onNavigate: (view: DashboardView) => void;
-  promptCount: number;
-  favoritesCount: number;
-  notebooksCount: number;
-  chatHistoryCount: number;
-  podcastsCount: number;
-  pipelinesCount: number;
-}
 
 interface CollapsibleGroupProps {
   group: NavGroup;
@@ -192,16 +183,18 @@ function getInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-export default function Sidebar({
-  currentView,
-  onNavigate,
-  promptCount,
-  favoritesCount,
-  notebooksCount,
-  chatHistoryCount,
-  podcastsCount,
-  pipelinesCount,
-}: SidebarProps) {
+export default function Sidebar() {
+  const {
+    currentView,
+    setCurrentView: onNavigate,
+    notebooksCount,
+    chatHistoryCount,
+    podcastsCount,
+    pipelinesCount,
+  } = useNavigation();
+  const { snippets, favoritesCount } = useSnippets();
+  const promptCount = snippets.length;
+
   const [user, setUser] = useState<StoredAuthProfile | null>(null);
 
   useEffect(() => {
