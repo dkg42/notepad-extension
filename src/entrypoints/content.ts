@@ -1,7 +1,7 @@
 /**
  * @module content
- * @description Thin content-script orchestrator that runs on all supported LLM and NotebookLM pages. It bootstraps platform-specific features (send-to-chat, source panel enhancer, studio panel enhancer, chat history sync) by resolving the correct adapter from the registry and delegating setup to the appropriate feature modules.
- * @dependencies @/adapters/adapter-registry, @/adapters/source-panel-adapter.interface, @/adapters/studio-panel-adapter.interface, @/content/send-to-chat, @/content/source-panel-enhancer/source-panel-enhancer, @/content/studio-panel-enhancer/studio-panel-enhancer, @/content/chat-history-sync
+ * @description Thin content-script orchestrator that runs on all supported LLM and NotebookLM pages. It bootstraps platform-specific features (send-to-chat, source panel enhancer, studio panel enhancer, manual chat save handler) by resolving the correct adapter from the registry and delegating setup to the appropriate feature modules.
+ * @dependencies @/adapters/adapter-registry, @/adapters/source-panel-adapter.interface, @/adapters/studio-panel-adapter.interface, @/content/send-to-chat, @/content/source-panel-enhancer/source-panel-enhancer, @/content/studio-panel-enhancer/studio-panel-enhancer, @/content/chat-save-handler
  * @public default (WXT content script definition)
  */
 import { defineContentScript } from 'wxt/sandbox';
@@ -11,7 +11,7 @@ import { isStudioPanelAdapter } from '@/adapters/studio-panel-adapter.interface'
 import { setupSendToChat } from '@/content/send-to-chat';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
 import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
-import { setupChatHistorySync } from '@/content/chat-history-sync';
+import { setupChatSaveHandler } from '@/content/chat-save-handler';
 
 export default defineContentScript({
   matches: [
@@ -42,7 +42,7 @@ export default defineContentScript({
       setupStudioPanelEnhancer(adapter);
     }
 
-    // Feature: sync chat history from ChatGPT, Claude, and Gemini
-    setupChatHistorySync();
+    // Feature: on-demand chat save — listens for EXTRACT_CURRENT_CHAT_INFO from background
+    setupChatSaveHandler(adapter);
   },
 });

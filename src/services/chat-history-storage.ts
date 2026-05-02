@@ -1,6 +1,10 @@
 /**
  * @module chat-history-storage
- * @description Persistence layer for synced chat conversation data across ChatGPT, Claude, and Gemini. Conversation metadata (titles, dates, message counts) is stored as a single sorted array for fast listing; full message content is stored per-conversation under isolated keys to avoid loading all messages into memory simultaneously. A composite platform+id key prevents collisions between conversations with the same ID on different platforms. Each write fires a best-effort Drive sync tail-call.
+ * @description Persistence layer for manually saved chat conversations. Conversation metadata
+ *   (titles, dates, message counts) is stored as a single sorted array for fast listing;
+ *   full message content is stored per-conversation under isolated keys. A composite
+ *   platform+id key prevents collisions between platforms. Each write fires a best-effort
+ *   Drive sync tail-call.
  * @dependencies token-lifecycle-service, drive/drive-sync-service
  * @public chatHistoryStorage
  */
@@ -9,7 +13,6 @@ import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
 const CONVERSATIONS_KEY = 'chatConversations';
-const SYNC_META_KEY = 'chatSyncMeta';
 
 async function getDriveToken(): Promise<string | null> {
   const result = await getValidToken();
@@ -26,14 +29,8 @@ function contentKey(platform: ChatPlatform, id: string): string {
   return `chatContent_${platform}_${id}`;
 }
 
-/**
- * Service for persisting chat session metadata and content in chrome.storage.local.
- *
- * Conversation metadata (titles, dates) is stored as a single array for fast listing.
- * Full conversation content is stored per-key to avoid loading all messages into memory.
- */
 export const chatHistoryStorage = {
-  /** Returns all synced conversations, optionally filtered by platform. */
+  /** Returns all saved conversations, optionally filtered by platform, sorted newest first. */
   async getConversations(platform?: ChatPlatform): Promise<ConversationMeta[]> {
     const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
     const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
@@ -57,9 +54,8 @@ export const chatHistoryStorage = {
 
     const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: merged });
-    syncToDrive(async (t) => {
-      const syncMeta = await this.getSyncMeta();
-      driveSyncService.saveChatConversationsMeta(merged, syncMeta, t);
+    syncToDrive((t) => {
+      driveSyncService.saveChatConversationsMeta(merged, [], t);
     });
   },
 
@@ -70,12 +66,11 @@ export const chatHistoryStorage = {
     return (result[key] as ConversationFull) ?? null;
   },
 
-  /** Stores full conversation content under its own key. */
+  /** Stores full conversation content and updates the message count in the metadata index. */
   async saveConversationContent(full: ConversationFull): Promise<void> {
     const key = contentKey(full.meta.platform, full.meta.id);
     await chrome.storage.local.set({ [key]: full });
 
-    // Also update messageCount on the metadata entry
     const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
     const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
     const updated = all.map((c) =>
@@ -84,42 +79,20 @@ export const chatHistoryStorage = {
         : c,
     );
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: updated });
-    syncToDrive(async (t) => {
+    syncToDrive((t) => {
       void driveSyncService.saveChatConversationContent(full, t);
-      const syncMeta = await this.getSyncMeta();
-      driveSyncService.saveChatConversationsMeta(updated, syncMeta, t);
+      driveSyncService.saveChatConversationsMeta(updated, [], t);
     });
   },
 
-  /** Returns sync metadata for all platforms. */
+  /** @deprecated Returns empty array — sync meta is no longer tracked. Kept for Drive serialization compatibility. */
   async getSyncMeta(): Promise<ChatSyncMeta[]> {
-    const result = await chrome.storage.local.get(SYNC_META_KEY);
-    return (result[SYNC_META_KEY] as ChatSyncMeta[]) ?? [];
-  },
-
-  /** Updates (merges) sync metadata for a single platform. */
-  async setSyncMeta(platform: ChatPlatform, meta: Partial<Omit<ChatSyncMeta, 'platform'>>): Promise<void> {
-    const all = await this.getSyncMeta();
-    const idx = all.findIndex((m) => m.platform === platform);
-    const current: ChatSyncMeta = idx >= 0
-      ? all[idx]
-      : { platform, lastSyncedAt: Date.now(), conversationCount: 0 };
-    const updated: ChatSyncMeta = { ...current, ...meta, platform };
-    if (idx >= 0) {
-      all[idx] = updated;
-    } else {
-      all.push(updated);
-    }
-    await chrome.storage.local.set({ [SYNC_META_KEY]: all });
-    syncToDrive(async (t) => {
-      const conversations = await this.getConversations();
-      driveSyncService.saveChatConversationsMeta(conversations, all, t);
-    });
+    return [];
   },
 
   async clearAllData(): Promise<void> {
     const allData = await chrome.storage.local.get(null);
     const dynamicKeys = Object.keys(allData).filter((k) => k.startsWith('chatContent_'));
-    await chrome.storage.local.remove([CONVERSATIONS_KEY, SYNC_META_KEY, ...dynamicKeys]);
+    await chrome.storage.local.remove([CONVERSATIONS_KEY, ...dynamicKeys]);
   },
 };

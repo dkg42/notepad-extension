@@ -60,10 +60,9 @@ const FEATURES: Feature[] = [
     id: 'history',
     name: 'Chat History',
     icon: MessageSquare,
-    desc: 'Recent conversations across AI tools',
+    desc: 'Save and revisit conversations across AI tools',
     plan: 'free',
     accent: 'sky',
-    comingSoon: true,
   },
   {
     id: 'screenshot',
@@ -81,7 +80,6 @@ const FEATURES: Feature[] = [
     desc: 'Group, label, declutter open tabs',
     plan: 'free',
     accent: 'violet',
-    comingSoon: true,
   },
   {
     id: 'notebook',

@@ -16,7 +16,11 @@
       "Bash(xargs grep:*)",
       "WebFetch(domain:developers.google.com)",
       "Bash(python3 -m json.tool)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(gunzip)",
+      "Bash(tar -x -C /tmp/notehub-design)",
+      "Read(//private/tmp/notehub-design/notehub-sidebar/**)"
     ]
   }
 }

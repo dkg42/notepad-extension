@@ -69,21 +69,17 @@ export const MSG = {
   /** Return the notes/annotations stored for a notebook */
   FETCH_NOTEBOOK_NOTES: 'FETCH_NOTEBOOK_NOTES',
 
-  // ── Chat History Sync ───────────────────────────────────────────────────────
-  /** Content script → background: persist a page's conversation list */
-  SYNC_CHAT_CONVERSATIONS: 'SYNC_CHAT_CONVERSATIONS',
-  /** Content script → background: persist a single conversation's messages */
-  SYNC_CHAT_CONVERSATION_CONTENT: 'SYNC_CHAT_CONVERSATION_CONTENT',
-  /** Content script → background: update the last-synced metadata record */
-  UPDATE_CHAT_SYNC_META: 'UPDATE_CHAT_SYNC_META',
-  /** Background → content script: fetch one conversation for sync */
-  FETCH_CONVERSATION_FOR_SYNC: 'FETCH_CONVERSATION_FOR_SYNC',
+  // ── Chat History (manual save) ───────────────────────────────────────────────
+  /** Sidebar → background: get info about the currently open LLM chat */
+  GET_CURRENT_CHAT_INFO: 'GET_CURRENT_CHAT_INFO',
+  /** Background → content script: extract current chat info from the DOM */
+  EXTRACT_CURRENT_CHAT_INFO: 'EXTRACT_CURRENT_CHAT_INFO',
+  /** Sidebar → background: persist a manually saved conversation */
+  SAVE_CURRENT_CHAT: 'SAVE_CURRENT_CHAT',
   /** Popup → background: return all stored conversations */
   GET_CHAT_CONVERSATIONS: 'GET_CHAT_CONVERSATIONS',
   /** Popup → background: return full message list for one conversation */
   GET_CHAT_CONVERSATION_CONTENT: 'GET_CHAT_CONVERSATION_CONTENT',
-  /** Popup → background: return per-platform sync status metadata */
-  GET_CHAT_SYNC_META: 'GET_CHAT_SYNC_META',
 
   // ── Import Jobs ─────────────────────────────────────────────────────────────
   /** Return the progress/status of the active import job */

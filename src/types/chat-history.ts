@@ -1,13 +1,13 @@
 /**
  * @module chat-history
- * @description Type definitions for the chat history sync feature, covering the three supported LLM platforms (ChatGPT, Claude, Gemini), lightweight conversation metadata for list views, full message content for detail views, and per-platform sync status tracking.
+ * @description Type definitions for the chat history manual save feature, covering the three supported LLM platforms (ChatGPT, Claude, Gemini), lightweight conversation metadata for list views, and full message content for detail views.
  * @dependencies none
- * @public ChatPlatform, ConversationMeta, ConversationMessage, ConversationFull, ChatSyncMeta
+ * @public ChatPlatform, ConversationMeta, ConversationMessage, ConversationFull
  */
-/** Which LLM platform a synced conversation belongs to. */
+/** Which LLM platform a saved conversation belongs to. */
 export type ChatPlatform = 'chatgpt' | 'claude' | 'gemini';
 
-/** Lightweight conversation metadata — synced on page load. */
+/** Lightweight conversation metadata stored in the list index. */
 export interface ConversationMeta {
   id: string;
   platform: ChatPlatform;
@@ -24,7 +24,7 @@ export interface ConversationMeta {
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
-  createdAt?: number;      // Unix ms, if available from API
+  createdAt?: number;      // Unix ms, if available
 }
 
 /** Full conversation including all messages. */
@@ -34,7 +34,7 @@ export interface ConversationFull {
   fetchedAt: number;
 }
 
-/** Sync status for a single platform. */
+/** @deprecated Sync status type kept for Drive serialization compatibility only. */
 export interface ChatSyncMeta {
   platform: ChatPlatform;
   lastSyncedAt: number;
