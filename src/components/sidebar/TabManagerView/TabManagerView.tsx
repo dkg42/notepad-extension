@@ -20,7 +20,7 @@ import {
   Check,
   Trash2,
 } from 'lucide-react';
-import type { TabGroup, GroupColor } from '@/types/tab-groups';
+import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { useTabManagerView, FREE_PLAN_MAX_GROUPS, COLORS } from './useTabManagerView';
 import './TabManagerView.css';
 
@@ -91,6 +91,44 @@ function TabRow({ tab, onClose, dense = false, actions }: TabRowProps) {
   );
 }
 
+// ── Stashed tab row ───────────────────────────────────────────────────────────
+
+interface StashedTabRowProps {
+  stashedTab: StashedTab;
+  onReopen: () => void;
+  onRemove: () => void;
+}
+
+function StashedTabRow({ stashedTab, onReopen, onRemove }: StashedTabRowProps) {
+  const hostname = (() => {
+    try { return new URL(stashedTab.url).hostname; } catch { return stashedTab.url; }
+  })();
+
+  return (
+    <div className="tab-manager-view__stashed-row">
+      <TabFavicon url={stashedTab.favIconUrl} title={stashedTab.title} />
+      <div className="tab-manager-view__tab-info">
+        <div className="tab-manager-view__tab-title">{stashedTab.title}</div>
+        <div className="tab-manager-view__tab-url">{hostname}</div>
+      </div>
+      <button
+        className="tab-manager-view__stashed-reopen-btn"
+        onClick={(e) => { e.stopPropagation(); onReopen(); }}
+        title="Reopen tab"
+      >
+        <ExternalLink size={11} strokeWidth={1.8} />
+      </button>
+      <button
+        className="tab-manager-view__tab-close"
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        title="Remove from group"
+      >
+        <X size={11} strokeWidth={1.8} />
+      </button>
+    </div>
+  );
+}
+
 // ── Context block ─────────────────────────────────────────────────────────────
 
 interface ContextBlockProps {
@@ -119,8 +157,18 @@ function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel 
         {aiContext ? <Sparkles size={9} strokeWidth={2.2} /> : <Pencil size={9} strokeWidth={2.2} />}
       </div>
       <div className="tab-manager-view__context-body">
-        <div className="tab-manager-view__context-label">
-          {aiContext ? 'AI summary' : 'Your note'}
+        <div className="tab-manager-view__context-label-row">
+          <span className="tab-manager-view__context-label">
+            {aiContext ? 'AI summary' : 'Your note'}
+          </span>
+          <button
+            className="tab-manager-view__context-generate-btn"
+            disabled
+            title="AI summary — coming soon"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Sparkles size={9} strokeWidth={2.2} />
+          </button>
         </div>
         {isEditing ? (
           <div className="tab-manager-view__context-edit">
@@ -430,6 +478,8 @@ interface TabGroupCardProps {
   onCloseAll: () => void;
   onCloseTab: (tabId: number) => void;
   onRemoveTab: (tabId: number) => void;
+  onReopenStashedTab: (url: string) => void;
+  onRemoveStashedTab: (url: string) => void;
 }
 
 function TabGroupCard({
@@ -446,6 +496,8 @@ function TabGroupCard({
   onCloseAll,
   onCloseTab,
   onRemoveTab,
+  onReopenStashedTab,
+  onRemoveStashedTab,
 }: TabGroupCardProps) {
   const c = COLOR_MAP[group.color];
   const [isRenamingInline, setIsRenamingInline] = useState(false);
@@ -469,7 +521,7 @@ function TabGroupCard({
   };
 
   const liveTabs = tabs.filter((t) => t.id != null && group.tabIds.includes(t.id!));
-  const stashedUrlCount = group.tabUrls.length;
+  const stashedTabs = group.stashedTabs ?? [];
 
   return (
     <div className="tab-manager-view__group">
@@ -509,8 +561,8 @@ function TabGroupCard({
         )}
         <span className="tab-manager-view__group-count">
           {liveTabs.length}
-          {stashedUrlCount > liveTabs.length && (
-            <span className="tab-manager-view__group-stashed">+{stashedUrlCount - liveTabs.length}</span>
+          {stashedTabs.length > 0 && (
+            <span className="tab-manager-view__group-stashed">+{stashedTabs.length}</span>
           )}
         </span>
         {expanded && (
@@ -566,29 +618,37 @@ function TabGroupCard({
             onSave={(val) => { onContextChange(val); setIsEditingContext(false); }}
             onCancel={() => setIsEditingContext(false)}
           />
-          {liveTabs.length === 0 && stashedUrlCount > 0 ? (
-            <div className="tab-manager-view__stashed-hint">
-              {stashedUrlCount} URL{stashedUrlCount !== 1 ? 's' : ''} saved — click "Open all" to restore
-            </div>
-          ) : liveTabs.length === 0 ? (
+          {liveTabs.length === 0 && stashedTabs.length === 0 && (
             <div className="tab-manager-view__stashed-hint">
               No open tabs in this group yet
             </div>
-          ) : null}
+          )}
           <div className="tab-manager-view__group-tabs">
             {liveTabs.map((tab) => (
               <TabRow
                 key={tab.id}
                 tab={tab}
                 onClose={() => {
-                  if (tab.id != null) {
-                    onCloseTab(tab.id);
-                    onRemoveTab(tab.id);
-                  }
+                  if (tab.id != null) onCloseTab(tab.id);
                 }}
               />
             ))}
           </div>
+          {stashedTabs.length > 0 && (
+            <div className="tab-manager-view__stashed-section">
+              <div className="tab-manager-view__stashed-label">
+                Stashed · {stashedTabs.length}
+              </div>
+              {stashedTabs.map((s) => (
+                <StashedTabRow
+                  key={s.url}
+                  stashedTab={s}
+                  onReopen={() => onReopenStashedTab(s.url)}
+                  onRemove={() => onRemoveStashedTab(s.url)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -636,6 +696,8 @@ export default function TabManagerView() {
     handleOpenAllTabs,
     handleCloseAllTabs,
     handleCloseTab,
+    handleReopenStashedTab,
+    handleRemoveStashedTab,
   } = useTabManagerView();
 
   return (
@@ -683,6 +745,8 @@ export default function TabManagerView() {
               onCloseAll={() => void handleCloseAllTabs(group.id)}
               onCloseTab={(tabId) => void handleCloseTab(tabId)}
               onRemoveTab={(tabId) => void handleRemoveTabFromGroup(tabId, group.id)}
+              onReopenStashedTab={(url) => handleReopenStashedTab(url)}
+              onRemoveStashedTab={(url) => void handleRemoveStashedTab(url, group.id)}
             />
           ))}
         </div>

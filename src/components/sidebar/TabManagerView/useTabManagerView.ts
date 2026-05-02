@@ -7,8 +7,8 @@
  * @dependencies @/types/tab-groups, @/services/tab-groups-storage
  * @public useTabManagerView
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { TabGroup, GroupColor } from '@/types/tab-groups';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { tabGroupsStorage } from '@/services/tab-groups-storage';
 
 export const FREE_PLAN_MAX_GROUPS = 3;
@@ -22,23 +22,79 @@ export function useTabManagerView() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState<GroupColor>('primary');
 
-  // Refresh live tabs and prune dead tabIds from all groups
+  // Cache tab metadata so it's available when onRemoved fires (chrome only gives us the ID)
+  const tabMetadataCacheRef = useRef<Map<number, chrome.tabs.Tab>>(new Map());
+
+  // Refresh live tabs: stash closed grouped tabs, auto-restore stashed tabs that are now live
   const refreshTabs = useCallback(async () => {
     const liveTabs = await chrome.tabs.query({});
+
+    // Keep metadata cache up to date
+    for (const t of liveTabs) {
+      if (t.id != null) tabMetadataCacheRef.current.set(t.id, t);
+    }
+
     const liveIdSet = new Set(liveTabs.filter((t) => t.id != null).map((t) => t.id!));
+    const liveUrlToId = new Map(
+      liveTabs.filter((t) => t.id != null && t.url).map((t) => [t.url!, t.id!]),
+    );
+
     setOpenTabs(liveTabs);
     setGroups((prev) => {
-      const updated = prev.map((g) => ({
-        ...g,
-        tabIds: g.tabIds.filter((id) => liveIdSet.has(id)),
-      }));
-      const changed = updated.some((g, i) => g.tabIds.length !== prev[i].tabIds.length);
+      let changed = false;
+      const updated = prev.map((g) => {
+        const closedIds = g.tabIds.filter((id) => !liveIdSet.has(id));
+        const restoredStashed = (g.stashedTabs ?? []).filter((s) => liveUrlToId.has(s.url));
+
+        if (closedIds.length === 0 && restoredStashed.length === 0) return g;
+        changed = true;
+
+        // Build updated stashed list: add newly-closed, remove restored
+        const restoredUrls = new Set(restoredStashed.map((s) => s.url));
+        const nextStashed: StashedTab[] = (g.stashedTabs ?? []).filter(
+          (s) => !restoredUrls.has(s.url),
+        );
+        for (const id of closedIds) {
+          const meta = tabMetadataCacheRef.current.get(id);
+          if (meta?.url?.startsWith('http')) {
+            const alreadyStashed = nextStashed.some((s) => s.url === meta.url);
+            if (!alreadyStashed) {
+              nextStashed.push({
+                url: meta.url,
+                title: meta.title || meta.url,
+                favIconUrl: meta.favIconUrl,
+                stashedAt: Date.now(),
+              });
+            }
+          }
+        }
+
+        // tabIds: remove closed, add restored
+        const restoredIds = restoredStashed.map((s) => liveUrlToId.get(s.url)!);
+        const nextTabIds = [
+          ...g.tabIds.filter((id) => liveIdSet.has(id)),
+          ...restoredIds,
+        ];
+
+        // tabUrls: remove closed URLs, add restored URLs
+        const closedUrls = new Set(
+          closedIds
+            .map((id) => tabMetadataCacheRef.current.get(id)?.url)
+            .filter((u): u is string => !!u),
+        );
+        const nextTabUrls = [
+          ...g.tabUrls.filter((u) => !closedUrls.has(u)),
+          ...restoredStashed.map((s) => s.url),
+        ];
+
+        return { ...g, tabIds: nextTabIds, tabUrls: nextTabUrls, stashedTabs: nextStashed, updatedAt: Date.now() };
+      });
       if (changed) void tabGroupsStorage.saveGroups(updated);
-      return updated;
+      return changed ? updated : prev;
     });
   }, []);
 
-  // Initial load: read stored groups, then sync live tabIds by matching stored URLs
+  // Initial load: read stored groups, sync live tabIds by URL, stash tabs not currently open
   useEffect(() => {
     void (async () => {
       const [stored, liveTabs] = await Promise.all([
@@ -48,15 +104,31 @@ export function useTabManagerView() {
       const urlToId = new Map<string, number>();
       for (const t of liveTabs) {
         if (t.id != null && t.url) urlToId.set(t.url, t.id);
+        if (t.id != null) tabMetadataCacheRef.current.set(t.id, t);
       }
-      const synced = stored.map((g) => ({
-        ...g,
-        tabIds: g.tabUrls
-          .map((url) => urlToId.get(url))
-          .filter((id): id is number => id != null),
-      }));
+      const now = Date.now();
+      const synced = stored.map((g) => {
+        const liveTabIds: number[] = [];
+        const liveTabUrls: string[] = [];
+        const stashed: StashedTab[] = [...(g.stashedTabs ?? [])];
+        for (const url of g.tabUrls) {
+          const id = urlToId.get(url);
+          if (id != null) {
+            liveTabIds.push(id);
+            liveTabUrls.push(url);
+          } else {
+            // Tab was closed between sessions — stash with URL as title fallback
+            const alreadyStashed = stashed.some((s) => s.url === url);
+            if (!alreadyStashed) {
+              stashed.push({ url, title: url, stashedAt: now });
+            }
+          }
+        }
+        return { ...g, tabIds: liveTabIds, tabUrls: liveTabUrls, stashedTabs: stashed };
+      });
       setGroups(synced);
       setOpenTabs(liveTabs);
+      void tabGroupsStorage.saveGroups(synced);
     })();
   }, []);
 
@@ -113,6 +185,7 @@ export function useTabManagerView() {
       aiContext: false,
       tabIds: [],
       tabUrls: [],
+      stashedTabs: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -224,11 +297,30 @@ export function useTabManagerView() {
     (groupId: string) => {
       const group = groups.find((g) => g.id === groupId);
       if (!group) return;
-      for (const url of group.tabUrls) {
-        void chrome.tabs.create({ url });
+      // Open only stashed (closed) tabs — live tabs are already open
+      for (const s of group.stashedTabs ?? []) {
+        void chrome.tabs.create({ url: s.url });
       }
     },
     [groups],
+  );
+
+  const handleReopenStashedTab = useCallback((url: string) => {
+    void chrome.tabs.create({ url });
+    // refreshTabs() auto-moves the URL from stashedTabs to tabIds when the tab becomes live
+  }, []);
+
+  const handleRemoveStashedTab = useCallback(
+    async (url: string, groupId: string) => {
+      await persistGroups(
+        groups.map((g) =>
+          g.id === groupId
+            ? { ...g, stashedTabs: (g.stashedTabs ?? []).filter((s) => s.url !== url), updatedAt: Date.now() }
+            : g,
+        ),
+      );
+    },
+    [groups, persistGroups],
   );
 
   const handleCloseAllTabs = useCallback(
@@ -274,5 +366,7 @@ export function useTabManagerView() {
     handleOpenAllTabs,
     handleCloseAllTabs,
     handleCloseTab,
+    handleReopenStashedTab,
+    handleRemoveStashedTab,
   };
 }
