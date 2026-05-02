@@ -59,64 +59,6 @@
   flex-shrink: 0;
 }
 
-/* Page context strip */
-.home-view__page-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  margin-bottom: 14px;
-}
-
-.home-view__page-strip-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: var(--primary-fg);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.home-view__page-strip-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.home-view__page-strip-label {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--fg);
-}
-
-.home-view__page-strip-url {
-  font-size: 11px;
-  color: var(--fg-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-view__page-strip-btn {
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--line-2);
-  background: var(--bg);
-  color: var(--fg);
-  cursor: pointer;
-  font-size: 11.5px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
 /* Section label */
 .home-view__section-label {
   font-family: var(--font-mono);

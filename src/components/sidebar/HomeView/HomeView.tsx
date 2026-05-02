@@ -1,10 +1,10 @@
 /**
  * @module HomeView
- * @description Home launcher grid of the sidebar showing all available tools (Prompt Hub, Snippets, etc.) with accent icons, plan badges, and coming-soon overlays. Displays a sign-in nudge for anonymous users and a current-page strip with a capture button.
+ * @description Home launcher grid of the sidebar showing all available tools (Prompt Hub, Snippets, etc.) with accent icons, plan badges, and coming-soon overlays. Displays a sign-in nudge for anonymous users.
  * @dependencies @/types
  * @public HomeView (default export)
  */
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Sparkles,
   Clipboard,
@@ -12,7 +12,6 @@ import {
   Camera,
   Layers,
   BookOpen,
-  Plus,
   User,
   type LucideIcon,
 } from 'lucide-react';
@@ -121,19 +120,6 @@ interface HomeViewProps {
 }
 
 export default function HomeView({ onNavigate, signedOut, onSignIn }: HomeViewProps) {
-  const [currentUrl, setCurrentUrl] = useState('');
-
-  useEffect(() => {
-    chrome.tabs?.query({ active: true, currentWindow: true }, (tabs) => {
-      const url = tabs[0]?.url ?? '';
-      try {
-        setCurrentUrl(new URL(url).hostname);
-      } catch {
-        setCurrentUrl(url);
-      }
-    });
-  }, []);
-
   return (
     <div className="home-view">
       {signedOut && (
@@ -149,22 +135,6 @@ export default function HomeView({ onNavigate, signedOut, onSignIn }: HomeViewPr
           </div>
           <button className="home-view__signin-nudge-btn" onClick={onSignIn}>
             Sign in
-          </button>
-        </div>
-      )}
-
-      {currentUrl && (
-        <div className="home-view__page-strip">
-          <div className="home-view__page-strip-icon">
-            <Sparkles size={15} strokeWidth={1.8} />
-          </div>
-          <div className="home-view__page-strip-info">
-            <div className="home-view__page-strip-label">This page</div>
-            <div className="home-view__page-strip-url">{currentUrl}</div>
-          </div>
-          <button className="home-view__page-strip-btn">
-            <Plus size={11} strokeWidth={2.4} />
-            Capture
           </button>
         </div>
       )}
