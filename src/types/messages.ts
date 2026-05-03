@@ -136,6 +136,20 @@ export const MSG = {
   FIREBASE_AUTH: 'firebase-auth',
   /** Background → offscreen: trigger Firebase sign-out via iframe */
   FIREBASE_SIGN_OUT: 'firebase-sign-out',
+
+  // ── Screenshot ───────────────────────────────────────────────────────────────
+  /** Sidebar → background: start capture mode; background injects the content strip */
+  START_CAPTURE_MODE: 'START_CAPTURE_MODE',
+  /** Background → content script: show the compact capture strip on the page */
+  SHOW_CAPTURE_STRIP: 'SHOW_CAPTURE_STRIP',
+  /** Content script → background: take the actual screenshot (only background can call captureVisibleTab) */
+  DO_CAPTURE: 'DO_CAPTURE',
+  /** Content script → background: user exited the strip; reopen the sidebar */
+  CAPTURE_STRIP_CLOSED: 'CAPTURE_STRIP_CLOSED',
+  /** Sidebar → background: fetch the persisted screenshot store */
+  GET_SCREENSHOT_STORE: 'GET_SCREENSHOT_STORE',
+  /** Sidebar → background: delete a stored capture by id */
+  DELETE_CAPTURE: 'DELETE_CAPTURE',
 } as const;
 
 /** Union of all valid message type strings. */

@@ -7,7 +7,7 @@ export default defineConfig({
     name: 'LLM Chat Enhancer',
     description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
     version: '1.0.0',
-    permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel'],
+    permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel', 'scripting'],
     options_ui: {
       page: 'dashboard.html',
       open_in_tab: true,

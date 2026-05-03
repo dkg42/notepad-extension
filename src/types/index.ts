@@ -9,6 +9,7 @@ export * from './import';
 export * from './chat-history';
 export * from './pipeline';
 export * from './tab-groups';
+export * from './screenshot';
 
 export interface Folder {
   id: string;

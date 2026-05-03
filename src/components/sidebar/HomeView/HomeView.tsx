@@ -70,7 +70,7 @@ const FEATURES: Feature[] = [
     desc: 'Capture, annotate, send to AI',
     plan: 'free',
     accent: 'amber',
-    comingSoon: true,
+    limit: { used: 0, max: 5, unit: 'shots today' },
   },
   {
     id: 'tabs',

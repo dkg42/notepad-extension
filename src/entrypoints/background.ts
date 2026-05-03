@@ -42,6 +42,7 @@ import {
   runPipelineAnnotationTriggers,
 } from '@/background/pipeline-handler';
 import { handleDriveMessage } from '@/background/drive-handler';
+import { handleScreenshotMessage } from '@/background/screenshot-handler';
 
 const ALARM_NAME = 'notebooklm-sync';
 const MIGRATION_KEY = 'preSignInDataMigratedToUid';
@@ -419,6 +420,7 @@ export default defineBackground(() => {
         handleChatHistoryMessage(message, sendResponse) ??
         handleImportMessage(message, sendResponse) ??
         handlePipelineMessage(message, sendResponse) ??
+        handleScreenshotMessage(message, sendResponse) ??
         handleAuthSessionMessage(message, sendResponse) ??
         false
       );

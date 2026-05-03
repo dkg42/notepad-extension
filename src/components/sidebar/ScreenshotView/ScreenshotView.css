@@ -1,0 +1,209 @@
+/* ── ScreenshotView ─────────────────────────────────────────────────────── */
+
+.screenshot-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Usage row */
+.screenshot-view__usage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+
+.screenshot-view__usage-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.screenshot-view__usage-bar-track {
+  flex: 1;
+  max-width: 80px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+
+.screenshot-view__usage-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+
+.screenshot-view__usage-bar-fill--warn {
+  background: var(--accent);
+}
+
+.screenshot-view__usage-count {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Capture mode grid */
+.screenshot-view__mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.screenshot-view__mode-btn {
+  text-align: left;
+  padding: 11px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.screenshot-view__mode-btn:hover:not(.screenshot-view__mode-btn--disabled) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.screenshot-view__mode-btn:hover:not(.screenshot-view__mode-btn--disabled) .screenshot-view__mode-label {
+  color: var(--primary-soft-fg);
+}
+
+.screenshot-view__mode-btn:hover:not(.screenshot-view__mode-btn--disabled) .screenshot-view__mode-icon {
+  color: var(--primary);
+}
+
+.screenshot-view__mode-btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.screenshot-view__mode-icon {
+  color: var(--fg-3);
+  transition: color 0.12s;
+}
+
+.screenshot-view__mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.3;
+}
+
+.screenshot-view__mode-sub {
+  font-size: 10px;
+  color: var(--fg-3);
+  line-height: 1.35;
+}
+
+/* Info note */
+.screenshot-view__info-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  border: 1px dashed var(--line-2);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+
+/* Error note */
+.screenshot-view__error-note {
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in oklch, var(--accent) 30%, transparent);
+  font-size: 11px;
+  color: var(--accent-fg);
+  line-height: 1.4;
+}
+
+/* Section label */
+.screenshot-view__section-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  padding-left: 2px;
+}
+
+/* Captures grid */
+.screenshot-view__captures-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.screenshot-view__capture-thumb {
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-2);
+  transition: border-color 0.12s;
+}
+
+.screenshot-view__capture-thumb:hover {
+  border-color: var(--line-2);
+}
+
+.screenshot-view__thumb-img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-3);
+}
+
+.screenshot-view__thumb-meta {
+  padding: 5px 7px 6px;
+}
+
+.screenshot-view__thumb-name {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenshot-view__thumb-time {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  margin-top: 1px;
+}
+
+/* Empty state */
+.screenshot-view__empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg-3);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-lg);
+  line-height: 1.5;
+}
+
