@@ -138,12 +138,16 @@ export const MSG = {
   FIREBASE_SIGN_OUT: 'firebase-sign-out',
 
   // ── Screenshot ───────────────────────────────────────────────────────────────
-  /** Sidebar → background: start capture mode; background injects the content strip */
+  /** Sidebar → background: take a screenshot; background handles capture and storage */
   START_CAPTURE_MODE: 'START_CAPTURE_MODE',
-  /** Background → content script: show the compact capture strip on the page */
-  SHOW_CAPTURE_STRIP: 'SHOW_CAPTURE_STRIP',
+  /** Background → content script: show interactive capture overlay (selection/element/scrollable) */
+  SHOW_INTERACTIVE_CAPTURE: 'SHOW_INTERACTIVE_CAPTURE',
   /** Content script → background: take the actual screenshot (only background can call captureVisibleTab) */
   DO_CAPTURE: 'DO_CAPTURE',
+  /** Content script → background: capture current viewport only, return PNG data URL (no storage) */
+  CAPTURE_SLICE: 'CAPTURE_SLICE',
+  /** Content script → background: stitch collected slices and persist one capture record */
+  STITCH_AND_STORE: 'STITCH_AND_STORE',
   /** Content script → background: user exited the strip; reopen the sidebar */
   CAPTURE_STRIP_CLOSED: 'CAPTURE_STRIP_CLOSED',
   /** Sidebar → background: fetch the persisted screenshot store */

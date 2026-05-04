@@ -1,56 +1,32 @@
 /**
  * @module screenshot-storage
- * @description Persistence layer for screenshot captures and daily usage tracking.
- *   Captures are stored in chrome.storage.local, newest-first, capped at MAX_STORED_CAPTURES.
- *   Usage resets lazily at midnight: the first read after a date change returns a fresh counter.
+ * @description Persistence layer for screenshot captures using chrome.storage.local.
+ *   Captures are stored newest-first with no enforced cap — users manage storage
+ *   by deleting captures from the sidebar.
  * @dependencies @/types
- * @public screenshotStorage, FREE_DAILY_LIMIT, MAX_STORED_CAPTURES
+ * @public screenshotStorage
  */
-import type { CaptureRecord, ScreenshotStore, ScreenshotUsage } from '@/types';
+import type { CaptureRecord, ScreenshotStore } from '@/types';
 
 const STORAGE_KEY = 'screenshotStore';
-export const FREE_DAILY_LIMIT = 5;
-export const MAX_STORED_CAPTURES = 10;
-
-function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function freshUsage(): ScreenshotUsage {
-  return { date: todayKey(), count: 0 };
-}
 
 export const screenshotStorage = {
   async getStore(): Promise<ScreenshotStore> {
     const result = await chrome.storage.local.get(STORAGE_KEY);
-    const raw = result[STORAGE_KEY] as ScreenshotStore | undefined;
-    if (!raw) return { captures: [], usage: freshUsage() };
-    const usage: ScreenshotUsage =
-      raw.usage?.date === todayKey() ? raw.usage : freshUsage();
-    return { captures: raw.captures ?? [], usage };
-  },
-
-  async getUsage(): Promise<ScreenshotUsage> {
-    const store = await screenshotStorage.getStore();
-    return store.usage;
+    const raw = result[STORAGE_KEY] as { captures?: CaptureRecord[] } | undefined;
+    return { captures: raw?.captures ?? [] };
   },
 
   async addCapture(capture: CaptureRecord): Promise<void> {
     const store = await screenshotStorage.getStore();
-    const today = todayKey();
-    const usage: ScreenshotUsage =
-      store.usage.date === today
-        ? { date: today, count: store.usage.count + 1 }
-        : { date: today, count: 1 };
-    const captures = [capture, ...store.captures].slice(0, MAX_STORED_CAPTURES);
-    await chrome.storage.local.set({ [STORAGE_KEY]: { captures, usage } });
+    const captures = [capture, ...store.captures];
+    await chrome.storage.local.set({ [STORAGE_KEY]: { captures } });
   },
 
   async deleteCapture(id: string): Promise<void> {
     const store = await screenshotStorage.getStore();
     const captures = store.captures.filter((c) => c.id !== id);
-    await chrome.storage.local.set({ [STORAGE_KEY]: { ...store, captures } });
+    await chrome.storage.local.set({ [STORAGE_KEY]: { captures } });
   },
 
   async clearAll(): Promise<void> {

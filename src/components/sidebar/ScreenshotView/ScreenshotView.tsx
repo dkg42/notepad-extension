@@ -1,19 +1,17 @@
 /**
  * @module ScreenshotView
- * @description Sidebar view for the screenshot capture feature. Shows a usage bar, a 2×2 grid
- *   of capture-mode buttons, and a recent captures grid. When a mode button is clicked, the
- *   sidebar sends START_CAPTURE_MODE to the background (which injects a compact strip onto the
- *   active page via a content script) and then closes itself with window.close().
+ * @description Sidebar view for the screenshot capture feature. Shows a 2×2 grid of
+ *   capture-mode buttons and a scrollable grid of all saved captures with delete buttons.
  * @dependencies useScreenshotView
  * @public ScreenshotView (default)
  */
 import React, { useState } from 'react';
 import {
   Monitor,
-  Maximize2,
+  ScrollText,
   Crop,
   MousePointer2,
-  Info,
+  X,
 } from 'lucide-react';
 import type { CaptureMode, CaptureRecord } from '@/types';
 import { useScreenshotView } from './useScreenshotView';
@@ -31,10 +29,10 @@ interface ModeConfig {
 }
 
 const CAPTURE_MODES: ModeConfig[] = [
-  { id: 'visible',   Icon: Monitor,       label: 'Visible area', sub: 'What you see now' },
-  { id: 'full',      Icon: Maximize2,     label: 'Full page',    sub: 'Entire scrollable page' },
-  { id: 'selection', Icon: Crop,          label: 'Selection',    sub: 'Draw a region' },
-  { id: 'element',   Icon: MousePointer2, label: 'Element',      sub: 'Pick a DOM node' },
+  { id: 'visible',    Icon: Monitor,       label: 'Visible area', sub: 'What you see now' },
+  { id: 'scrollable', Icon: ScrollText,    label: 'Scrollable',   sub: 'Scroll & stitch' },
+  { id: 'selection',  Icon: Crop,          label: 'Selection',    sub: 'Draw a region' },
+  { id: 'element',    Icon: MousePointer2, label: 'Element',      sub: 'Pick a DOM node' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,7 +83,13 @@ function CaptureBtn({ config, disabled, onClick }: CaptureBtnProps) {
 // CaptureThumbnail subcomponent
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CaptureThumbnail({ capture }: { capture: CaptureRecord }) {
+function CaptureThumbnail({
+  capture,
+  onDelete,
+}: {
+  capture: CaptureRecord;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="screenshot-view__capture-thumb" title={capture.tabTitle}>
       <img
@@ -94,6 +98,17 @@ function CaptureThumbnail({ capture }: { capture: CaptureRecord }) {
         alt={capture.tabTitle}
         loading="lazy"
       />
+      <button
+        className="screenshot-view__thumb-delete"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(capture.id);
+        }}
+        title="Delete capture"
+        aria-label="Delete capture"
+      >
+        <X size={10} strokeWidth={2.5} />
+      </button>
       <div className="screenshot-view__thumb-meta">
         <div className="screenshot-view__thumb-name">
           {modeLabel(capture.mode)} — {capture.tabTitle || 'Untitled'}
@@ -109,74 +124,47 @@ function CaptureThumbnail({ capture }: { capture: CaptureRecord }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ScreenshotView() {
-  const { captures, usedToday, dailyLimit } = useScreenshotView();
+  const { captures, deleteCapture, loadStore } = useScreenshotView();
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
 
-  const limitReached = usedToday >= dailyLimit;
-  const usagePct = Math.min(100, (usedToday / dailyLimit) * 100);
-  const usageWarn = usagePct >= 80;
-
   const handleCapture = async (mode: CaptureMode) => {
-    if (limitReached || launching) return;
+    if (launching) return;
     setLaunching(true);
     setLaunchError(null);
-    const dark = localStorage.getItem('nh_dark_mode') === 'true';
     try {
-      // Await the background response — it ensures the capture strip is fully
-      // injected and visible on the page before this sidebar closes itself.
-      const res = await chrome.runtime.sendMessage({
-        type: 'START_CAPTURE_MODE',
-        mode,
-        dark,
-      }) as { ok: boolean; error?: string } | undefined;
+      const raw = await chrome.runtime.sendMessage({ type: 'START_CAPTURE_MODE', mode });
+      const res = raw as { ok: boolean; error?: string } | undefined;
 
-      if (res?.ok) {
-        window.close();
-      } else {
-        setLaunchError(res?.error === 'no_active_tab'
+      if (res && !res.ok) {
+        setLaunchError(res.error === 'no_active_tab'
           ? 'No active page found. Click on a page first.'
           : 'Could not start capture. Refresh the page and try again.');
-        setLaunching(false);
+      } else if (mode === 'visible') {
+        // Sidebar stays open for visible captures — refresh the list.
+        await loadStore();
       }
+      // For interactive modes the sidebar is closed by the background;
+      // the port closing causes an exception that is swallowed below.
     } catch {
-      setLaunchError('Could not reach the extension background. Try reloading the extension.');
+      // Port closed mid-message: normal when background closes the sidebar.
+    } finally {
       setLaunching(false);
     }
   };
 
   return (
     <div className="screenshot-view">
-      {/* Usage bar */}
-      <div className="screenshot-view__usage-row">
-        <span className="screenshot-view__usage-label">
-          {usedToday} of {dailyLimit} today
-        </span>
-        <div className="screenshot-view__usage-bar-track">
-          <div
-            className={`screenshot-view__usage-bar-fill${usageWarn ? ' screenshot-view__usage-bar-fill--warn' : ''}`}
-            style={{ width: `${usagePct}%` }}
-          />
-        </div>
-        <span className="screenshot-view__usage-count">{usedToday}/{dailyLimit}</span>
-      </div>
-
       {/* Capture mode grid */}
       <div className="screenshot-view__mode-grid">
         {CAPTURE_MODES.map((cfg) => (
           <CaptureBtn
             key={cfg.id}
             config={cfg}
-            disabled={limitReached || launching}
+            disabled={launching}
             onClick={() => void handleCapture(cfg.id)}
           />
         ))}
-      </div>
-
-      {/* Info note */}
-      <div className="screenshot-view__info-note">
-        <Info size={11} strokeWidth={1.8} style={{ flexShrink: 0, opacity: 0.6 }} />
-        {launching ? 'Opening capture strip…' : 'Sidebar closes while capturing — reopen automatically when done'}
       </div>
 
       {/* Launch error */}
@@ -184,13 +172,15 @@ export default function ScreenshotView() {
         <div className="screenshot-view__error-note">{launchError}</div>
       )}
 
-      {/* Recent captures */}
+      {/* Captures */}
       {captures.length > 0 && (
         <>
-          <div className="screenshot-view__section-label">Recent captures</div>
+          <div className="screenshot-view__section-label">
+            Captures ({captures.length})
+          </div>
           <div className="screenshot-view__captures-grid">
-            {captures.slice(0, 4).map((c) => (
-              <CaptureThumbnail key={c.id} capture={c} />
+            {captures.map((c) => (
+              <CaptureThumbnail key={c.id} capture={c} onDelete={deleteCapture} />
             ))}
           </div>
         </>

@@ -2,11 +2,11 @@
  * @module screenshot
  * @description Type definitions for the Screenshot capture feature.
  * @dependencies none
- * @public CaptureMode, CaptureRecord, ScreenshotUsage, ScreenshotStore
+ * @public CaptureMode, CaptureRecord, ScreenshotStore
  */
 
 /** The four capture modes available in the screenshot strip. */
-export type CaptureMode = 'full' | 'visible' | 'selection' | 'element';
+export type CaptureMode = 'scrollable' | 'visible' | 'selection' | 'element';
 
 /** A single captured screenshot persisted in chrome.storage.local. */
 export interface CaptureRecord {
@@ -19,16 +19,8 @@ export interface CaptureRecord {
   capturedAt: number; // Unix ms
 }
 
-/** Daily usage counter; the date string resets at midnight local time. */
-export interface ScreenshotUsage {
-  /** 'YYYY-MM-DD' in local timezone. */
-  date: string;
-  count: number;
-}
-
 /** Top-level shape stored under STORAGE_KEY in chrome.storage.local. */
 export interface ScreenshotStore {
-  /** Ordered newest-first, capped at MAX_STORED_CAPTURES. */
+  /** Ordered newest-first. */
   captures: CaptureRecord[];
-  usage: ScreenshotUsage;
 }
