@@ -30,10 +30,21 @@ export function useDashboardHome(snippets: Snippet[], folders: Folder[]) {
     return counts;
   }, [snippets]);
 
+  const formattedDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      }).format(new Date()),
+    [],
+  );
+
   return {
     totalTags,
     recentSnippets,
     folderMap,
     snippetsPerFolder,
+    formattedDate,
   };
 }

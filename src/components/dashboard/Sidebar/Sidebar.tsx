@@ -1,6 +1,6 @@
 /**
  * @module Sidebar
- * @description Dashboard navigation sidebar with primary nav items, animated collapsible groups for Notebooks, Chat History, and Podcasts, and a footer user card that navigates to the Account page.
+ * @description Dashboard navigation sidebar with Notehublm branding, cmd-K search trigger, primary nav items, animated collapsible groups, and a footer user card.
  * @dependencies @/types, @/types/dashboard, @/services/auth-service, @/contexts/NavigationContext, @/contexts/SnippetsContext
  * @public Sidebar
  */
@@ -23,9 +23,9 @@ import {
   Clock,
   Settings,
   ChevronRight,
-  Sparkles,
+  ChevronDown,
   Zap,
-  User,
+  Search,
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
@@ -70,7 +70,7 @@ const NOTEBOOKS_GROUP: NavGroup = {
 const CHAT_HISTORY_GROUP: NavGroup = {
   view: 'chat-history',
   icon: MessageSquare,
-  label: 'Chat History',
+  label: 'Chat history',
   subItems: [
     { view: 'chat-history', icon: MessagesSquare, label: 'All Chats' },
   ],
@@ -88,8 +88,8 @@ const PODCASTS_GROUP: NavGroup = {
 
 const SECONDARY_NAV: NavItem[] = [
   { view: 'analytics', icon: BarChart2, label: 'Analytics' },
-  { view: 'export-history', icon: Clock, label: 'Export History' },
   { view: 'pipelines', icon: Zap, label: 'Pipelines' },
+  { view: 'export-history', icon: Clock, label: 'Export History' },
 ];
 
 const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
@@ -115,25 +115,20 @@ function CollapsibleGroup({
   onToggle,
   onNavigate,
 }: CollapsibleGroupProps) {
-  const Icon = group.icon;
-
   return (
     <div className="sidebar__group">
       <button
-        className={`sidebar__nav-item${isGroupActive ? ' sidebar__nav-item--active' : ''}`}
+        className="sidebar__group-trigger"
         onClick={onToggle}
         title={group.label}
       >
-        <Icon size={16} strokeWidth={1.75} />
-        <span className="sidebar__nav-label">{group.label}</span>
-        {badge > 0 && <span className="sidebar__nav-badge">{badge}</span>}
-        <motion.span
-          className="sidebar__nav-caret"
-          animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronRight size={12} strokeWidth={2} />
-        </motion.span>
+        {isExpanded
+          ? <ChevronDown size={9} strokeWidth={2.2} />
+          : <ChevronRight size={9} strokeWidth={2.2} />}
+        <span>{group.label}</span>
+        {badge > 0 && (
+          <span className="sidebar__nav-badge" style={{ marginLeft: 'auto' }}>{badge}</span>
+        )}
       </button>
 
       <AnimatePresence initial={false}>
@@ -164,7 +159,9 @@ function CollapsibleGroup({
                     onClick={() => onNavigate(sub.view)}
                     title={sub.label}
                   >
-                    <SubIcon size={14} strokeWidth={1.75} />
+                    <span className="sidebar__nav-icon">
+                      <SubIcon size={13} strokeWidth={1.75} />
+                    </span>
                     <span className="sidebar__nav-label">{sub.label}</span>
                   </button>
                 );
@@ -191,6 +188,7 @@ export default function Sidebar() {
     chatHistoryCount,
     podcastsCount,
     pipelinesCount,
+    setShowCommandPalette,
   } = useNavigation();
   const { snippets, favoritesCount } = useSnippets();
   const promptCount = snippets.length;
@@ -231,7 +229,9 @@ export default function Sidebar() {
         onClick={() => onNavigate(item.view)}
         title={item.label}
       >
-        <Icon size={16} strokeWidth={1.75} />
+        <span className="sidebar__nav-icon">
+          <Icon size={14} strokeWidth={1.75} />
+        </span>
         <span className="sidebar__nav-label">{item.label}</span>
         {badge !== null && <span className="sidebar__nav-badge">{badge}</span>}
       </button>
@@ -273,20 +273,29 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      {/* Brand section */}
+      {/* Brand */}
       <div className="sidebar__brand">
-        <div className="sidebar__brand-avatar">
-          <Sparkles size={18} strokeWidth={2} />
-        </div>
+        <div className="sidebar__brand-avatar">n</div>
         <div className="sidebar__brand-info">
-          <span className="sidebar__brand-name">LLM Enhancer</span>
-          <span className="sidebar__brand-version">v1.0.0</span>
+          <span className="sidebar__brand-name">Notehublm</span>
+          <span className="sidebar__brand-subtitle">Dashboard</span>
         </div>
+      </div>
+
+      {/* Cmd-K search trigger */}
+      <div className="sidebar__search-wrap">
+        <button
+          className="sidebar__search-btn"
+          onClick={() => setShowCommandPalette(true)}
+        >
+          <Search size={13} />
+          <span>Search everything…</span>
+          <kbd>⌘K</kbd>
+        </button>
       </div>
 
       {/* Primary navigation */}
       <nav className="sidebar__nav">
-        <div className="sidebar__section-label">Menu</div>
         {PRIMARY_NAV.map(renderNavItem)}
 
         <CollapsibleGroup
@@ -317,12 +326,25 @@ export default function Sidebar() {
           onNavigate={onNavigate}
         />
 
-        <div className="sidebar__section-label">More</div>
+        <div className="sidebar__divider" />
+
         {SECONDARY_NAV.map(renderNavItem)}
       </nav>
 
       {/* Footer */}
       <div className="sidebar__footer">
+        {!user && (
+          <div className="sidebar__upgrade-banner">
+            <div className="sidebar__upgrade-banner-title">
+              <Zap size={11} />
+              Upgrade to Pro
+            </div>
+            <div className="sidebar__upgrade-banner-body">
+              Unlock pipelines, NotebookLM, cloud sync. <strong>$5/mo.</strong>
+            </div>
+          </div>
+        )}
+
         {user ? (
           (() => {
             const { displayName = null, email = null, photoURL = null } = user ?? {};
@@ -354,6 +376,9 @@ export default function Sidebar() {
                     <span className="sidebar__user-email">{email}</span>
                   )}
                 </div>
+                <span className="sidebar__user-settings-icon">
+                  <Settings size={13} strokeWidth={1.75} />
+                </span>
               </button>
             );
           })()
@@ -363,16 +388,18 @@ export default function Sidebar() {
             onClick={() => onNavigate('account')}
             title="Account"
           >
-            <User size={16} strokeWidth={1.75} />
             <span className="sidebar__nav-label">Account</span>
           </button>
         )}
+
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
           onClick={() => onNavigate('settings')}
           title="Settings"
         >
-          <Settings size={16} strokeWidth={1.75} />
+          <span className="sidebar__nav-icon">
+            <Settings size={14} strokeWidth={1.75} />
+          </span>
           <span className="sidebar__nav-label">Settings</span>
         </button>
       </div>

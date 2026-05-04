@@ -24,6 +24,7 @@ export function ThemeProvider({ children, initialTheme, onThemeChange }: ThemePr
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   // Sync when initialTheme prop changes (e.g. loaded from storage)

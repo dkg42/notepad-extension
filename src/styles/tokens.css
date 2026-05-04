@@ -1,3 +1,78 @@
+/* ── Notehublm design tokens (oklch) ───────────────────────────────────────── */
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --bg:        oklch(0.992 0.003 80);
+  --bg-2:      oklch(0.975 0.005 80);
+  --bg-3:      oklch(0.955 0.006 80);
+  --line:      oklch(0.910 0.008 80);
+  --line-2:    oklch(0.860 0.010 80);
+
+  --fg:        oklch(0.205 0.015 260);
+  --fg-2:      oklch(0.420 0.012 260);
+  --fg-3:      oklch(0.580 0.010 260);
+
+  --primary:         oklch(0.585 0.18 270);
+  --primary-fg:      oklch(0.985 0.005 270);
+  --primary-soft:    oklch(0.945 0.040 270);
+  --primary-soft-fg: oklch(0.480 0.16 270);
+
+  --accent:     oklch(0.760 0.16 75);
+  --accent-fg:  oklch(0.250 0.05 75);
+  --accent-soft:oklch(0.955 0.045 75);
+
+  --tag-1-bg: oklch(0.945 0.045 270); --tag-1-fg: oklch(0.430 0.14 270);
+  --tag-2-bg: oklch(0.950 0.045 160); --tag-2-fg: oklch(0.420 0.13 160);
+  --tag-3-bg: oklch(0.955 0.045 30);  --tag-3-fg: oklch(0.450 0.14 30);
+  --tag-4-bg: oklch(0.950 0.045 320); --tag-4-fg: oklch(0.450 0.14 320);
+  --tag-5-bg: oklch(0.950 0.045 220); --tag-5-fg: oklch(0.430 0.13 220);
+  --tag-6-bg: oklch(0.955 0.045 75);  --tag-6-fg: oklch(0.420 0.12 75);
+
+  --shadow-sm: 0 1px 2px oklch(0.2 0.02 260 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0.2 0.02 260 / 0.08), 0 1px 2px oklch(0.2 0.02 260 / 0.04);
+  --shadow-lg: 0 12px 32px oklch(0.2 0.02 260 / 0.12), 0 2px 6px oklch(0.2 0.02 260 / 0.06);
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+
+  --sidebar-width: 232px;
+}
+
+[data-theme='dark'] {
+  --bg:        oklch(0.175 0.012 265);
+  --bg-2:      oklch(0.215 0.014 265);
+  --bg-3:      oklch(0.255 0.015 265);
+  --line:      oklch(0.295 0.015 265);
+  --line-2:    oklch(0.355 0.015 265);
+
+  --fg:        oklch(0.965 0.005 265);
+  --fg-2:      oklch(0.745 0.012 265);
+  --fg-3:      oklch(0.585 0.012 265);
+
+  --primary:         oklch(0.700 0.17 270);
+  --primary-fg:      oklch(0.150 0.02 270);
+  --primary-soft:    oklch(0.295 0.060 270);
+  --primary-soft-fg: oklch(0.820 0.13 270);
+
+  --accent:     oklch(0.800 0.15 75);
+  --accent-fg:  oklch(0.200 0.04 75);
+  --accent-soft:oklch(0.310 0.060 75);
+
+  --tag-1-bg: oklch(0.295 0.055 270); --tag-1-fg: oklch(0.820 0.12 270);
+  --tag-2-bg: oklch(0.295 0.055 160); --tag-2-fg: oklch(0.820 0.12 160);
+  --tag-3-bg: oklch(0.300 0.060 30);  --tag-3-fg: oklch(0.830 0.13 30);
+  --tag-4-bg: oklch(0.300 0.060 320); --tag-4-fg: oklch(0.830 0.13 320);
+  --tag-5-bg: oklch(0.295 0.055 220); --tag-5-fg: oklch(0.820 0.12 220);
+  --tag-6-bg: oklch(0.300 0.055 75);  --tag-6-fg: oklch(0.830 0.12 75);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.45), 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-lg: 0 12px 32px oklch(0 0 0 / 0.55), 0 2px 6px oklch(0 0 0 / 0.35);
+}
+
 /* ── Light theme (default) ─────────────────────────────────────────────────── */
 :root,
 [data-theme='light'] {
