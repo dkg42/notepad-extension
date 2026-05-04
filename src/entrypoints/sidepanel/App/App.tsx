@@ -12,6 +12,7 @@ import SnippetsView from '@/components/sidebar/SnippetsView/SnippetsView';
 import ChatHistoryView from '@/components/sidebar/ChatHistoryView/ChatHistoryView';
 import TabManagerView from '@/components/sidebar/TabManagerView/TabManagerView';
 import ScreenshotView from '@/components/sidebar/ScreenshotView/ScreenshotView';
+import NotebookView from '@/components/sidebar/NotebookView/NotebookView';
 import UserMenu from '@/components/sidebar/UserMenu/UserMenu';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
@@ -19,7 +20,7 @@ import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
 import { useApp } from './useApp';
 import './App.css';
 
-type View = 'home' | 'prompts' | 'snippets' | 'history' | 'tabs' | 'screenshot';
+type View = 'home' | 'prompts' | 'snippets' | 'history' | 'tabs' | 'screenshot' | 'notebook';
 
 const DARK_KEY = 'nh_dark_mode';
 
@@ -78,7 +79,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   };
 
   const handleNavigate = (target: string) => {
-    if (target === 'prompts' || target === 'snippets' || target === 'history' || target === 'tabs' || target === 'screenshot') {
+    if (target === 'prompts' || target === 'snippets' || target === 'history' || target === 'tabs' || target === 'screenshot' || target === 'notebook') {
       setView(target as View);
     }
   };
@@ -138,6 +139,8 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
       {view === 'tabs' && <TabManagerView />}
 
       {view === 'screenshot' && <ScreenshotView />}
+
+      {view === 'notebook' && <NotebookView />}
 
       {userMenuOpen && user && (
         <UserMenu

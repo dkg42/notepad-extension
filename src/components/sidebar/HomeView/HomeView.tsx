@@ -87,7 +87,6 @@ const FEATURES: Feature[] = [
     desc: 'Send current tab as a source',
     plan: 'pro',
     accent: 'magenta',
-    comingSoon: true,
   },
 ];
 

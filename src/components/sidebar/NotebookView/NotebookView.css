@@ -1,0 +1,284 @@
+/* NotebookView — Add to NotebookLM sidebar view */
+
+.notebook-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Page preview card ─────────────────────────────────────────────────────── */
+
+.notebook-view__page-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 11px 12px;
+}
+
+.notebook-view__page-card-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 6px;
+}
+
+.notebook-view__page-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notebook-view__page-url {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notebook-view__no-url {
+  font-size: 11px;
+  color: var(--fg-3);
+  line-height: 1.4;
+}
+
+/* ── Section header row ────────────────────────────────────────────────────── */
+
+.notebook-view__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notebook-view__section-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.notebook-view__sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.notebook-view__sync-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.notebook-view__sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notebook-view__spin {
+  animation: notebook-spin 0.7s linear infinite;
+}
+
+@keyframes notebook-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Notebook list ─────────────────────────────────────────────────────────── */
+
+.notebook-view__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notebook-view__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.notebook-view__item:hover:not(:disabled):not(.notebook-view__item--selected) {
+  border-color: var(--line-2);
+  background: var(--bg-2);
+}
+
+.notebook-view__item--selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.notebook-view__item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notebook-view__item-icon {
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+
+.notebook-view__item--selected .notebook-view__item-icon {
+  color: var(--primary);
+}
+
+.notebook-view__item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notebook-view__item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notebook-view__item--selected .notebook-view__item-title {
+  color: var(--primary-soft-fg);
+}
+
+.notebook-view__item-meta {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+  margin-top: 1px;
+}
+
+.notebook-view__item-check {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────────── */
+
+.notebook-view__empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg-3);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-lg);
+  line-height: 1.5;
+}
+
+/* ── Banners (success / error) ─────────────────────────────────────────────── */
+
+.notebook-view__banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+}
+
+.notebook-view__banner--success {
+  background: oklch(0.950 0.045 160);
+  border-color: oklch(0.860 0.08 160);
+  color: oklch(0.370 0.13 160);
+}
+
+.notebook-view__banner--error {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklch, var(--accent) 30%, transparent);
+  color: var(--accent-fg);
+}
+
+.notebook-view__banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notebook-view__banner-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.notebook-view__banner-sub {
+  font-size: 10.5px;
+  opacity: 0.85;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.notebook-view__banner-reset {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  color: inherit;
+}
+
+/* ── Submit footer ─────────────────────────────────────────────────────────── */
+
+.notebook-view__footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notebook-view__submit-btn {
+  width: 100%;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: none;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.12s;
+}
+
+.notebook-view__submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notebook-view__footer-hint {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  text-align: center;
+}
