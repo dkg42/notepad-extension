@@ -33,6 +33,9 @@ export default function PromptsPage() {
   const [tagMenuOpen, setTagMenuOpen] = useState(false);
   const tagMenuRef = useRef<HTMLDivElement>(null);
 
+  const [openSections, setOpenSections] = useState<string[]>([]);
+  const preSearchSectionsRef = useRef<string[] | null>(null);
+
   useEffect(() => {
     if (!tagMenuOpen) return;
     const handleOutside = (e: MouseEvent) => {
@@ -80,6 +83,24 @@ export default function PromptsPage() {
   }, [filtered, folders]);
 
   const uncategorizedSnippets = groupedByFolder.get(UNCATEGORIZED_ID) ?? [];
+
+  // Auto-expand accordion sections that have matching results while searching;
+  // restore to pre-search state when the query is cleared.
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setOpenSections((current) => {
+        if (preSearchSectionsRef.current === null) {
+          preSearchSectionsRef.current = current;
+        }
+        return [...groupedByFolder.entries()]
+          .filter(([, snips]) => snips.length > 0)
+          .map(([key]) => key);
+      });
+    } else if (preSearchSectionsRef.current !== null) {
+      setOpenSections(preSearchSectionsRef.current);
+      preSearchSectionsRef.current = null;
+    }
+  }, [searchQuery, groupedByFolder]);
 
   const sharedTableProps = {
     hideToolbar: true as const,
@@ -163,7 +184,12 @@ export default function PromptsPage() {
         </span>
       </div>
 
-      <Accordion type="multiple" className="prompts-page__accordion">
+      <Accordion
+        type="multiple"
+        className="prompts-page__accordion"
+        value={openSections}
+        onValueChange={setOpenSections}
+      >
         {folders.map((folder) => {
           const folderSnippets = groupedByFolder.get(folder.id) ?? [];
           return (

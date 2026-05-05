@@ -12,6 +12,7 @@ interface CommandPaletteProps {
   isOpen: boolean;
   query: string;
   items: PaletteItem[];
+  selectableItems: PaletteItem[];
   activeIndex: number;
   onQueryChange: (q: string) => void;
   onSelectItem: (item: PaletteItem) => void;
@@ -24,6 +25,7 @@ export default function CommandPalette({
   isOpen,
   query,
   items,
+  selectableItems,
   activeIndex,
   onQueryChange,
   onSelectItem,
@@ -41,11 +43,15 @@ export default function CommandPalette({
   }, [isOpen]);
 
   useEffect(() => {
-    const activeEl = listRef.current?.children[activeIndex] as HTMLElement | undefined;
-    activeEl?.scrollIntoView({ block: 'nearest' });
-  }, [activeIndex]);
+    const activeId = selectableItems[activeIndex]?.id;
+    if (!activeId || !listRef.current) return;
+    const el = listRef.current.querySelector(`[data-id="${activeId}"]`) as HTMLElement | null;
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, selectableItems]);
 
   if (!isOpen) return null;
+
+  const hasContent = items.some((i) => i.type !== 'section');
 
   return (
     <div className="command-palette-overlay" onClick={onClose}>
@@ -67,23 +73,37 @@ export default function CommandPalette({
           <kbd className="command-palette__esc">Esc</kbd>
         </div>
 
-        {items.length === 0 ? (
+        {!hasContent ? (
           <div className="command-palette__empty">No results</div>
         ) : (
           <ul ref={listRef} className="command-palette__list">
-            {items.map((item, i) => (
-              <li
-                key={item.id}
-                className={`command-palette__item${i === activeIndex ? ' command-palette__item--active' : ''}`}
-                onMouseEnter={() => onSetActiveIndex(i)}
-                onClick={() => onSelectItem(item)}
-              >
-                <span className="command-palette__item-label">{item.label}</span>
-                {item.sublabel && (
-                  <span className="command-palette__item-sublabel">{item.sublabel}</span>
-                )}
-              </li>
-            ))}
+            {items.map((item, i) => {
+              if (item.type === 'section') {
+                return (
+                  <li key={item.id} className="command-palette__section">
+                    {item.label}
+                  </li>
+                );
+              }
+
+              const selectableIndex = selectableItems.findIndex((s) => s.id === item.id);
+              const isActive = selectableIndex === activeIndex;
+
+              return (
+                <li
+                  key={item.id}
+                  data-id={item.id}
+                  className={`command-palette__item${isActive ? ' command-palette__item--active' : ''}`}
+                  onMouseEnter={() => onSetActiveIndex(selectableIndex)}
+                  onClick={() => onSelectItem(item)}
+                >
+                  <span className="command-palette__item-label">{item.label}</span>
+                  {item.sublabel && (
+                    <span className="command-palette__item-sublabel">{item.sublabel}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
 

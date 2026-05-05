@@ -4,7 +4,7 @@
  * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, SnippetsContext, NavigationContext, and all dashboard page components
  * @public DashboardApp
  */
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
 import DashboardHome from '@/components/dashboard/DashboardHome/DashboardHome';
 import PromptsTable from '@/components/dashboard/PromptsTable/PromptsTable';
@@ -57,9 +57,13 @@ export default function DashboardApp() {
     currentView,
     isLoading,
     favoritesCount,
+    notebooks,
     notebooksCount,
+    conversations,
     chatHistoryCount,
+    podcastEpisodes,
     podcastsCount,
+    pipelines,
     pipelinesCount,
     selectedEpisodeId,
     selectedChatId,
@@ -97,7 +101,16 @@ export default function DashboardApp() {
     handleConflictResolution,
   } = useDashboardApp();
 
-  const palette = useCommandPalette(snippets, folders, setCurrentView);
+  const palette = useCommandPalette(snippets, folders, notebooks, conversations, pipelines, podcastEpisodes, setCurrentView);
+
+  // Bridge: sidebar "Search everything" button sets showCommandPalette via context,
+  // but the palette itself tracks its own isOpen state. Sync them here.
+  useEffect(() => {
+    if (showCommandPalette) {
+      palette.open();
+      setShowCommandPalette(false);
+    }
+  }, [showCommandPalette]);
 
   const shortcuts = useMemo(
     () => [
@@ -328,6 +341,7 @@ export default function DashboardApp() {
             isOpen={palette.isOpen}
             query={palette.query}
             items={palette.items}
+            selectableItems={palette.selectableItems}
             activeIndex={palette.activeIndex}
             onQueryChange={palette.setQuery}
             onSelectItem={(item) => item.onSelect()}

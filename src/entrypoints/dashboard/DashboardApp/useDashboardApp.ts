@@ -5,7 +5,9 @@
  * @public useDashboardApp
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, Snippet, TagMeta } from '@/types';
+import type { ChatPlatform, Folder, NotebookAnnotation, NotebookMeta, PodcastEpisode, Snippet, TagMeta } from '@/types';
+import type { ConversationMeta } from '@/types/chat-history';
+import type { Pipeline } from '@/types/pipeline';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
@@ -33,13 +35,17 @@ export function useDashboardApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [notebooks, setNotebooks] = useState<NotebookMeta[]>([]);
   const [notebooksCount, setNotebooksCount] = useState(0);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [chatHistoryCount, setChatHistoryCount] = useState(0);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedChatPlatform, setSelectedChatPlatform] = useState<ChatPlatform | null>(null);
+  const [podcastEpisodes, setPodcastEpisodes] = useState<PodcastEpisode[]>([]);
   const [podcastsCount, setPodcastsCount] = useState(0);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(null);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [pipelinesCount, setPipelinesCount] = useState(0);
   const [driveConflict, setDriveConflict] = useState<ConflictSummary | null>(null);
 
@@ -69,10 +75,14 @@ export function useDashboardApp() {
         setTagsMeta(loadedTagsMeta);
         setNotebookAnnotations(loadedAnnotations);
         setSettings(loadedSettings);
+        setNotebooks(loadedNotebooks);
         setNotebooksCount(loadedNotebooks.length);
         return storageService.getPodcastEpisodes();
       })
-      .then((episodes) => setPodcastsCount(episodes.length))
+      .then((episodes) => {
+        setPodcastEpisodes(episodes);
+        setPodcastsCount(episodes.length);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -81,6 +91,7 @@ export function useDashboardApp() {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if ('notebooksMeta' in changes) {
         const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
+        setNotebooks(updated);
         setNotebooksCount(updated.length);
       }
       if ('notebookAnnotations' in changes) {
@@ -95,8 +106,9 @@ export function useDashboardApp() {
   // Load initial chat history count
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'GET_CHAT_CONVERSATIONS' })
-      .then((res: { ok: boolean; conversations?: Array<unknown> }) => {
+      .then((res: { ok: boolean; conversations?: ConversationMeta[] }) => {
         if (res?.ok && res.conversations) {
+          setConversations(res.conversations);
           setChatHistoryCount(res.conversations.length);
         }
       })
@@ -119,15 +131,18 @@ export function useDashboardApp() {
         setSettings(changes.dashboardSettings.newValue as DashboardSettings);
       }
       if ('chatConversations' in changes) {
-        const updated = (changes.chatConversations.newValue as Array<unknown>) ?? [];
+        const updated = (changes.chatConversations.newValue as ConversationMeta[]) ?? [];
+        setConversations(updated);
         setChatHistoryCount(updated.length);
       }
       if ('podcastEpisodes' in changes) {
-        const updated = (changes.podcastEpisodes.newValue as Array<unknown>) ?? [];
+        const updated = (changes.podcastEpisodes.newValue as PodcastEpisode[]) ?? [];
+        setPodcastEpisodes(updated);
         setPodcastsCount(updated.length);
       }
       if ('pipelines' in changes) {
-        const updated = (changes.pipelines.newValue as Array<{ enabled: boolean }>) ?? [];
+        const updated = (changes.pipelines.newValue as Pipeline[]) ?? [];
+        setPipelines(updated);
         setPipelinesCount(updated.filter((p) => p.enabled).length);
       }
     };
@@ -139,7 +154,8 @@ export function useDashboardApp() {
   useEffect(() => {
     chrome.storage.local.get('pipelines')
       .then((result) => {
-        const loaded = (result.pipelines as Array<{ enabled: boolean }>) ?? [];
+        const loaded = (result.pipelines as Pipeline[]) ?? [];
+        setPipelines(loaded);
         setPipelinesCount(loaded.filter((p) => p.enabled).length);
       })
       .catch(() => {});
@@ -367,9 +383,13 @@ export function useDashboardApp() {
     currentView,
     isLoading,
     favoritesCount,
+    notebooks,
     notebooksCount,
+    conversations,
     chatHistoryCount,
+    podcastEpisodes,
     podcastsCount,
+    pipelines,
     pipelinesCount,
     selectedEpisodeId,
     selectedChatId,

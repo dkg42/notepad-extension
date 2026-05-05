@@ -30,7 +30,11 @@ export function filterSnippets(
 
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
-    result = result.filter((s) => s.text.toLowerCase().includes(q));
+    result = result.filter(
+      (s) =>
+        s.text.toLowerCase().includes(q) ||
+        (s.title?.toLowerCase().includes(q) ?? false),
+    );
   }
 
   if (selectedFolderIds.size > 0) {
