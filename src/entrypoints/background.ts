@@ -11,6 +11,9 @@ import { storageService } from '@/services/storage-service';
 import { domainRouterService } from '@/services/domain-router-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { sourceCountCacheService } from '@/services/source-count-cache-service';
+import { allSourcesCacheService } from '@/services/all-sources-cache-service';
+import { allArtifactsCacheService } from '@/services/all-artifacts-cache-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { pipelineService } from '@/services/pipeline-service';
 import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-session-service';
@@ -235,6 +238,9 @@ function handleAuthSessionMessage(
             audioCacheService.clear(),
             podcastAudioService.clear(),
             domainRouterService.clearAllData(),
+            sourceCountCacheService.clear(),
+            allSourcesCacheService.clear(),
+            allArtifactsCacheService.clear(),
           ]);
         }
         console.log('[AUTH][BG] Auth complete, storing profile and session token');
@@ -329,6 +335,9 @@ function handleAuthSessionMessage(
           audioCacheService.clear(),
           podcastAudioService.clear(),
           domainRouterService.clearAllData(),
+          sourceCountCacheService.clear(),
+          allSourcesCacheService.clear(),
+          allArtifactsCacheService.clear(),
         ]);
       })
       .then(() => sendResponse({ ok: true }))

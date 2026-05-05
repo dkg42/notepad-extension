@@ -15,8 +15,10 @@ import {
   fetchNotebookNotes,
 } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { sourceCountCacheService } from '@/services/source-count-cache-service';
 import { authStorageService } from '@/services/auth-storage-service';
 import { ensureSignedIn } from './shared';
+import { prefetchAndCacheAllData } from './source-handler';
 
 /**
  * Fetches the current user's notebooks from NotebookLM and persists them via
@@ -40,6 +42,12 @@ export async function syncNotebooks(): Promise<void> {
     const notebooks = await fetchNotebooks();
     if (notebooks.length > 0) {
       await notebookSyncService.upsertMany(notebooks);
+      // Pre-fetch source counts, all sources, and all artifacts so dashboard pages
+      // show data instantly. Both calls are non-blocking and fire in parallel.
+      fetchSourceCounts(notebooks.map((n) => n.id))
+        .then((counts) => sourceCountCacheService.set(counts))
+        .catch(() => {});
+      prefetchAndCacheAllData(notebooks).catch(() => {});
     }
     await notebookSyncService.setSyncMeta({ lastSyncedAt: Date.now(), ownerUid: uid ?? undefined });
   } catch (error) {
@@ -71,7 +79,10 @@ export function handleNotebookMessage(
     const { notebookIds } = message as { type: string; notebookIds: string[] };
     ensureSignedIn()
       .then(() => fetchSourceCounts(notebookIds))
-      .then((counts) => sendResponse({ ok: true, counts }))
+      .then(async (counts) => {
+        await sourceCountCacheService.set(counts);
+        sendResponse({ ok: true, counts });
+      })
       .catch((err: unknown) =>
         sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       );

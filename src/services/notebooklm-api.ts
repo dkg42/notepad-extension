@@ -255,13 +255,21 @@ export async function fetchSourceCounts(
   const { csrfToken, sessionId, authuserIndex } = await extractTokens();
   if (!csrfToken) throw new Error('Not signed in to NotebookLM');
 
+  const CONCURRENCY = 5;
   const counts: Record<string, number> = {};
-  for (const id of notebookIds) {
-    try {
-      const sources = await fetchNotebookSourcesInternal(id, csrfToken, sessionId, authuserIndex);
-      counts[id] = sources.length;
-    } catch {
-      // Skip notebooks that fail — UI will show "—"
+  for (let i = 0; i < notebookIds.length; i += CONCURRENCY) {
+    const batch = notebookIds.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((id) =>
+        fetchNotebookSourcesInternal(id, csrfToken, sessionId, authuserIndex).then((sources) => ({
+          id,
+          count: sources.length,
+        })),
+      ),
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled') counts[r.value.id] = r.value.count;
+      // rejected entries are silently skipped — UI will show "—"
     }
   }
   return counts;

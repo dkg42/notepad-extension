@@ -2,7 +2,7 @@
  * @module source-handler
  * @description Handles source chrome.runtime messages for the background service worker.
  * @dependencies notebooklm-api, notebook-sync-service, import-job-service, shared
- * @public handleSourceMessage
+ * @public handleSourceMessage, prefetchAndCacheAllData
  */
 import {
   addSourceUrl,
@@ -10,9 +10,49 @@ import {
   fetchNotebookSourcesDetailed,
   fetchNotebookFullData,
 } from '@/services/notebooklm-api';
+import type { NotebookMeta, AggregatedSource, AggregatedArtifact } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { allSourcesCacheService } from '@/services/all-sources-cache-service';
+import { allArtifactsCacheService } from '@/services/all-artifacts-cache-service';
 import { importJobService } from '@/services/import-job-service';
 import { ensureSignedIn } from './shared';
+
+const CONCURRENCY = 5;
+
+/**
+ * Fetches full data for every notebook in a single parallelised pass (concurrency 5),
+ * building the aggregated sources and artifacts arrays simultaneously so the API is
+ * called only once per notebook. Writes both caches on completion.
+ *
+ * Called by syncNotebooks after a successful notebook sync so that AllSourcesPage and
+ * AllArtifactsPage can display data instantly without further API calls.
+ */
+export async function prefetchAndCacheAllData(notebooks: NotebookMeta[]): Promise<void> {
+  const allSources: AggregatedSource[] = [];
+  const allArtifacts: AggregatedArtifact[] = [];
+
+  for (let i = 0; i < notebooks.length; i += CONCURRENCY) {
+    const batch = notebooks.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((nb) => fetchNotebookFullData(nb.id).then((data) => ({ nb, data }))),
+    );
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      const { nb, data } = r.value;
+      for (const src of data.sources) {
+        allSources.push({ id: src.id, title: src.title, type: src.type, notebookId: nb.id, notebookTitle: nb.title });
+      }
+      for (const art of data.artifacts) {
+        allArtifacts.push({ ...art, notebookId: nb.id, notebookTitle: nb.title });
+      }
+    }
+  }
+
+  await Promise.all([
+    allSourcesCacheService.set(allSources),
+    allArtifactsCacheService.set(allArtifacts),
+  ]);
+}
 
 export function handleSourceMessage(
   message: { type: string } & Record<string, unknown>,
@@ -48,28 +88,23 @@ export function handleSourceMessage(
     (async () => {
       await ensureSignedIn();
       const notebooks = await notebookSyncService.getAll();
-      const allSources: Array<{
-        id: string; title: string; type: string; sourceUrl?: string;
-        notebookId: string; notebookTitle: string;
-      }> = [];
+      const allSources: AggregatedSource[] = [];
 
-      for (const nb of notebooks) {
-        try {
-          const data = await fetchNotebookFullData(nb.id);
+      for (let i = 0; i < notebooks.length; i += CONCURRENCY) {
+        const batch = notebooks.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map((nb) => fetchNotebookFullData(nb.id).then((data) => ({ nb, data }))),
+        );
+        for (const r of results) {
+          if (r.status !== 'fulfilled') continue;
+          const { nb, data } = r.value;
           for (const src of data.sources) {
-            allSources.push({
-              id: src.id,
-              title: src.title,
-              type: src.type,
-              notebookId: nb.id,
-              notebookTitle: nb.title,
-            });
+            allSources.push({ id: src.id, title: src.title, type: src.type, notebookId: nb.id, notebookTitle: nb.title });
           }
-        } catch {
-          // Skip notebooks that fail — partial results are fine
         }
       }
 
+      await allSourcesCacheService.set(allSources);
       return allSources;
     })()
       .then((sources) => sendResponse({ ok: true, sources }))
@@ -83,27 +118,23 @@ export function handleSourceMessage(
     (async () => {
       await ensureSignedIn();
       const notebooks = await notebookSyncService.getAll();
-      const allArtifacts: Array<{
-        id: string; title: string; typeCode: number; mediaUrl?: string;
-        createdAt?: number; status?: number;
-        notebookId: string; notebookTitle: string;
-      }> = [];
+      const allArtifacts: AggregatedArtifact[] = [];
 
-      for (const nb of notebooks) {
-        try {
-          const data = await fetchNotebookFullData(nb.id);
+      for (let i = 0; i < notebooks.length; i += CONCURRENCY) {
+        const batch = notebooks.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map((nb) => fetchNotebookFullData(nb.id).then((data) => ({ nb, data }))),
+        );
+        for (const r of results) {
+          if (r.status !== 'fulfilled') continue;
+          const { nb, data } = r.value;
           for (const art of data.artifacts) {
-            allArtifacts.push({
-              ...art,
-              notebookId: nb.id,
-              notebookTitle: nb.title,
-            });
+            allArtifacts.push({ ...art, notebookId: nb.id, notebookTitle: nb.title });
           }
-        } catch {
-          // Skip notebooks that fail
         }
       }
 
+      await allArtifactsCacheService.set(allArtifacts);
       return allArtifacts;
     })()
       .then((artifacts) => sendResponse({ ok: true, artifacts }))

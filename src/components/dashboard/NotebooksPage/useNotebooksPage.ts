@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NotebookAnnotation, NotebookCollection, NotebookMeta, SourceRecord } from '@/types';
 import { notebookSyncService, type SyncMeta } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { sourceCountCacheService, type SourceCountsCache } from '@/services/source-count-cache-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 
 interface DeleteResult {
@@ -39,6 +40,7 @@ export function useNotebooksPage() {
   const [sourceCounts, setSourceCounts] = useState<Record<string, number>>({});
   const [fetchingSourcesId, setFetchingSourcesId] = useState<string | null>(null);
   const [sourceExportError, setSourceExportError] = useState<string | null>(null);
+  const [hasFreshCache, setHasFreshCache] = useState(false);
 
   // ── Initial load ────────────────────────────────────────────────────────────
 
@@ -48,12 +50,17 @@ export function useNotebooksPage() {
       notebookSyncService.getSyncMeta(),
       notebookAnnotationService.getAllAnnotations(),
       notebookAnnotationService.getAllCollections(),
+      sourceCountCacheService.get(),
     ])
-      .then(([loaded, meta, loadedAnnotations, loadedCollections]) => {
+      .then(([loaded, meta, loadedAnnotations, loadedCollections, cachedCounts]) => {
         setNotebooks(loaded);
         setSyncMeta(meta);
         setAnnotations(loadedAnnotations);
         setCollections(loadedCollections);
+        if (cachedCounts) {
+          setSourceCounts(cachedCounts.counts);
+          setHasFreshCache(!cachedCounts.isStale);
+        }
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -82,11 +89,12 @@ export function useNotebooksPage() {
   }, []);
 
   // ── Auto-fetch source counts once notebooks are loaded ────────────────────
+  // Skipped when a fresh cache was loaded on mount; only runs if cache is absent or stale.
 
   const hasFetchedCounts = useRef(false);
 
   useEffect(() => {
-    if (isLoading || notebooks.length === 0 || hasFetchedCounts.current) return;
+    if (isLoading || notebooks.length === 0 || hasFetchedCounts.current || hasFreshCache) return;
     hasFetchedCounts.current = true;
 
     setFetchingSourcesId('__all__');
@@ -104,7 +112,20 @@ export function useNotebooksPage() {
         // Silent — cells will keep showing "—"
       })
       .finally(() => setFetchingSourcesId(null));
-  }, [isLoading, notebooks]);
+  }, [isLoading, notebooks, hasFreshCache]);
+
+  // ── Listen for source count cache updates from background sync ────────────
+
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('sourceCountsCache' in changes) {
+        const cache = changes.sourceCountsCache.newValue as SourceCountsCache | undefined;
+        if (cache?.counts) setSourceCounts(cache.counts);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, []);
 
   // ── Derived state ───────────────────────────────────────────────────────────
 

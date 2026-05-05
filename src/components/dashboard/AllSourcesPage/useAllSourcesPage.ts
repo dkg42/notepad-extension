@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedSource, NotebookMeta } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { allSourcesCacheService, type AllSourcesCache } from '@/services/all-sources-cache-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 
 type SortField = 'title' | 'type' | 'notebookTitle';
@@ -40,7 +41,27 @@ export function useAllSourcesPage() {
   const [isAddingToNotebook, setIsAddingToNotebook] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+  const [hasFreshCache, setHasFreshCache] = useState(false);
+
   // ── Load data ──────────────────────────────────────────────────────────────
+
+  // On mount: read cache + notebooks simultaneously so the page renders with data
+  // immediately. isCacheLoaded gates the API fetch so it never fires before we
+  // know whether the cache is fresh.
+  useEffect(() => {
+    Promise.all([
+      allSourcesCacheService.get(),
+      notebookSyncService.getAll(),
+    ]).then(([cached, loadedNotebooks]) => {
+      setNotebooks(loadedNotebooks);
+      if (cached) {
+        setSources(cached.sources);
+        setHasFreshCache(!cached.isStale);
+        setIsLoading(false);
+      }
+    }).finally(() => setIsCacheLoaded(true));
+  }, []);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -65,9 +86,23 @@ export function useAllSourcesPage() {
     }
   }, []);
 
+  // Fetch from API only after the cache check completes and only when cache is absent or stale.
   useEffect(() => {
+    if (!isCacheLoaded || hasFreshCache) return;
     void fetchData();
-  }, [fetchData]);
+  }, [isCacheLoaded, hasFreshCache, fetchData]);
+
+  // Listen for cache updates written by the background sync or a manual refresh.
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('allSourcesCache' in changes) {
+        const cache = changes.allSourcesCache.newValue as AllSourcesCache | undefined;
+        if (cache?.sources) setSources(cache.sources);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, []);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 

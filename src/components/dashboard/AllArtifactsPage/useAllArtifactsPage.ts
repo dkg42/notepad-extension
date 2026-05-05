@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedArtifact } from '@/types';
+import { allArtifactsCacheService, type AllArtifactsCache } from '@/services/all-artifacts-cache-service';
 
 type SortField = 'title' | 'notebookTitle' | 'createdAt';
 type SortDir = 'asc' | 'desc';
@@ -34,7 +35,22 @@ export function useAllArtifactsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+  const [hasFreshCache, setHasFreshCache] = useState(false);
+
   // ── Load data ──────────────────────────────────────────────────────────────
+
+  // On mount: read cache immediately so the page renders with data before any API call.
+  // isCacheLoaded gates the API fetch so it never fires before we know the cache state.
+  useEffect(() => {
+    allArtifactsCacheService.get().then((cached) => {
+      if (cached) {
+        setArtifacts(cached.artifacts);
+        setHasFreshCache(!cached.isStale);
+        setIsLoading(false);
+      }
+    }).finally(() => setIsCacheLoaded(true));
+  }, []);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -57,9 +73,23 @@ export function useAllArtifactsPage() {
     }
   }, []);
 
+  // Fetch from API only after the cache check completes and only when cache is absent or stale.
   useEffect(() => {
+    if (!isCacheLoaded || hasFreshCache) return;
     void fetchData();
-  }, [fetchData]);
+  }, [isCacheLoaded, hasFreshCache, fetchData]);
+
+  // Listen for cache updates written by the background sync or a manual refresh.
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('allArtifactsCache' in changes) {
+        const cache = changes.allArtifactsCache.newValue as AllArtifactsCache | undefined;
+        if (cache?.artifacts) setArtifacts(cache.artifacts);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, []);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
