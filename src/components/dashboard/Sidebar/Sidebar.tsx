@@ -52,7 +52,7 @@ interface NavGroup {
 
 const PRIMARY_NAV: NavItem[] = [
   { view: 'home', icon: Home, label: 'Home' },
-  { view: 'prompts', icon: FileText, label: 'Prompts' },
+  { view: 'prompts', icon: FileText, label: 'Prompt Hub' },
   { view: 'favorites', icon: Star, label: 'Favorites' },
   { view: 'tags', icon: Tag, label: 'Tags' },
 ];

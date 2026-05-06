@@ -22,16 +22,10 @@
  *   drive_cache_manifest              → DriveManifest
  *   drive_cache_snippets_meta         → DriveSnippetsMetaFile
  *   drive_cache_snippet_text_{id}     → string (raw snippet text)
- *   drive_cache_folders               → DriveFoldersFile
- *   drive_cache_tags                  → DriveTagsFile
- *   drive_cache_settings              → DriveSettingsFile
- *   drive_cache_export_history        → DriveExportHistoryFile
- *   drive_cache_notebooks_meta        → DriveNotebooksMetaFile
+ *   drive_cache_core_data             → DriveCoreDataFile (folders+tags+settings+domainRouterRules)
+ *   drive_cache_history_data          → DriveHistoryDataFile (exportHistory+pipelineRuns+podcastEpisodes)
  *   drive_cache_annotations           → DriveNotebookAnnotationsFile
  *   drive_cache_pipelines             → DrivePipelinesFile
- *   drive_cache_pipeline_runs         → DrivePipelineRunsFile
- *   drive_cache_podcast_episodes      → DrivePodcastEpisodesFile
- *   drive_cache_domain_router         → DriveDomainRouterFile
  *   drive_cache_chat_meta             → DriveChatConversationsMetaFile
  *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
  *   drive_cache_version_{fileId}      → number (Drive version for a file)
@@ -65,15 +59,10 @@ const snippetTextAccessTime = new Map<string, number>();
 export const CacheKeys = {
   manifest: `${KEY_PREFIX}manifest`,
   snippetsMeta: `${KEY_PREFIX}snippets_meta`,
-  folders: `${KEY_PREFIX}folders`,
-  tags: `${KEY_PREFIX}tags`,
-  settings: `${KEY_PREFIX}settings`,
-  exportHistory: `${KEY_PREFIX}export_history`,
+  coreData: `${KEY_PREFIX}core_data`,
+  historyData: `${KEY_PREFIX}history_data`,
   annotations: `${KEY_PREFIX}annotations`,
   pipelines: `${KEY_PREFIX}pipelines`,
-  pipelineRuns: `${KEY_PREFIX}pipeline_runs`,
-  podcastEpisodes: `${KEY_PREFIX}podcast_episodes`,
-  domainRouter: `${KEY_PREFIX}domain_router`,
   chatMeta: `${KEY_PREFIX}chat_meta`,
 
   snippetText: (snippetId: string) => `${SNIPPET_TEXT_PREFIX}${snippetId}`,

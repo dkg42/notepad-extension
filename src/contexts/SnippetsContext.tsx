@@ -30,6 +30,8 @@ export interface SnippetsContextValue {
   handleRenameTag: (oldName: string, newName: string) => Promise<void>;
   handleDeleteTag: (name: string) => Promise<void>;
   handleTagColorChange: (name: string, color: string | undefined) => Promise<void>;
+  handleSaveSnippet: (title: string, text: string, tags: string[], folderId?: string) => Promise<void>;
+  handleUpdateSnippet: (id: string, title: string, text: string) => Promise<void>;
 }
 
 interface SnippetsProviderProps {

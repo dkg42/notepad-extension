@@ -7,7 +7,6 @@
 import React, { useEffect, useMemo } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
 import DashboardHome from '@/components/dashboard/DashboardHome/DashboardHome';
-import PromptsTable from '@/components/dashboard/PromptsTable/PromptsTable';
 import PromptsPage from '@/components/dashboard/PromptsPage/PromptsPage';
 import FolderExplorer from '@/components/dashboard/FolderExplorer/FolderExplorer';
 import TagManager from '@/components/dashboard/TagManager/TagManager';
@@ -83,6 +82,8 @@ export default function DashboardApp() {
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,
+    handleSaveSnippet,
+    handleUpdateSnippet,
     handleBulkDelete,
     handleBulkMoveToFolder,
     handleBulkAddTags,
@@ -141,6 +142,8 @@ export default function DashboardApp() {
       handleDelete,
       handleUpdateTags,
       handleToggleFavorite,
+      handleSaveSnippet,
+      handleUpdateSnippet,
       handleBulkDelete,
       handleBulkMoveToFolder,
       handleBulkAddTags,
@@ -164,6 +167,8 @@ export default function DashboardApp() {
       handleDelete,
       handleUpdateTags,
       handleToggleFavorite,
+      handleSaveSnippet,
+      handleUpdateSnippet,
       handleBulkDelete,
       handleBulkMoveToFolder,
       handleBulkAddTags,
@@ -266,7 +271,7 @@ export default function DashboardApp() {
         return <PromptsPage />;
 
       case 'favorites':
-        return <PromptsTable snippets={snippets.filter((s) => s.isFavorite)} />;
+        return <PromptsPage initialFolder="__starred" />;
 
       case 'folders':
         return <FolderExplorer />;

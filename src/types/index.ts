@@ -36,6 +36,7 @@ export interface Snippet {
   folderId?: string;
   tags?: string[];
   isFavorite?: boolean;
+  usageCount?: number;
 }
 
 export interface ClipboardEntry {

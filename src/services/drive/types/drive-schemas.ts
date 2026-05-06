@@ -2,7 +2,7 @@
  * @module drive-schemas
  * @description Defines the TypeScript wire-format contracts (interfaces and enums) for every JSON and plain-text file persisted in Google Drive AppData. All Drive services must conform to these types when serializing or deserializing data; incrementing DRIVE_SCHEMA_VERSION and adding a migration path in drive-init-service.ts is required for any breaking field change. Audio Blob payloads are intentionally excluded from sync — only Drive-safe representations are defined here.
  * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history
- * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveFoldersFile, DriveTagsFile, DriveSettingsFile, DriveExportHistoryFile, DriveNotebookAnnotationsFile, DrivePipelinesFile, DrivePipelineRunsFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DrivePodcastEpisodesFile, DriveDomainRouterFile, DriveChatConversationsMetaFile, DriveConversationMetaLine, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
+ * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveCoreDataFile, DriveHistoryDataFile, DriveNotebookAnnotationsFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
  */
 
 /**
@@ -18,16 +18,10 @@
  *   manifest.json                      ← file-ID registry + versions + schema versions
  *   snippets-meta.json                 ← snippet metadata (text bodies excluded)
  *   snippet-text-{id}.txt              ← one plain-text file per snippet body
- *   folders.json
- *   tags.json
- *   settings.json
- *   export-history.json                ← max 200 records, newest first
- *   notebooks-meta.json                ← NotebookLM metadata + syncMeta
+ *   core-data.json                     ← folders + tags + settings + domain-router-rules
+ *   history-data.json                  ← export-history + pipeline-runs + podcast-episodes
  *   notebook-annotations.json          ← NotebookAnnotation[] + NotebookCollection[]
  *   pipelines.json
- *   pipeline-runs.json                 ← max 200 records, newest first
- *   podcast-episodes.json              ← PodcastEpisode[] — audio blobs NEVER synced
- *   domain-router-rules.json
  *   chat-conversations-meta.json       ← ConversationMeta[] only
  *   chat-content-{platform}-{id}.txt   ← NDJSON per conversation
  */
@@ -59,15 +53,10 @@ export const DRIVE_SCHEMA_VERSION = 1;
 export type DriveFilename =
   | 'manifest.json'
   | 'snippets-meta.json'
-  | 'folders.json'
-  | 'tags.json'
-  | 'settings.json'
-  | 'export-history.json'
+  | 'core-data.json'
+  | 'history-data.json'
   | 'notebook-annotations.json'
   | 'pipelines.json'
-  | 'pipeline-runs.json'
-  | 'podcast-episodes.json'
-  | 'domain-router-rules.json'
   | 'chat-conversations-meta.json';
 
 /** Returns the Drive filename for a per-snippet text file. */
@@ -159,29 +148,25 @@ export interface DriveSnippetsMetaFile extends DriveFileEnvelope {
   snippets: DriveSnippetMeta[];
 }
 
-// ── folders.json ──────────────────────────────────────────────────────────────
+// ── core-data.json ────────────────────────────────────────────────────────────
 
-export interface DriveFoldersFile extends DriveFileEnvelope {
+/** Consolidates folders, tags, settings, and domain-router-rules into one file. */
+export interface DriveCoreDataFile extends DriveFileEnvelope {
   folders: Folder[];
-}
-
-// ── tags.json ─────────────────────────────────────────────────────────────────
-
-export interface DriveTagsFile extends DriveFileEnvelope {
   tags: TagMeta[];
+  settings: DashboardSettings | null;
+  domainRouterRules: DomainRouterRule[];
 }
 
-// ── settings.json ─────────────────────────────────────────────────────────────
+// ── history-data.json ─────────────────────────────────────────────────────────
 
-export interface DriveSettingsFile extends DriveFileEnvelope {
-  settings: DashboardSettings;
-}
-
-// ── export-history.json ───────────────────────────────────────────────────────
-
-export interface DriveExportHistoryFile extends DriveFileEnvelope {
+/** Consolidates export-history, pipeline-runs, and podcast-episodes into one file. */
+export interface DriveHistoryDataFile extends DriveFileEnvelope {
   /** Capped at 200 entries, newest first. */
-  records: ExportRecord[];
+  exportHistory: ExportRecord[];
+  /** Capped at 200 entries, newest first. */
+  pipelineRuns: PipelineRun[];
+  podcastEpisodes: DriveSafePodcastEpisode[];
 }
 
 // ── notebook-annotations.json ─────────────────────────────────────────────────
@@ -195,13 +180,6 @@ export interface DriveNotebookAnnotationsFile extends DriveFileEnvelope {
 
 export interface DrivePipelinesFile extends DriveFileEnvelope {
   pipelines: Pipeline[];
-}
-
-// ── pipeline-runs.json ────────────────────────────────────────────────────────
-
-export interface DrivePipelineRunsFile extends DriveFileEnvelope {
-  /** Capped at 200 entries, newest first. */
-  runs: PipelineRun[];
 }
 
 // ── podcast-episodes.json ─────────────────────────────────────────────────────
@@ -224,16 +202,6 @@ export interface DriveSafeEpisodeTrack extends Omit<EpisodeTrack, 'source'> {
 
 export interface DriveSafePodcastEpisode extends Omit<PodcastEpisode, 'tracks'> {
   tracks: DriveSafeEpisodeTrack[];
-}
-
-export interface DrivePodcastEpisodesFile extends DriveFileEnvelope {
-  episodes: DriveSafePodcastEpisode[];
-}
-
-// ── domain-router-rules.json ──────────────────────────────────────────────────
-
-export interface DriveDomainRouterFile extends DriveFileEnvelope {
-  rules: DomainRouterRule[];
 }
 
 // ── chat-conversations-meta.json ──────────────────────────────────────────────

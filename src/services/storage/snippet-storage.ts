@@ -204,6 +204,19 @@ export const snippetStorage = {
   },
 
   /**
+   * Updates the title and/or text of a snippet and syncs to Drive.
+   * @param id UUID of the snippet to update.
+   * @param updates Partial fields to merge into the snippet.
+   * @sideEffect Drive sync
+   */
+  async updateSnippet(id: string, updates: { title?: string; text?: string }): Promise<void> {
+    const all = await snippetStorage.getAll();
+    const updated = all.map((s) => s.id === id ? { ...s, ...updates } : s);
+    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    syncToDrive((t) => driveSyncService.saveAllSnippets(updated, t));
+  },
+
+  /**
    * Strips the given tags from each targeted snippet and syncs metadata to Drive.
    * @param ids Array of snippet UUIDs to update.
    * @param tags Tag names to remove; tags not present on a snippet are silently skipped.

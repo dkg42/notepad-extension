@@ -11,7 +11,7 @@ import type { Pipeline } from '@/types/pipeline';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
-import { storageService } from '@/services/storage-service';
+import { storageService, snippetStorage } from '@/services/storage-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { useGlobalAudio } from '@/hooks/useGlobalAudio';
@@ -182,6 +182,20 @@ export function useDashboardApp() {
     await storageService.toggleFavorite(id);
     setSnippets((prev) =>
       prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)),
+    );
+  };
+
+  const handleSaveSnippet = async (title: string, text: string, tags: string[], folderId?: string) => {
+    const snippet = await storageService.saveWithMeta({
+      text, source: 'dashboard', title: title || undefined, folderId, tags,
+    });
+    setSnippets((prev) => [snippet, ...prev]);
+  };
+
+  const handleUpdateSnippet = async (id: string, title: string, text: string) => {
+    await snippetStorage.updateSnippet(id, { title: title || undefined, text });
+    setSnippets((prev) =>
+      prev.map((s) => s.id === id ? { ...s, title: title || undefined, text } : s),
     );
   };
 
@@ -409,6 +423,8 @@ export function useDashboardApp() {
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,
+    handleSaveSnippet,
+    handleUpdateSnippet,
     handleBulkDelete,
     handleBulkMoveToFolder,
     handleBulkAddTags,

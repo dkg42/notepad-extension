@@ -21,7 +21,7 @@ export interface PaletteItem {
 
 const NAV_ACTIONS: Array<{ view: DashboardView; label: string; icon: string }> = [
   { view: 'home',          label: 'Home',            icon: '⌂' },
-  { view: 'prompts',       label: 'Prompts',          icon: '≡' },
+  { view: 'prompts',       label: 'Prompt Hub',       icon: '≡' },
   { view: 'favorites',     label: 'Favorites',        icon: '★' },
   { view: 'notebooks',     label: 'Notebooks',        icon: '◻' },
   { view: 'all-sources',   label: 'All Sources',      icon: '◈' },
@@ -106,7 +106,7 @@ export function useCommandPalette(
 
     const promptSlice = matchedPrompts.slice(0, 5);
     if (promptSlice.length > 0) {
-      result.push(section(q ? 'Prompts' : 'Recent prompts'));
+      result.push(section(q ? 'Prompt Hub' : 'Recent prompts'));
       promptSlice.forEach((s) => {
         const display = displayText(s);
         result.push({

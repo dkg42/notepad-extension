@@ -146,25 +146,28 @@ export async function initialize(
       return { isFirstTime: false, filesLoaded: 0, conflicts: ['ownerUid_mismatch'] };
     }
 
-    // Path B: Returning user — read all Drive files first
+    // Path B: Returning user — read all Drive files in parallel
     const allDriveFiles = new Map<DriveFilename, DriveFileData>();
-    const filenames = Object.keys(manifest.files) as DriveFilename[];
 
-    for (const filename of filenames) {
-      if (filename === 'manifest.json') continue;
-      const entry = manifest.files[filename];
-      if (!entry?.driveFileId) continue;
+    // Plain-text and NDJSON files (.txt) are read on-demand — init cannot apply
+    // them to storage and JSON.parse would fail on NDJSON content.
+    const fileEntries = (Object.keys(manifest.files) as DriveFilename[]).filter(
+      (f) => f !== 'manifest.json' && !f.endsWith('.txt') && manifest.files[f]?.driveFileId,
+    );
 
-      // Plain-text and NDJSON files (.txt) are read on-demand — init cannot apply
-      // them to storage and JSON.parse would fail on NDJSON content.
-      if (filename.endsWith('.txt')) continue;
+    const settled = await Promise.all(
+      fileEntries.map(async (filename) => {
+        const entry = manifest.files[filename]!;
+        const result = await readFile(entry.driveFileId, token);
+        return { filename, result };
+      }),
+    );
 
-      const result = await readFile(entry.driveFileId, token);
+    for (const { filename, result } of settled) {
       if (!result.ok) {
         console.warn(`[DRIVE-INIT] Could not read ${filename}:`, result.error);
         continue;
       }
-
       try {
         const driveFile = JSON.parse(result.data) as Record<string, unknown>;
         const driveUpdatedAt = (driveFile.updatedAt as number | undefined) ?? 0;
@@ -193,13 +196,15 @@ export async function initialize(
 
       if (!hasLocalData) {
         // Empty local storage → Drive wins, no prompt needed
-        for (const [filename, { driveFile, rawContent }] of allDriveFiles) {
-          try {
-            await applyDriveData(filename, driveFile, rawContent, token);
-          } catch (err) {
-            console.error(`[DRIVE-INIT] Failed to apply ${filename}:`, err);
-          }
-        }
+        await Promise.all(
+          [...allDriveFiles.entries()].map(async ([filename, { driveFile, rawContent }]) => {
+            try {
+              await applyDriveData(filename, driveFile, rawContent, token);
+            } catch (err) {
+              console.error(`[DRIVE-INIT] Failed to apply ${filename}:`, err);
+            }
+          }),
+        );
         await markDeviceInitialized();
         console.log(`[DRIVE-INIT] First-time init (empty local) — ${allDriveFiles.size} files applied from Drive`);
         return { isFirstTime: false, filesLoaded: allDriveFiles.size, conflicts: [] };
@@ -207,16 +212,15 @@ export async function initialize(
 
       // Local data exists — surface conflict summary to the user without modifying storage
       const driveSnippetsFile = allDriveFiles.get('snippets-meta.json')?.driveFile;
-      const driveFoldersFile = allDriveFiles.get('folders.json')?.driveFile;
-      const driveTagsFile = allDriveFiles.get('tags.json')?.driveFile;
+      const driveCoreFile = allDriveFiles.get('core-data.json')?.driveFile;
 
       const conflictSummary: ConflictSummary = {
         localSnippetCount: localSnippets.length,
         driveSnippetCount: ((driveSnippetsFile?.snippets as unknown[] | undefined) ?? []).length,
         localFolderCount: localFolders.length,
-        driveFolderCount: ((driveFoldersFile?.folders as unknown[] | undefined) ?? []).length,
+        driveFolderCount: ((driveCoreFile?.folders as unknown[] | undefined) ?? []).length,
         localTagCount: localTags.length,
-        driveTagCount: ((driveTagsFile?.tags as unknown[] | undefined) ?? []).length,
+        driveTagCount: ((driveCoreFile?.tags as unknown[] | undefined) ?? []).length,
         driveLastSync: allDriveFiles.get('snippets-meta.json')?.driveUpdatedAt ?? 0,
       };
 
@@ -303,17 +307,19 @@ async function applyConflictDecision(
   decision: 'merge' | 'overwrite',
   token: string,
 ): Promise<void> {
-  for (const [filename, { driveFile, rawContent }] of allDriveFiles) {
-    try {
-      if (decision === 'overwrite') {
-        await applyDriveData(filename, driveFile, rawContent, token);
-      } else {
-        await applyMergedData(filename, driveFile, rawContent, token);
+  await Promise.all(
+    [...allDriveFiles.entries()].map(async ([filename, { driveFile, rawContent }]) => {
+      try {
+        if (decision === 'overwrite') {
+          await applyDriveData(filename, driveFile, rawContent, token);
+        } else {
+          await applyMergedData(filename, driveFile, rawContent, token);
+        }
+      } catch (err) {
+        console.error(`[DRIVE-INIT] Failed to apply ${filename} (${decision}):`, err);
       }
-    } catch (err) {
-      console.error(`[DRIVE-INIT] Failed to apply ${filename} (${decision}):`, err);
-    }
-  }
+    }),
+  );
 }
 
 /**
@@ -358,30 +364,30 @@ async function applyMergedData(
       break;
     }
 
-    case 'folders.json': {
+    case 'core-data.json': {
+      // Merge folders and tags; settings and domain-router-rules: Drive wins.
       const driveFolders = (driveFile.folders as Folder[]) ?? [];
       const localFolders = await storageService.getFolders();
-      const driveIds = new Set(driveFolders.map((f) => f.id));
-      const localOnlyFolders = localFolders.filter((f) => !driveIds.has(f.id));
-      const mergedFolders = [...driveFolders, ...localOnlyFolders];
-      await chrome.storage.local.set({ folders: mergedFolders });
-      driveSyncService.saveFolders(mergedFolders, token);
-      break;
-    }
+      const driveFolderIds = new Set(driveFolders.map((f) => f.id));
+      const mergedFolders = [...driveFolders, ...localFolders.filter((f) => !driveFolderIds.has(f.id))];
 
-    case 'tags.json': {
       const driveTags = (driveFile.tags as TagMeta[]) ?? [];
       const localTags = await storageService.getTagsMeta();
       const driveTagNames = new Set(driveTags.map((t) => t.name));
-      const localOnlyTags = localTags.filter((t) => !driveTagNames.has(t.name));
-      const mergedTags = [...driveTags, ...localOnlyTags];
-      await chrome.storage.local.set({ tagsMeta: mergedTags });
+      const mergedTags = [...driveTags, ...localTags.filter((t) => !driveTagNames.has(t.name))];
+
+      const domainRouterRules = (driveFile.domainRouterRules as unknown[]) ?? [];
+      await chrome.storage.local.set({ folders: mergedFolders, tagsMeta: mergedTags, domainRouterRules });
+      if (driveFile.settings) {
+        await chrome.storage.local.set({ dashboardSettings: driveFile.settings });
+      }
+      driveSyncService.saveFolders(mergedFolders, token);
       driveSyncService.saveTags(mergedTags, token);
       break;
     }
 
     default:
-      // Drive wins for settings, annotations, pipelines, etc.
+      // Drive wins for history-data, annotations, pipelines, chat, etc.
       await applyDriveData(filename, driveFile, rawContent, token);
       break;
   }
@@ -462,20 +468,21 @@ async function applyDriveData(
       await chrome.storage.local.set({ snippets: updated });
       break;
     }
-    case 'folders.json': {
+    case 'core-data.json': {
       const folders = (driveFile.folders as unknown[]) ?? [];
-      await chrome.storage.local.set({ folders });
-      break;
-    }
-    case 'tags.json': {
       const tagsMeta = (driveFile.tags as unknown[]) ?? [];
-      await chrome.storage.local.set({ tagsMeta });
-      break;
-    }
-    case 'settings.json': {
+      const domainRouterRules = (driveFile.domainRouterRules as unknown[]) ?? [];
+      await chrome.storage.local.set({ folders, tagsMeta, domainRouterRules });
       if (driveFile.settings) {
         await chrome.storage.local.set({ dashboardSettings: driveFile.settings });
       }
+      break;
+    }
+    case 'history-data.json': {
+      const exportHistory = (driveFile.exportHistory as unknown[]) ?? [];
+      const pipelineRuns = (driveFile.pipelineRuns as unknown[]) ?? [];
+      const podcastEpisodes = (driveFile.podcastEpisodes as unknown[]) ?? [];
+      await chrome.storage.local.set({ exportHistory, pipelineRuns, podcastEpisodes });
       break;
     }
     case 'notebook-annotations.json': {
@@ -489,16 +496,6 @@ async function applyDriveData(
       await chrome.storage.local.set({ pipelines });
       break;
     }
-    case 'podcast-episodes.json': {
-      const podcastEpisodes = (driveFile.episodes as unknown[]) ?? [];
-      await chrome.storage.local.set({ podcastEpisodes });
-      break;
-    }
-    case 'domain-router-rules.json': {
-      const domainRouterRules = (driveFile.rules as unknown[]) ?? [];
-      await chrome.storage.local.set({ domainRouterRules });
-      break;
-    }
     case 'chat-conversations-meta.json': {
       const chatConversations = (driveFile.conversations as unknown[]) ?? [];
       const chatSyncMeta = (driveFile.syncMeta as unknown[]) ?? [];
@@ -506,7 +503,6 @@ async function applyDriveData(
       break;
     }
     default:
-      // pipeline-runs and export-history are read-only from Drive perspective during init
       break;
   }
 }
@@ -517,19 +513,27 @@ async function applyDriveData(
  */
 async function pushLocalToDrive(filename: DriveFilename, token: string): Promise<void> {
   switch (filename) {
-    case 'folders.json': {
-      const folders = await storageService.getFolders();
+    case 'core-data.json': {
+      const [folders, tags, settings, rules] = await Promise.all([
+        storageService.getFolders(),
+        storageService.getTagsMeta(),
+        storageService.getSettings(),
+        domainRouterService.getRules(),
+      ]);
       driveSyncService.saveFolders(folders, token);
-      break;
-    }
-    case 'tags.json': {
-      const tags = await storageService.getTagsMeta();
       driveSyncService.saveTags(tags, token);
+      driveSyncService.saveSettings(settings, token);
+      driveSyncService.saveDomainRouterRules(rules, token);
       break;
     }
-    case 'settings.json': {
-      const settings = await storageService.getSettings();
-      driveSyncService.saveSettings(settings, token);
+    case 'history-data.json': {
+      const exportHistory = await storageService.getExportHistory();
+      const podcastEpisodes = await storageService.getPodcastEpisodes();
+      driveSyncService.savePodcastEpisodes(podcastEpisodes, token);
+      // Export history and pipeline runs are append-only — push the latest
+      for (const record of exportHistory) {
+        void driveSyncService.appendExportRecord(record, token);
+      }
       break;
     }
     case 'notebook-annotations.json': {
@@ -541,11 +545,6 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
     case 'pipelines.json': {
       const pipelines = await pipelineService.getAll();
       driveSyncService.savePipelines(pipelines, token);
-      break;
-    }
-    case 'domain-router-rules.json': {
-      const rules = await domainRouterService.getRules();
-      driveSyncService.saveDomainRouterRules(rules, token);
       break;
     }
     case 'chat-conversations-meta.json': {
