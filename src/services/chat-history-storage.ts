@@ -90,6 +90,18 @@ export const chatHistoryStorage = {
     return [];
   },
 
+  /** Removes a single conversation's metadata and content from storage. */
+  async deleteConversation(platform: ChatPlatform, id: string): Promise<void> {
+    const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
+    const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
+    const filtered = all.filter((c) => !(c.platform === platform && c.id === id));
+    await chrome.storage.local.set({ [CONVERSATIONS_KEY]: filtered });
+    await chrome.storage.local.remove(contentKey(platform, id));
+    syncToDrive((t) => {
+      driveSyncService.saveChatConversationsMeta(filtered, [], t);
+    });
+  },
+
   async clearAllData(): Promise<void> {
     const allData = await chrome.storage.local.get(null);
     const dynamicKeys = Object.keys(allData).filter((k) => k.startsWith('chatContent_'));

@@ -1,13 +1,18 @@
 /**
  * @module useChatHistoryDetailPage
- * @description Hook for the conversation detail page that fetches a full conversation (messages + meta) from the background and exposes Markdown and JSON export handlers that trigger browser file downloads.
+ * @description Hook for the conversation detail page that fetches a full conversation
+ *   (messages + meta) from the background and exposes export, copy, and delete handlers.
  * @dependencies @/types
  * @public useChatHistoryDetailPage
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { ChatPlatform, ConversationFull } from '@/types';
 
-export function useChatHistoryDetailPage(platform: ChatPlatform, conversationId: string) {
+export function useChatHistoryDetailPage(
+  platform: ChatPlatform,
+  conversationId: string,
+  onBack: () => void,
+) {
   const [conversation, setConversation] = useState<ConversationFull | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,23 +72,37 @@ export function useChatHistoryDetailPage(platform: ChatPlatform, conversationId:
     URL.revokeObjectURL(url);
   }, [conversation]);
 
-  const handleExportJson = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     if (!conversation) return;
-    const blob = new Blob([JSON.stringify(conversation, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${conversation.meta.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const lines: string[] = [conversation.meta.title, ''];
+    for (const msg of conversation.messages) {
+      lines.push(`${msg.role === 'user' ? 'You' : 'Assistant'}:`);
+      lines.push(msg.content);
+      lines.push('');
+    }
+    await navigator.clipboard.writeText(lines.join('\n'));
   }, [conversation]);
+
+  const handleDelete = useCallback(async () => {
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'DELETE_CHAT_CONVERSATION',
+        platform,
+        id: conversationId,
+      });
+      onBack();
+    } catch (err) {
+      console.warn('[ChatHistoryDetail] Delete failed', err);
+    }
+  }, [platform, conversationId, onBack]);
 
   return {
     conversation,
     isLoading,
     error,
     handleExportMarkdown,
-    handleExportJson,
+    handleCopy,
+    handleDelete,
     handleRetry: fetchContent,
   };
 }

@@ -7,9 +7,9 @@
  * @public ChatHistoryPage
  */
 import React from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Download, Plus, MoreHorizontal } from 'lucide-react';
 import type { ChatPlatform } from '@/types';
-import { useChatHistoryPage } from './useChatHistoryPage';
+import { useChatHistoryPage, formatSmartDate } from './useChatHistoryPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './ChatHistoryPage.css';
@@ -20,15 +20,10 @@ const PLATFORM_LABELS: Record<ChatPlatform, string> = {
   gemini: 'Gemini',
 };
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-}
-
 function PlatformBadge({ platform }: { platform: ChatPlatform }) {
   return (
-    <span className={`chat-history-page__platform-badge chat-history-page__platform-badge--${platform}`}>
+    <span className={`chp-badge chp-badge--${platform}`}>
+      <span className="chp-badge__dot" />
       {PLATFORM_LABELS[platform]}
     </span>
   );
@@ -42,6 +37,7 @@ export default function ChatHistoryPage() {
     totalCount,
     countByPlatform,
     isLoading,
+    isSaving,
     activePlatform,
     setActivePlatform,
     sortField,
@@ -50,105 +46,119 @@ export default function ChatHistoryPage() {
     searchQuery,
     setSearchQuery,
     handleOpenConversation,
+    handleSaveCurrentChat,
+    handleExportAll,
   } = useChatHistoryPage(onOpenConversation);
 
   return (
-    <div className="chat-history-page">
-      <div className="chat-history-page__header">
-        <div>
-          <h1 className="chat-history-page__title">Chat History</h1>
-          <p className="chat-history-page__subtitle">
-            {totalCount} saved conversation{totalCount !== 1 ? 's' : ''}
-          </p>
+    <div className="chp">
+      {/* ── Header ── */}
+      <div className="chp__header">
+        <div className="chp__header-left">
+          <p className="chp__eyebrow">Chat History</p>
+          <h1 className="chp__title">All chats</h1>
+          <p className="chp__subtitle">Saved conversations across every LLM you use.</p>
+        </div>
+        <div className="chp__header-actions">
+          <button className="chp__btn-ghost" onClick={handleExportAll} disabled={totalCount === 0}>
+            <Download size={14} />
+            Export
+          </button>
+          <button
+            className="chp__btn-primary"
+            onClick={() => void handleSaveCurrentChat()}
+            disabled={isSaving}
+          >
+            <Plus size={14} />
+            {isSaving ? 'Saving…' : 'Save current chat'}
+          </button>
         </div>
       </div>
 
-      <div className="chat-history-page__toolbar">
-        <div className="chat-history-page__platform-tabs">
+      {/* ── Toolbar ── */}
+      <div className="chp__toolbar">
+        <div className="chp__tabs">
           {(['all', 'chatgpt', 'claude', 'gemini'] as const).map((p) => (
             <button
               key={p}
-              className={`chat-history-page__tab${activePlatform === p ? ' chat-history-page__tab--active' : ''}`}
+              className={`chp__tab${activePlatform === p ? ' chp__tab--active' : ''}`}
               onClick={() => setActivePlatform(p)}
             >
               {p === 'all' ? 'All' : PLATFORM_LABELS[p]}
-              <span className="chat-history-page__tab-count">
+              <span className="chp__tab-count">
                 {p === 'all' ? totalCount : countByPlatform[p]}
               </span>
             </button>
           ))}
         </div>
-
         <SearchBar
-          className="chat-history-page__search"
+          className="chp__search"
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search conversations…"
+          placeholder="Search messages…"
         />
       </div>
 
+      {/* ── Content ── */}
       {isLoading && conversations.length === 0 ? (
-        <div className="chat-history-page__loading">Loading…</div>
+        <div className="chp__state">Loading…</div>
       ) : conversations.length === 0 ? (
-        <div className="chat-history-page__empty">
+        <div className="chp__state">
           {totalCount === 0
-            ? 'No saved conversations yet. Open ChatGPT, Claude, or Gemini and use the sidebar to save a chat.'
+            ? 'No saved conversations yet. Open ChatGPT, Claude, or Gemini and save a chat.'
             : 'No conversations match your search.'}
         </div>
       ) : (
-        <div className="chat-history-page__table-wrapper">
-          <div className="chat-history-page__table-scroll">
-            <table className="chat-history-page__table">
+        <div className="chp__table-wrapper">
+          <div className="chp__table-scroll">
+            <table className="chp__table">
               <thead>
                 <tr>
-                  <th
-                    className="chat-history-page__th chat-history-page__th--sortable"
-                    onClick={() => handleSort('title')}
-                  >
-                    <span className="chat-history-page__th-content">
+                  <th className="chp__th chp__th--platform">Platform</th>
+                  <th className="chp__th chp__th--title chp__th--sortable" onClick={() => handleSort('title')}>
+                    <span className="chp__th-inner">
                       Title
-                      {sortField === 'title'
-                        ? (sortDir === 'asc'
-                          ? <ChevronUp size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />
-                          : <ChevronDown size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />)
-                        : null}
+                      {sortField === 'title' && (
+                        sortDir === 'asc'
+                          ? <ChevronUp size={11} className="chp__sort-icon" />
+                          : <ChevronDown size={11} className="chp__sort-icon" />
+                      )}
                     </span>
                   </th>
-                  <th className="chat-history-page__th">Platform</th>
+                  <th className="chp__th chp__th--msgs">Msgs</th>
                   <th
-                    className="chat-history-page__th chat-history-page__th--sortable"
+                    className="chp__th chp__th--updated chp__th--sortable"
                     onClick={() => handleSort('updatedAt')}
                   >
-                    <span className="chat-history-page__th-content">
-                      Saved
-                      {sortField === 'updatedAt'
-                        ? (sortDir === 'asc'
-                          ? <ChevronUp size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />
-                          : <ChevronDown size={11} className="chat-history-page__sort-icon chat-history-page__sort-icon--active" />)
-                        : null}
+                    <span className="chp__th-inner">
+                      Updated
+                      {sortField === 'updatedAt' && (
+                        sortDir === 'asc'
+                          ? <ChevronUp size={11} className="chp__sort-icon" />
+                          : <ChevronDown size={11} className="chp__sort-icon" />
+                      )}
                     </span>
                   </th>
-                  <th className="chat-history-page__th">Messages</th>
+                  <th className="chp__th chp__th--menu" />
                 </tr>
               </thead>
               <tbody>
                 {conversations.map((conv) => (
                   <tr
                     key={`${conv.platform}:${conv.id}`}
-                    className="chat-history-page__row"
+                    className="chp__row"
                     onClick={() => handleOpenConversation(conv.platform, conv.id)}
                   >
-                    <td className="chat-history-page__td chat-history-page__td--title">
-                      {conv.title}
-                    </td>
-                    <td className="chat-history-page__td">
+                    <td className="chp__td chp__td--platform">
                       <PlatformBadge platform={conv.platform} />
                     </td>
-                    <td className="chat-history-page__td chat-history-page__td--date">
-                      {formatDate(conv.updatedAt)}
-                    </td>
-                    <td className="chat-history-page__td chat-history-page__td--count">
-                      {conv.messageCount ?? '—'}
+                    <td className="chp__td chp__td--title">{conv.title}</td>
+                    <td className="chp__td chp__td--msgs">{conv.messageCount ?? '—'}</td>
+                    <td className="chp__td chp__td--updated">{formatSmartDate(conv.updatedAt)}</td>
+                    <td className="chp__td chp__td--menu" onClick={(e) => e.stopPropagation()}>
+                      <button className="chp__menu-btn" aria-label="More options">
+                        <MoreHorizontal size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}

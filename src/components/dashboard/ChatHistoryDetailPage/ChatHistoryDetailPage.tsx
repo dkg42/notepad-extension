@@ -1,10 +1,12 @@
 /**
  * @module ChatHistoryDetailPage
- * @description Detail view for a single saved conversation — renders the message thread with role labels, platform badge, and export buttons for Markdown and JSON formats.
+ * @description Detail view for a single saved conversation — renders the message thread
+ *   as chat bubbles with role avatars, platform badge, and Copy/Export/Delete actions.
  * @dependencies @/types, ./useChatHistoryDetailPage, @/contexts/NavigationContext
  * @public ChatHistoryDetailPage
  */
 import React from 'react';
+import { ArrowLeft, Copy, Download, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform } from '@/types';
 import { useChatHistoryDetailPage } from './useChatHistoryDetailPage';
 import { useNavigation } from '@/contexts/NavigationContext';
@@ -16,11 +18,17 @@ const PLATFORM_LABELS: Record<ChatPlatform, string> = {
   gemini: 'Gemini',
 };
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function PlatformBadge({ platform }: { platform: ChatPlatform }) {
+  return (
+    <span className={`chd-badge chd-badge--${platform}`}>
+      <span className="chd-badge__dot" />
+      {PLATFORM_LABELS[platform]}
+    </span>
+  );
 }
 
 export default function ChatHistoryDetailPage() {
@@ -35,79 +43,103 @@ export default function ChatHistoryDetailPage() {
     isLoading,
     error,
     handleExportMarkdown,
-    handleExportJson,
+    handleCopy,
+    handleDelete,
     handleRetry,
-  } = useChatHistoryDetailPage(platform!, conversationId!);
+  } = useChatHistoryDetailPage(platform!, conversationId!, onBack);
 
   return (
-    <div className="chat-history-detail">
-      <div className="chat-history-detail__header">
-        <button className="chat-history-detail__back-btn" onClick={onBack}>
-          &#x2190; Back
-        </button>
+    <div className="chd">
+      {/* ── Back nav ── */}
+      <button className="chd__back" onClick={onBack}>
+        <ArrowLeft size={14} />
+        Chat history
+      </button>
 
-        {conversation && (
-          <div className="chat-history-detail__meta">
-            <h1 className="chat-history-detail__title">{conversation.meta.title}</h1>
-            <div className="chat-history-detail__info">
-              <span className={`chat-history-detail__platform-badge chat-history-detail__platform-badge--${platform}`}>
-                {PLATFORM_LABELS[platform!]}
+      {/* ── Header ── */}
+      {conversation && (
+        <div className="chd__header">
+          <div className="chd__header-left">
+            <h1 className="chd__title">{conversation.meta.title}</h1>
+            <div className="chd__meta">
+              <PlatformBadge platform={platform!} />
+              <span className="chd__msg-count">
+                {conversation.messages.length} messages
               </span>
-              <span className="chat-history-detail__date">
-                Updated {formatDate(conversation.meta.updatedAt)}
-              </span>
-              <a
-                className="chat-history-detail__open-link"
-                href={conversation.meta.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open in {PLATFORM_LABELS[platform!]} &#x2197;
-              </a>
+              {conversation.meta.url && (
+                <a
+                  className="chd__link"
+                  href={conversation.meta.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink size={12} />
+                  <span className="chd__link-text">{conversation.meta.url}</span>
+                </a>
+              )}
             </div>
           </div>
-        )}
-
-        {conversation && (
-          <div className="chat-history-detail__actions">
-            <button className="chat-history-detail__export-btn" onClick={handleExportMarkdown}>
-              Export MD
+          <div className="chd__actions">
+            <button className="chd__btn-ghost" onClick={() => void handleCopy()}>
+              <Copy size={14} />
+              Copy
             </button>
-            <button className="chat-history-detail__export-btn" onClick={handleExportJson}>
-              Export JSON
+            <button className="chd__btn-ghost" onClick={handleExportMarkdown}>
+              <Download size={14} />
+              Export
+            </button>
+            <button className="chd__btn-danger" onClick={() => void handleDelete()}>
+              <Trash2 size={14} />
+              Delete
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
+      {/* ── States ── */}
       {isLoading && (
-        <div className="chat-history-detail__loading">Loading conversation...</div>
+        <div className="chd__state">Loading conversation…</div>
       )}
 
       {error && !isLoading && (
-        <div className="chat-history-detail__error">
+        <div className="chd__error">
           <p>{error}</p>
-          <button className="chat-history-detail__retry-btn" onClick={() => void handleRetry()}>
+          <button className="chd__retry-btn" onClick={() => void handleRetry()}>
             Retry
           </button>
         </div>
       )}
 
+      {/* ── Thread ── */}
       {conversation && !isLoading && (
-        <div className="chat-history-detail__thread">
+        <div className="chd__thread">
           {conversation.messages.map((msg, i) => (
             <div
               key={i}
-              className={`chat-history-detail__message chat-history-detail__message--${msg.role}`}
+              className={`chd__msg chd__msg--${msg.role}`}
             >
-              <div className="chat-history-detail__message-label">
-                {msg.role === 'user' ? 'You' : PLATFORM_LABELS[platform!]}
-              </div>
-              <div className="chat-history-detail__message-content">{msg.content}</div>
-              {msg.createdAt && (
-                <div className="chat-history-detail__message-time">
-                  {formatDate(msg.createdAt)}
-                </div>
+              {msg.role === 'user' ? (
+                <>
+                  <div className="chd__msg-header chd__msg-header--user">
+                    <span className="chd__msg-label">You</span>
+                    {msg.createdAt && (
+                      <span className="chd__msg-time">{formatTime(msg.createdAt)}</span>
+                    )}
+                    <span className="chd__avatar chd__avatar--user">Y</span>
+                  </div>
+                  <div className="chd__bubble chd__bubble--user">{msg.content}</div>
+                </>
+              ) : (
+                <>
+                  <div className="chd__msg-header chd__msg-header--assistant">
+                    <span className="chd__avatar chd__avatar--assistant">*</span>
+                    <span className="chd__msg-label">Assistant</span>
+                    {msg.createdAt && (
+                      <span className="chd__msg-time">{formatTime(msg.createdAt)}</span>
+                    )}
+                  </div>
+                  <div className="chd__bubble chd__bubble--assistant">{msg.content}</div>
+                </>
               )}
             </div>
           ))}

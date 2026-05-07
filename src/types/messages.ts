@@ -80,6 +80,8 @@ export const MSG = {
   GET_CHAT_CONVERSATIONS: 'GET_CHAT_CONVERSATIONS',
   /** Popup → background: return full message list for one conversation */
   GET_CHAT_CONVERSATION_CONTENT: 'GET_CHAT_CONVERSATION_CONTENT',
+  /** Popup → background: delete a saved conversation and its content */
+  DELETE_CHAT_CONVERSATION: 'DELETE_CHAT_CONVERSATION',
 
   // ── Import Jobs ─────────────────────────────────────────────────────────────
   /** Return the progress/status of the active import job */

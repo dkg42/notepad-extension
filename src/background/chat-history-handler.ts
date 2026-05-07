@@ -150,5 +150,15 @@ export function handleChatHistoryMessage(
     return true;
   }
 
+  if (message.type === 'DELETE_CHAT_CONVERSATION') {
+    const { platform, id } = message as { type: string; platform: ChatPlatform; id: string };
+    chatHistoryStorage.deleteConversation(platform, id)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err: unknown) =>
+        sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+      );
+    return true;
+  }
+
   return undefined;
 }
