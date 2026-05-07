@@ -53,6 +53,11 @@ export interface NavigationContextValue {
   handleOpenChatDetail: (platform: ChatPlatform, id: string) => void;
   handleBackToChatHistory: () => void;
 
+  // Screenshot editor navigation
+  selectedCaptureId: string | null;
+  handleOpenScreenshotEditor: (captureId: string) => void;
+  handleBackToScreenshots: () => void;
+
   // Drive conflict
   driveConflict: ConflictSummary | null;
   handleConflictResolution: (decision: 'merge' | 'overwrite') => Promise<void>;

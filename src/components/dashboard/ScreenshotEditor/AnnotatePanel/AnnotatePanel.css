@@ -1,0 +1,183 @@
+.annotate-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.annotate-panel__section {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.annotate-panel__section:last-child {
+  border-bottom: none;
+}
+
+.annotate-panel__section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--fg-3);
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+/* Tool buttons */
+.annotate-panel__tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.annotate-panel__tool-btn {
+  padding: 7px 6px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.annotate-panel__tool-btn:hover {
+  border-color: var(--line-2);
+  background: var(--bg-2);
+  color: var(--fg);
+}
+
+.annotate-panel__tool-btn--active {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+/* Spans full width for Redact/Blur */
+.annotate-panel__tools .annotate-panel__tool-btn:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+.annotate-panel__hint {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin: 10px 0 0;
+  line-height: 1.45;
+}
+
+.annotate-panel__hint--sm {
+  margin: 10px 0 0;
+}
+
+/* Color + size row */
+.annotate-panel__color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.annotate-panel__color-label-wrap {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.annotate-panel__color-preview {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--line-2);
+  transition: border-color 0.12s;
+}
+
+.annotate-panel__color-label-wrap:hover .annotate-panel__color-preview {
+  border-color: var(--primary);
+}
+
+.annotate-panel__color-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.annotate-panel__size-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+
+.annotate-panel__range {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--line-2);
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+
+.annotate-panel__range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.2);
+}
+
+.annotate-panel__size-value {
+  font-size: 11px;
+  color: var(--fg-3);
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action buttons */
+.annotate-panel__action-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.annotate-panel__action-btn {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s;
+}
+
+.annotate-panel__action-btn:hover:not(:disabled) {
+  background: var(--bg-2);
+  border-color: var(--line-2);
+  color: var(--fg);
+}
+
+.annotate-panel__action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.annotate-panel__action-btn--danger {
+  color: oklch(0.45 0.18 20);
+  border-color: oklch(0.88 0.04 20);
+}
+
+.annotate-panel__action-btn--danger:hover:not(:disabled) {
+  background: oklch(0.96 0.02 20);
+  border-color: oklch(0.80 0.08 20);
+  color: oklch(0.40 0.20 20);
+}

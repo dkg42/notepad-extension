@@ -1,0 +1,200 @@
+.screenshot-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+
+/* Top bar */
+.screenshot-editor__topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-2);
+}
+
+.screenshot-editor__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.screenshot-editor__back-btn:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+}
+
+.screenshot-editor__tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-3);
+  border-radius: var(--r-md);
+  padding: 3px;
+}
+
+.screenshot-editor__tab {
+  padding: 4px 14px;
+  border-radius: calc(var(--r-md) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.screenshot-editor__tab--active {
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Body */
+.screenshot-editor__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left panel */
+.screenshot-editor__panel {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+}
+
+.screenshot-editor__panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.screenshot-editor__panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+}
+
+.screenshot-editor__panel-footer .general-panel__btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: var(--r-md);
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.1s;
+}
+
+.screenshot-editor__panel-footer .general-panel__btn:active {
+  transform: scale(0.97);
+}
+
+/* Canvas area */
+.screenshot-editor__canvas-area {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px;
+  background: oklch(0.15 0.01 260);
+}
+
+.screenshot-editor__canvas-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.screenshot-editor__canvas {
+  display: block;
+  max-width: min(900px, 100%);
+  height: auto;
+  border-radius: var(--r-sm);
+  box-shadow: 0 8px 40px oklch(0 0 0 / 0.5);
+  user-select: none;
+}
+
+/* Loading state */
+.screenshot-editor__loading {
+  color: var(--fg-3);
+  font-size: 13px;
+  margin: auto;
+  padding: 60px 0;
+}
+
+/* Floating text input */
+.screenshot-editor__text-wrap {
+  position: absolute;
+  z-index: 20;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+
+.screenshot-editor__text-input {
+  min-width: 140px;
+  max-width: 340px;
+  background: oklch(0.98 0.005 260 / 0.97);
+  border: 2px solid var(--primary);
+  border-radius: var(--r-sm);
+  padding: 5px 9px;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--fg);
+  outline: none;
+  resize: none;
+  line-height: 1.4;
+}
+
+.screenshot-editor__text-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.screenshot-editor__text-commit,
+.screenshot-editor__text-cancel {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screenshot-editor__text-commit {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.screenshot-editor__text-cancel {
+  background: oklch(0.9 0.01 0);
+  color: oklch(0.4 0.15 20);
+}

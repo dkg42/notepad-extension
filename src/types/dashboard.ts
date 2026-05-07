@@ -25,7 +25,9 @@ export type DashboardView =
   | 'all-audio'
   | 'pipelines'
   | 'settings'
-  | 'account';
+  | 'account'
+  | 'screenshots'
+  | 'screenshot-editor';
 
 export interface DashboardSettings {
   theme: 'light' | 'dark';

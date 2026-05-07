@@ -24,6 +24,8 @@ import PodcastDetailPage from '@/components/dashboard/PodcastDetailPage/PodcastD
 import AllAudioPage from '@/components/dashboard/AllAudioPage/AllAudioPage';
 import PipelinesPage from '@/components/dashboard/PipelinesPage/PipelinesPage';
 import AccountPage from '@/components/dashboard/AccountPage/AccountPage';
+import ScreenshotsPage from '@/components/dashboard/ScreenshotsPage/ScreenshotsPage';
+import ScreenshotEditor from '@/components/dashboard/ScreenshotEditor/ScreenshotEditor';
 import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
 import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette';
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
@@ -79,6 +81,9 @@ export default function DashboardApp() {
     handleBackToPodcasts,
     handleOpenChatDetail,
     handleBackToChatHistory,
+    selectedCaptureId,
+    handleOpenScreenshotEditor,
+    handleBackToScreenshots,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,
@@ -210,6 +215,9 @@ export default function DashboardApp() {
       selectedChatPlatform,
       handleOpenChatDetail,
       handleBackToChatHistory,
+      selectedCaptureId,
+      handleOpenScreenshotEditor,
+      handleBackToScreenshots,
       driveConflict,
       handleConflictResolution,
       audioUrl,
@@ -245,6 +253,9 @@ export default function DashboardApp() {
       selectedChatPlatform,
       handleOpenChatDetail,
       handleBackToChatHistory,
+      selectedCaptureId,
+      handleOpenScreenshotEditor,
+      handleBackToScreenshots,
       driveConflict,
       handleConflictResolution,
       audioUrl,
@@ -320,6 +331,12 @@ export default function DashboardApp() {
 
       case 'account':
         return <AccountPage />;
+
+      case 'screenshots':
+        return <ScreenshotsPage />;
+
+      case 'screenshot-editor':
+        return selectedCaptureId ? <ScreenshotEditor captureId={selectedCaptureId} /> : null;
 
       default:
         return (

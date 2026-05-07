@@ -48,6 +48,7 @@ export function useDashboardApp() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [pipelinesCount, setPipelinesCount] = useState(0);
   const [driveConflict, setDriveConflict] = useState<ConflictSummary | null>(null);
+  const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);
 
   useEffect(() => {
     // Trigger Drive sync in the background. Responses land via the local storage
@@ -375,6 +376,18 @@ export function useDashboardApp() {
     setSelectedChatPlatform(null);
   };
 
+  // ── Screenshot editor navigation ─────────────────────────────────────────
+
+  const handleOpenScreenshotEditor = (captureId: string) => {
+    setSelectedCaptureId(captureId);
+    setCurrentView('screenshot-editor');
+  };
+
+  const handleBackToScreenshots = () => {
+    setCurrentView('screenshots');
+    setSelectedCaptureId(null);
+  };
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
   const handleSettingsChange = async (partial: Partial<DashboardSettings>) => {
@@ -420,6 +433,9 @@ export function useDashboardApp() {
     handleBackToPodcasts,
     handleOpenChatDetail,
     handleBackToChatHistory,
+    selectedCaptureId,
+    handleOpenScreenshotEditor,
+    handleBackToScreenshots,
     handleDelete,
     handleUpdateTags,
     handleToggleFavorite,

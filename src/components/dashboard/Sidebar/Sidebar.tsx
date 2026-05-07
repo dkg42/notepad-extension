@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Zap,
   Search,
+  Camera,
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
@@ -55,6 +56,7 @@ const PRIMARY_NAV: NavItem[] = [
   { view: 'prompts', icon: FileText, label: 'Prompt Hub' },
   { view: 'favorites', icon: Star, label: 'Favorites' },
   { view: 'tags', icon: Tag, label: 'Tags' },
+  { view: 'screenshots', icon: Camera, label: 'Screenshots' },
 ];
 
 const NOTEBOOKS_GROUP: NavGroup = {
@@ -212,7 +214,9 @@ export default function Sidebar() {
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
-    const isActive = currentView === item.view;
+    const isActive =
+      currentView === item.view ||
+      (item.view === 'screenshots' && currentView === 'screenshot-editor');
     const badge =
       item.view === 'prompts' && promptCount > 0
         ? promptCount
