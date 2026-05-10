@@ -187,10 +187,9 @@ export function useDashboardApp() {
   };
 
   const handleSaveSnippet = async (title: string, text: string, tags: string[], folderId?: string) => {
-    const snippet = await storageService.saveWithMeta({
+    await storageService.saveWithMeta({
       text, source: 'dashboard', title: title || undefined, folderId, tags,
     });
-    setSnippets((prev) => [snippet, ...prev]);
   };
 
   const handleUpdateSnippet = async (id: string, title: string, text: string) => {

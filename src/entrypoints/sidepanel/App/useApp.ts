@@ -108,8 +108,7 @@ export function useApp() {
     tags: string[],
     folderId?: string,
   ) => {
-    const snippet = await storageService.saveWithMeta({ title, text, tags, folderId });
-    setSnippets((prev) => [snippet, ...prev]);
+    await storageService.saveWithMeta({ title, text, tags, folderId });
   };
 
   return {

@@ -476,15 +476,18 @@ interface ComposeModalProps {
   folders: FolderType[];
   defaultFolderId?: string;
   onCreate: (title: string, text: string, tags: string[], folderId?: string) => void;
+  onCreateFolder: (name: string, parentId?: string) => Promise<void>;
   onClose: () => void;
 }
 
-function ComposeModal({ folders, defaultFolderId, onCreate, onClose }: ComposeModalProps) {
+function ComposeModal({ folders, defaultFolderId, onCreate, onCreateFolder, onClose }: ComposeModalProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [folderId, setFolderId] = useState<string>(defaultFolderId ?? '');
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
 
   const commitTag = () => {
@@ -498,6 +501,14 @@ function ComposeModal({ folders, defaultFolderId, onCreate, onClose }: ComposeMo
     const finalTags = tagInput.trim() ? [...tags, tagInput.trim().toLowerCase()] : tags;
     onCreate(title.trim(), body.trim(), finalTags, folderId || undefined);
     onClose();
+  };
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    await onCreateFolder(name);
+    setNewFolderName('');
+    setCreatingFolder(false);
   };
 
   return (
@@ -523,18 +534,36 @@ function ComposeModal({ folders, defaultFolderId, onCreate, onClose }: ComposeMo
             />
           </div>
 
+          <div className="ph-modal__field-label">Folder</div>
           {folders.length > 0 && (
-            <>
-              <div className="ph-modal__field-label">Folder</div>
-              <select className="ph-modal__select" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
-                <option value="">No folder</option>
-                {treeItems.map(({ folder, depth }) => (
-                  <option key={folder.id} value={folder.id}>
-                    {'  '.repeat(depth)}{folder.name}
-                  </option>
-                ))}
-              </select>
-            </>
+            <select className="ph-modal__select" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
+              <option value="">No folder</option>
+              {treeItems.map(({ folder, depth }) => (
+                <option key={folder.id} value={folder.id}>
+                  {'  '.repeat(depth)}{folder.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {creatingFolder ? (
+            <div className="ph-modal__new-folder">
+              <input
+                className="ph-modal__folder-input"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleCreateFolder(); if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); } }}
+                placeholder="Folder name…"
+                autoFocus
+              />
+              <button className="ph-btn-ghost" onClick={() => { setCreatingFolder(false); setNewFolderName(''); }}>Cancel</button>
+              <button className="ph-btn-primary" onClick={() => void handleCreateFolder()} disabled={!newFolderName.trim()}>
+                <Check size={12} strokeWidth={2.4} /> Create
+              </button>
+            </div>
+          ) : (
+            <button className="ph-modal__create-folder-btn" onClick={() => setCreatingFolder(true)}>
+              <Plus size={11} strokeWidth={2} /> {folders.length > 0 ? 'New folder' : 'Create a folder'}
+            </button>
           )}
         </div>
 
@@ -1010,6 +1039,7 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
             await handleSaveSnippet(title, text, tags, folderId);
             await usePromptLimit();
           }}
+          onCreateFolder={handleCreateFolder}
           onClose={() => setComposeOpen(false)}
         />
       )}
