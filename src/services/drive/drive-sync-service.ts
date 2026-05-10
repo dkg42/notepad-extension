@@ -52,6 +52,19 @@ import { CacheKeys, get as cacheGet, set as cacheSet, invalidate as cacheInvalid
 import { getEntry } from './drive-manifest-service';
 import { readFile } from './drive-io-service';
 import { enqueue } from './drive-write-queue';
+import { authStorageService } from '@/services/auth-storage-service';
+
+// Cached pro-status — updated eagerly on load and on claims changes.
+// Drive writes are no-ops for free-tier users; reads return null (no Drive files exist).
+let _driveEnabled = false;
+void authStorageService.getAuthClaims().then((claims) => {
+  _driveEnabled = claims?.subscriptionStatus === 'active' &&
+    (claims.subscriptionPlan === 'pro_monthly' || claims.subscriptionPlan === 'pro_yearly');
+});
+authStorageService.onClaimsChanged((claims) => {
+  _driveEnabled = claims?.subscriptionStatus === 'active' &&
+    (claims.subscriptionPlan === 'pro_monthly' || claims.subscriptionPlan === 'pro_yearly');
+});
 import type { Snippet, Folder, TagMeta, NotebookAnnotation, NotebookCollection, PodcastEpisode } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 import type { Pipeline, PipelineRun } from '@/types/pipeline';
@@ -66,12 +79,17 @@ const MAX_PIPELINE_RUNS = 200;
 /**
  * Reads a JSON file from Drive and populates the session cache.
  * Returns null if the file does not exist or read fails.
+ * For free-tier users (_driveEnabled=false), returns null on a cache miss rather
+ * than making a Drive API call — but cached data (from a prior pro session) is
+ * always returned via the callers' cache-check guard above.
  */
 async function readJsonFromDrive<T>(
   filename: string,
   cacheKey: string,
   token: string,
 ): Promise<T | null> {
+  if (!_driveEnabled) return null;
+
   const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
@@ -94,8 +112,10 @@ async function readJsonFromDrive<T>(
 
 /**
  * Enqueues a JSON file write to Drive and updates the session cache.
+ * No-op for free-tier users (_driveEnabled === false).
  */
 function writeJson<T>(filename: string, cacheKey: string, data: T, token: string): void {
+  if (!_driveEnabled) return;
   void cacheSet(cacheKey, data);
   enqueue(filename, JSON.stringify(data), token);
 }
@@ -128,6 +148,8 @@ export async function getSnippetText(snippetId: string, token: string): Promise<
   const cached = await cacheGet<string>(cacheKey);
   if (cached !== null) return cached;
 
+  if (!_driveEnabled) return null;
+
   const filename = snippetTextFilename(snippetId);
   const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
@@ -144,6 +166,7 @@ export async function getSnippetText(snippetId: string, token: string): Promise<
  * a separate .txt file write for the text body.
  */
 export async function saveSnippet(snippet: Snippet, token: string): Promise<void> {
+  if (!_driveEnabled) return;
   // Update snippet text file
   const textFilename = snippetTextFilename(snippet.id);
   const textCacheKey = CacheKeys.snippetText(snippet.id);
@@ -168,6 +191,7 @@ export async function deleteSnippet(snippetId: string, token: string): Promise<v
 }
 
 export async function saveAllSnippets(snippets: Snippet[], token: string): Promise<void> {
+  if (!_driveEnabled) return;
   const metas: DriveSnippetMeta[] = snippets.map(({ text: _text, ...meta }) => ({
     ...meta,
     textFileId: null,
@@ -191,6 +215,7 @@ async function readCoreData(token: string): Promise<DriveCoreDataFile | null> {
 }
 
 function writeCoreData(file: DriveCoreDataFile, token: string): void {
+  if (!_driveEnabled) return;
   void cacheSet(CacheKeys.coreData, file);
   enqueue('core-data.json', JSON.stringify(file), token);
 }
@@ -253,6 +278,7 @@ async function readHistoryData(token: string): Promise<DriveHistoryDataFile | nu
 }
 
 function writeHistoryData(file: DriveHistoryDataFile, token: string): void {
+  if (!_driveEnabled) return;
   void cacheSet(CacheKeys.historyData, file);
   enqueue('history-data.json', JSON.stringify(file), token);
 }
@@ -399,6 +425,8 @@ export async function getChatConversationContent(
   const cachedNdjson = await cacheGet<string>(cacheKey);
   if (cachedNdjson !== null) return parseConversationNdjson(cachedNdjson);
 
+  if (!_driveEnabled) return null;
+
   const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
@@ -414,6 +442,7 @@ export async function getChatConversationContent(
  * First line: { _meta, fetchedAt }; subsequent lines: one ConversationMessage per line.
  */
 export async function saveChatConversationContent(full: ConversationFull, token: string): Promise<void> {
+  if (!_driveEnabled) return;
   const filename = chatContentFilename(full.meta.platform, full.meta.id);
   const cacheKey = CacheKeys.chatContent(full.meta.platform, full.meta.id);
 

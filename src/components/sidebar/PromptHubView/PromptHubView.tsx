@@ -28,6 +28,7 @@ import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderPath } from '@/utils/folder-utils';
 import { filterSnippets } from '@/utils/filter-snippets';
 import { usePromptHubView, type SortOrder } from './usePromptHubView';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -870,6 +871,7 @@ export default function PromptHubView({
     setSortOpen,
   } = usePromptHubView();
 
+  const { canUse: canAddPrompt, count: promptCount, use: usePromptLimit } = useUsageLimit('prompt_hub');
   const openSnippet = openPromptId ? snippets.find((s) => s.id === openPromptId) : null;
 
   const visibleSnippets = useMemo(() => {
@@ -916,11 +918,10 @@ export default function PromptHubView({
     : (folders.find((f) => f.id === selectedFolder)?.name ?? 'Prompts');
 
   const handleSave = (title: string, text: string) => {
-    if (!openSnippet) return;
-    // Update snippet via updateTags doesn't cover title/text — use delete+add for now
-    // In a full implementation, a storageService.updateSnippet method would be preferable
+    if (!openSnippet || !canAddPrompt) return;
     handleDelete(openSnippet.id);
     handleAddSnippet(title, text, openSnippet.tags ?? [], openSnippet.folderId);
+    void usePromptLimit();
     closeDetail();
   };
 
@@ -942,12 +943,14 @@ export default function PromptHubView({
           onDelete={(id) => { handleDelete(id); closeDetail(); }}
           onCopy={handleCopy}
           onDuplicate={() => {
+            if (!canAddPrompt) return;
             handleAddSnippet(
               openSnippet.title ? `${openSnippet.title} (copy)` : '',
               openSnippet.text,
               openSnippet.tags ?? [],
               openSnippet.folderId,
             );
+            void usePromptLimit();
             closeDetail();
           }}
           onMove={(folderId) => {
@@ -1095,20 +1098,31 @@ export default function PromptHubView({
             )}
           </div>
 
-          <ComposeCard
-            open={composeOpen}
-            onToggle={() => setComposeOpen(!composeOpen)}
-            folders={folders}
-            defaultFolderId={
-              selectedFolder !== '__all' && selectedFolder !== '__starred'
-                ? selectedFolder
-                : undefined
-            }
-            onCreate={(title, text, tags, folderId) => {
-              handleAddSnippet(title, text, tags, folderId);
-              setComposeOpen(false);
-            }}
-          />
+          {canAddPrompt ? (
+            <ComposeCard
+              open={composeOpen}
+              onToggle={() => setComposeOpen(!composeOpen)}
+              folders={folders}
+              defaultFolderId={
+                selectedFolder !== '__all' && selectedFolder !== '__starred'
+                  ? selectedFolder
+                  : undefined
+              }
+              onCreate={(title, text, tags, folderId) => {
+                handleAddSnippet(title, text, tags, folderId);
+                void usePromptLimit();
+                setComposeOpen(false);
+              }}
+            />
+          ) : (
+            <div className="prompt-hub__limit-notice">
+              Daily limit reached ({promptCount}/5 prompts today).{' '}
+              <button className="prompt-hub__limit-upgrade" onClick={() => chrome.runtime.openOptionsPage()}>
+                Upgrade to Pro
+              </button>{' '}
+              for unlimited.
+            </div>
+          )}
         </>
       )}
     </div>

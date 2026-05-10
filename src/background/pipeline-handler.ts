@@ -11,7 +11,8 @@ import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { authStorageService } from '@/services/auth-storage-service';
 import { fetchSourceCounts, listArtifacts } from '@/services/notebooklm-api';
-import { ensureSignedIn } from './shared';
+import { ensureSignedIn, isProUser } from './shared';
+import { usageLimitService } from '@/services/usage-limit-service';
 
 /**
  * Returns true if the pipeline has any trigger that requires periodic polling
@@ -27,6 +28,12 @@ function needsPolling(pipeline: Pipeline): boolean {
  */
 export async function runPipelineCheck(): Promise<void> {
   if (!await authStorageService.getAuthProfile()) return;
+  const pro = await isProUser();
+  const allowed = await usageLimitService.canUse('pipeline_run', pro);
+  if (!allowed) {
+    console.warn('[NLM-EXT BG] Pipeline check skipped — daily limit reached');
+    return;
+  }
   try {
     const pipelines = await pipelineService.getAll();
     const pollable = pipelines.filter((p) => p.enabled && needsPolling(p));
@@ -86,6 +93,7 @@ export async function runPipelineCheck(): Promise<void> {
     if (needsArtifacts) {
       await pipelineService.setArtifactBaseline(artifactIds);
     }
+    if (!pro) await usageLimitService.increment('pipeline_run');
   } catch (err) {
     console.warn('[NLM-EXT BG] Pipeline check failed:', err);
   }
@@ -229,6 +237,10 @@ export function handlePipelineMessage(
     const { pipeline } = message as { type: string; pipeline: Pipeline };
     (async () => {
       await ensureSignedIn();
+      const pro = await isProUser();
+      const allowed = await usageLimitService.canUse('pipeline_run', pro);
+      if (!allowed) return { ok: false, reason: 'daily_limit' };
+
       const [notebooks, annotations, collections] = await Promise.all([
         notebookSyncService.getAll(),
         notebookAnnotationService.getAllAnnotations(),
@@ -242,9 +254,10 @@ export function handlePipelineMessage(
       for (const run of runs) {
         await pipelineService.appendRun(run);
       }
-      return runs;
+      if (!pro) await usageLimitService.increment('pipeline_run');
+      return { ok: true, runs };
     })()
-      .then((runs) => sendResponse({ ok: true, runs }))
+      .then((result) => sendResponse(result))
       .catch((err: unknown) =>
         sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       );

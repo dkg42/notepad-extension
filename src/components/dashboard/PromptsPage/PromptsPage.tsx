@@ -13,6 +13,7 @@ import {
 import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderSubtreeIds, getFolderPath } from '@/utils/folder-utils';
 import { useSnippets } from '@/contexts/SnippetsContext';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './PromptsPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -643,6 +644,7 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
     handleBulkDelete, handleBulkMoveToFolder, handleBulkAddTags,
     handleCreateFolder, handleDeleteFolder,
   } = useSnippets();
+  const { canUse: canAddPrompt, count: promptCount, use: usePromptLimit } = useUsageLimit('prompt_hub');
 
   // ── UI state
   const [selectedFolder, setSelectedFolder] = useState<string>(initialFolder ?? '__all');
@@ -753,12 +755,14 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
   };
 
   const handleDuplicate = async (s: Snippet) => {
+    if (!canAddPrompt) return;
     await handleSaveSnippet(
       s.title ? `${s.title} (copy)` : '',
       s.text,
       s.tags ?? [],
       s.folderId,
     );
+    await usePromptLimit();
   };
 
   const handleMoveRow = async (s: Snippet, folderId: string | undefined) => {
@@ -780,10 +784,20 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
             <p className="prompt-hub__subtitle">{pageSubtitle}</p>
           </div>
           <div className="prompt-hub__header-actions">
+            {promptCount !== null && (
+              <span className="ph-usage-chip">
+                {promptCount}/5 prompts today
+              </span>
+            )}
             <button className="ph-btn-ghost" disabled title="Coming soon">
               ↑ Import
             </button>
-            <button className="ph-btn-primary" onClick={() => setComposeOpen(true)}>
+            <button
+              className="ph-btn-primary"
+              onClick={() => setComposeOpen(true)}
+              disabled={!canAddPrompt}
+              title={!canAddPrompt ? 'Daily limit reached (5/5). Upgrade to Pro for unlimited.' : undefined}
+            >
               <Plus size={13} strokeWidth={2.2} /> New prompt
             </button>
           </div>
@@ -864,7 +878,11 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
               folders={folders}
               onBack={() => setOpenPromptId(null)}
               onStar={handleToggleFavorite}
-              onSave={(id, title, text) => void handleUpdateSnippet(id, title, text)}
+              onSave={async (id, title, text) => {
+                if (!canAddPrompt) return;
+                await handleUpdateSnippet(id, title, text);
+                await usePromptLimit();
+              }}
               onDelete={(id) => { void handleDelete(id); setOpenPromptId(null); }}
             />
           ) : (
@@ -988,7 +1006,10 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
         <ComposeModal
           folders={folders}
           defaultFolderId={selectedFolder !== '__all' && selectedFolder !== '__starred' ? selectedFolder : undefined}
-          onCreate={(title, text, tags, folderId) => void handleSaveSnippet(title, text, tags, folderId)}
+          onCreate={async (title, text, tags, folderId) => {
+            await handleSaveSnippet(title, text, tags, folderId);
+            await usePromptLimit();
+          }}
           onClose={() => setComposeOpen(false)}
         />
       )}

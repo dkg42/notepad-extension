@@ -15,7 +15,8 @@ import { notebookSyncService } from '@/services/notebook-sync-service';
 import { allSourcesCacheService } from '@/services/all-sources-cache-service';
 import { allArtifactsCacheService } from '@/services/all-artifacts-cache-service';
 import { importJobService } from '@/services/import-job-service';
-import { ensureSignedIn } from './shared';
+import { ensureSignedIn, isProUser } from './shared';
+import { usageLimitService } from '@/services/usage-limit-service';
 
 const CONCURRENCY = 5;
 
@@ -62,9 +63,16 @@ export function handleSourceMessage(
 
   if (message.type === 'ADD_SOURCE_URL') {
     const { notebookId, url } = message as { type: string; notebookId: string; url: string };
-    ensureSignedIn()
-      .then(() => addSourceUrl(notebookId, url))
-      .then(() => sendResponse({ ok: true }))
+    (async () => {
+      await ensureSignedIn();
+      const pro = await isProUser();
+      const allowed = await usageLimitService.canUse('notebooklm_add', pro);
+      if (!allowed) return { ok: false, reason: 'daily_limit' };
+      await addSourceUrl(notebookId, url);
+      if (!pro) await usageLimitService.increment('notebooklm_add');
+      return { ok: true };
+    })()
+      .then((result) => sendResponse(result))
       .catch((err: unknown) =>
         sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       );

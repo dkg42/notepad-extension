@@ -4,6 +4,7 @@ import { useNavigation } from '@/contexts/NavigationContext';
 import GeneralPanel from './GeneralPanel/GeneralPanel';
 import AnnotatePanel from './AnnotatePanel/AnnotatePanel';
 import { useScreenshotEditor } from './useScreenshotEditor';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './ScreenshotEditor.css';
 
 type PanelTab = 'general' | 'annotate';
@@ -40,6 +41,18 @@ export default function ScreenshotEditor({ captureId }: Props) {
     download,
     copyToClipboard,
   } = useScreenshotEditor(captureId);
+
+  const { canUse: canEdit, count: editCount, use: useEdit } = useUsageLimit('screenshot_editor');
+
+  const handleDownload = async () => {
+    await useEdit();
+    download();
+  };
+
+  const handleCopy = async () => {
+    await useEdit();
+    copyToClipboard();
+  };
 
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -86,9 +99,11 @@ export default function ScreenshotEditor({ captureId }: Props) {
                 filename={filename}
                 onSettingChange={updateSetting}
                 onFilenameChange={setFilename}
-                onDownload={download}
-                onCopy={copyToClipboard}
+                onDownload={() => void handleDownload()}
+                onCopy={() => void handleCopy()}
                 copied={copied}
+                canExport={canEdit}
+                exportCount={editCount}
               />
             ) : (
               <AnnotatePanel
@@ -106,10 +121,20 @@ export default function ScreenshotEditor({ captureId }: Props) {
 
           {activeTab === 'annotate' && (
             <div className="screenshot-editor__panel-footer">
-              <button className="general-panel__btn general-panel__btn--download" onClick={download}>
+              <button
+                className="general-panel__btn general-panel__btn--download"
+                onClick={() => void handleDownload()}
+                disabled={!canEdit}
+                title={!canEdit ? 'Daily export limit reached — upgrade to Pro' : undefined}
+              >
                 ↓ Download
               </button>
-              <button className="general-panel__btn general-panel__btn--copy" onClick={copyToClipboard}>
+              <button
+                className="general-panel__btn general-panel__btn--copy"
+                onClick={() => void handleCopy()}
+                disabled={!canEdit}
+                title={!canEdit ? 'Daily export limit reached — upgrade to Pro' : undefined}
+              >
                 {copied ? '✓ Copied!' : '⎘ Copy'}
               </button>
             </div>

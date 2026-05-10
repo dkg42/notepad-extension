@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { usePodcastsPage } from './usePodcastsPage';
 import { useNavigation } from '@/contexts/NavigationContext';
+import SubscriptionGuard from '@/components/ui/SubscriptionGuard/SubscriptionGuard';
 import './PodcastsPage.css';
 
 function formatDate(timestamp: number): string {
@@ -37,6 +38,7 @@ export default function PodcastsPage() {
   }
 
   return (
+    <SubscriptionGuard requiredPlan={['pro_monthly', 'pro_yearly']} showBlurred>
     <div className="podcasts-page">
       <header className="podcasts-page__header">
         <h1 className="podcasts-page__title">Podcast Episodes</h1>
@@ -117,5 +119,6 @@ export default function PodcastsPage() {
         </div>
       )}
     </div>
+    </SubscriptionGuard>
   );
 }

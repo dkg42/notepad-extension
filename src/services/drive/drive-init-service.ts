@@ -48,7 +48,8 @@
 
 import { load as loadManifest, initialize as initManifest, clearInMemory } from './drive-manifest-service';
 import { writeAllFromLocal, driveSyncService } from './drive-sync-service';
-import { invalidateAll as invalidateCache } from './drive-cache-service';
+import { invalidateAll as invalidateCache, get as cacheGet, CacheKeys } from './drive-cache-service';
+import { authStorageService } from '@/services/auth-storage-service';
 import { cancelAll as cancelQueue, setInitializing, enqueue } from './drive-write-queue';
 import { readFile } from './drive-io-service';
 import { snippetTextFilename } from './types/drive-schemas';
@@ -85,6 +86,48 @@ export interface InitResult {
   needsMergeDecision?: boolean;
   /** Present when needsMergeDecision is true. */
   conflictSummary?: ConflictSummary;
+}
+
+// ── Pro-tier check ─────────────────────────────────────────────────────────────
+
+async function isProUser(): Promise<boolean> {
+  const claims = await authStorageService.getAuthClaims();
+  return (
+    claims?.subscriptionStatus === 'active' &&
+    (claims.subscriptionPlan === 'pro_monthly' || claims.subscriptionPlan === 'pro_yearly')
+  );
+}
+
+/**
+ * Flushes any Drive data currently in the session cache to chrome.storage.local.
+ * Called for free-tier users to preserve data that arrived during a Pro→Free
+ * transition without making any new Drive API calls.
+ */
+async function applyCachedDriveDataToLocal(): Promise<void> {
+  const filesToApply: Array<{ cacheKey: string; filename: DriveFilename }> = [
+    { cacheKey: CacheKeys.coreData,     filename: 'core-data.json' },
+    { cacheKey: CacheKeys.historyData,  filename: 'history-data.json' },
+    { cacheKey: CacheKeys.snippetsMeta, filename: 'snippets-meta.json' },
+    { cacheKey: CacheKeys.annotations,  filename: 'notebook-annotations.json' },
+    { cacheKey: CacheKeys.pipelines,    filename: 'pipelines.json' },
+    { cacheKey: CacheKeys.chatMeta,     filename: 'chat-conversations-meta.json' },
+  ];
+
+  let applied = 0;
+  for (const { cacheKey, filename } of filesToApply) {
+    const cached = await cacheGet<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      try {
+        await applyDriveData(filename, cached, '', '');
+        applied++;
+      } catch (err) {
+        console.error(`[DRIVE-INIT] Free-tier cache flush failed for ${filename}:`, err);
+      }
+    }
+  }
+  if (applied > 0) {
+    console.log(`[DRIVE-INIT] Free-tier: flushed ${applied} cached Drive files to local storage`);
+  }
 }
 
 // ── Device sync flag ───────────────────────────────────────────────────────────
@@ -127,6 +170,14 @@ export async function initialize(
   ownerUid: string,
   conflictDecision?: 'merge' | 'overwrite',
 ): Promise<InitResult> {
+  // Free-tier users must not make Drive API calls. Apply any data already
+  // in the session cache (from a prior Pro session) so it is not discarded.
+  if (!await isProUser()) {
+    console.log('[DRIVE-INIT] Free-tier user — skipping Drive API calls');
+    await applyCachedDriveDataToLocal();
+    return { isFirstTime: false, filesLoaded: 0, conflicts: [] };
+  }
+
   setInitializing(true);
   try {
     const manifest = await loadManifest(token);

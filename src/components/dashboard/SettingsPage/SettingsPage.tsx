@@ -10,6 +10,7 @@ import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
 import { useSettingsPage } from './useSettingsPage';
 import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './SettingsPage.css';
 
 const ROWS_OPTIONS = [10, 25, 50, 100];
@@ -33,6 +34,7 @@ export default function SettingsPage() {
     handleImport,
     handleClearAll,
   } = useSettingsPage(settings, onSettingsChange);
+  const { canUse: canImportExport, count: importExportCount, use: useImportExport } = useUsageLimit('import_export');
 
   return (
     <div className="settings-page">
@@ -128,9 +130,15 @@ export default function SettingsPage() {
               <span className="settings-row__name">Export all data</span>
               <span className="settings-row__description">
                 Download a JSON backup of all prompts, folders, tags and settings.
+                {importExportCount !== null && ` (${importExportCount}/5 used today${!canImportExport ? ' — upgrade to Pro for unlimited' : ''})`}
               </span>
             </div>
-            <button className="settings-page__btn" onClick={handleExport}>
+            <button
+              className="settings-page__btn"
+              onClick={() => { void useImportExport(); handleExport(); }}
+              disabled={!canImportExport}
+              title={!canImportExport ? 'Daily limit reached. Upgrade to Pro for unlimited.' : undefined}
+            >
               Export JSON
             </button>
           </div>
@@ -144,7 +152,9 @@ export default function SettingsPage() {
             </div>
             <button
               className="settings-page__btn"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { void useImportExport(); fileInputRef.current?.click(); }}
+              disabled={!canImportExport}
+              title={!canImportExport ? 'Daily limit reached. Upgrade to Pro for unlimited.' : undefined}
             >
               Import JSON
             </button>

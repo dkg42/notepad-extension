@@ -8,6 +8,8 @@
  */
 import type { ChatPlatform, ConversationFull } from '@/types';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
+import { usageLimitService } from '@/services/usage-limit-service';
+import { isProUser } from './shared';
 
 const SUPPORTED_LLM_PATTERNS = [
   { pattern: /chatgpt\.com|chat\.openai\.com/, platform: 'chatgpt' as ChatPlatform },
@@ -114,8 +116,15 @@ export function handleChatHistoryMessage(
         }
       }
 
+      const pro = await isProUser();
+      const allowed = await usageLimitService.canUse('chat_history', pro);
+      if (!allowed) return { ok: false, reason: 'daily_limit' };
+
       await chatHistoryStorage.upsertConversations([toSave.meta]);
-      await chatHistoryStorage.saveConversationContent(toSave);
+      if (pro) {
+        await chatHistoryStorage.saveConversationContent(toSave);
+      }
+      if (!pro) await usageLimitService.increment('chat_history');
       return { ok: true };
     })()
       .then((result) => sendResponse(result))

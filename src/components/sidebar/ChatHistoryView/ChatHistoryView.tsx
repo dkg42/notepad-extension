@@ -10,6 +10,7 @@ import React from 'react';
 import { Search, Plus, Check } from 'lucide-react';
 import type { ChatPlatform, ConversationMeta } from '@/types';
 import { useChatHistoryView } from './useChatHistoryView';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './ChatHistoryView.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -77,6 +78,7 @@ export default function ChatHistoryView() {
     searchQuery,
     setSearchQuery,
   } = useChatHistoryView();
+  const { canUse: canSave, count: saveCount } = useUsageLimit('chat_history');
 
   const filters: Array<'all' | ChatPlatform> = ['all', 'chatgpt', 'claude', 'gemini'];
 
@@ -108,6 +110,10 @@ export default function ChatHistoryView() {
                 <Check size={11} />
                 Saved
               </span>
+            ) : !canSave ? (
+              <span className="chat-history-view__limit-badge">
+                Daily limit reached
+              </span>
             ) : (
               <button
                 className="chat-history-view__save-btn"
@@ -115,7 +121,7 @@ export default function ChatHistoryView() {
                 disabled={isSaving}
               >
                 <Plus size={11} strokeWidth={2.4} />
-                {isSaving ? 'Saving…' : 'Save'}
+                {isSaving ? 'Saving…' : `Save${saveCount !== null ? ` (${saveCount}/2 today)` : ''}`}
               </button>
             )}
           </div>

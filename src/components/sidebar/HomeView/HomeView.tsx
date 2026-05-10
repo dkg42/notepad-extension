@@ -16,6 +16,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
+import type { UsageFeature } from '@/services/usage-limit-service';
 import './HomeView.css';
 
 interface Feature {
@@ -26,7 +28,8 @@ interface Feature {
   plan: 'free' | 'pro';
   accent: string;
   comingSoon?: boolean;
-  limit?: { used: number; max: number; unit: string };
+  dailyLimit?: number;
+  usageFeature?: UsageFeature;
 }
 
 const ACCENT_MAP: Record<string, { bg: string; fg: string }> = {
@@ -46,6 +49,8 @@ const FEATURES: Feature[] = [
     desc: 'Save, tag and reuse your prompts',
     plan: 'free',
     accent: 'primary',
+    dailyLimit: 5,
+    usageFeature: 'prompt_hub',
   },
   {
     id: 'snippets',
@@ -62,6 +67,8 @@ const FEATURES: Feature[] = [
     desc: 'Save and revisit conversations across AI tools',
     plan: 'free',
     accent: 'sky',
+    dailyLimit: 2,
+    usageFeature: 'chat_history',
   },
   {
     id: 'screenshot',
@@ -70,7 +77,6 @@ const FEATURES: Feature[] = [
     desc: 'Capture, annotate, send to AI',
     plan: 'free',
     accent: 'amber',
-    limit: { used: 0, max: 5, unit: 'shots today' },
   },
   {
     id: 'tabs',
@@ -85,29 +91,73 @@ const FEATURES: Feature[] = [
     name: 'Add to NotebookLM',
     icon: BookOpen,
     desc: 'Send current tab as a source',
-    plan: 'pro',
+    plan: 'free',
     accent: 'magenta',
+    dailyLimit: 3,
+    usageFeature: 'notebooklm_add',
   },
 ];
 
-interface UsageBarProps {
-  used: number;
-  max: number;
-}
 
-function UsageBar({ used, max }: UsageBarProps) {
-  const pct = Math.min(100, (used / max) * 100);
-  const warn = pct >= 80;
+function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) => void }) {
+  // Always call the hook — safe because it's called unconditionally.
+  // For features without a usageFeature, we pass 'prompt_hub' as a dummy but ignore the result.
+  const { count } = useUsageLimit(f.usageFeature ?? 'prompt_hub');
+  const a = ACCENT_MAP[f.accent] ?? ACCENT_MAP.primary;
+  const isDisabled = f.comingSoon;
+
+  let footerText: string;
+  if (f.plan === 'pro') {
+    footerText = 'Pro only';
+  } else if (f.usageFeature && f.dailyLimit) {
+    // count is null for pro users (unlimited); otherwise show live "X/Y today"
+    footerText = count !== null ? `${count}/${f.dailyLimit} today` : 'Unlimited';
+  } else {
+    footerText = 'Unlimited';
+  }
+
   return (
-    <div className="home-view__usage-bar-row">
-      <div className="home-view__usage-bar-track">
+    <button
+      key={f.id}
+      className={`home-view__tile${isDisabled ? ' home-view__tile--disabled' : ''}`}
+      onClick={() => !isDisabled && onNavigate(f.id)}
+      disabled={isDisabled}
+    >
+      <div className="home-view__tile-header">
         <div
-          className={`home-view__usage-bar-fill${warn ? ' home-view__usage-bar-fill--warn' : ''}`}
-          style={{ width: `${pct}%` }}
-        />
+          className="home-view__tile-icon"
+          style={{ background: a.bg, color: a.fg }}
+        >
+          <f.icon size={15} strokeWidth={1.7} />
+        </div>
+        {f.plan === 'pro' ? (
+          <span className="home-view__tile-badge home-view__tile-badge--pro">Pro</span>
+        ) : (
+          <span className="home-view__tile-badge home-view__tile-badge--free">Free</span>
+        )}
       </div>
-      <span className="home-view__usage-count">{used}/{max}</span>
-    </div>
+
+      <div className="home-view__tile-body">
+        <div className="home-view__tile-name">{f.name}</div>
+        <div className="home-view__tile-desc">{f.desc}</div>
+      </div>
+
+      <div className="home-view__tile-footer">
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '9.5px',
+          color: 'var(--fg-3)',
+        }}>
+          {footerText}
+        </span>
+      </div>
+
+      {f.comingSoon && (
+        <div className="home-view__coming-soon">
+          <span className="home-view__coming-soon-badge">Coming soon</span>
+        </div>
+      )}
+    </button>
   );
 }
 
@@ -141,58 +191,9 @@ export default function HomeView({ onNavigate, signedOut, onSignIn }: HomeViewPr
       <div className="home-view__section-label">Tools</div>
 
       <div className="home-view__grid">
-        {FEATURES.map((f) => {
-          const a = ACCENT_MAP[f.accent] ?? ACCENT_MAP.primary;
-          const isDisabled = f.comingSoon;
-
-          return (
-            <button
-              key={f.id}
-              className={`home-view__tile${isDisabled ? ' home-view__tile--disabled' : ''}`}
-              onClick={() => !isDisabled && onNavigate(f.id)}
-              disabled={isDisabled}
-            >
-              <div className="home-view__tile-header">
-                <div
-                  className="home-view__tile-icon"
-                  style={{ background: a.bg, color: a.fg }}
-                >
-                  <f.icon size={15} strokeWidth={1.7} />
-                </div>
-                {f.plan === 'pro' ? (
-                  <span className="home-view__tile-badge home-view__tile-badge--pro">Pro</span>
-                ) : (
-                  <span className="home-view__tile-badge home-view__tile-badge--free">Free</span>
-                )}
-              </div>
-
-              <div className="home-view__tile-body">
-                <div className="home-view__tile-name">{f.name}</div>
-                <div className="home-view__tile-desc">{f.desc}</div>
-              </div>
-
-              <div className="home-view__tile-footer">
-                {f.limit ? (
-                  <UsageBar used={f.limit.used} max={f.limit.max} />
-                ) : (
-                  <span style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '9.5px',
-                    color: 'var(--fg-3)',
-                  }}>
-                    {f.plan === 'pro' ? 'Unlimited on Pro' : 'Unlimited'}
-                  </span>
-                )}
-              </div>
-
-              {f.comingSoon && (
-                <div className="home-view__coming-soon">
-                  <span className="home-view__coming-soon-badge">Coming soon</span>
-                </div>
-              )}
-            </button>
-          );
-        })}
+        {FEATURES.map((f) => (
+          <FeatureCard key={f.id} f={f} onNavigate={onNavigate} />
+        ))}
       </div>
 
       <div className="home-view__upsell">

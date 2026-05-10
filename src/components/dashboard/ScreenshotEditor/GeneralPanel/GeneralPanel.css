@@ -278,3 +278,14 @@
   background: var(--primary);
   color: var(--primary-fg);
 }
+
+.general-panel__limit-notice {
+  font-size: 11px;
+  color: var(--fg-3);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}

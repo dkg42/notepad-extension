@@ -8,6 +8,7 @@ import React from 'react';
 import StatChart from '@/components/dashboard/StatChart/StatChart';
 import { useAnalyticsPage } from './useAnalyticsPage';
 import { useSnippets } from '@/contexts/SnippetsContext';
+import SubscriptionGuard from '@/components/ui/SubscriptionGuard/SubscriptionGuard';
 import './AnalyticsPage.css';
 
 export default function AnalyticsPage() {
@@ -22,6 +23,7 @@ export default function AnalyticsPage() {
   const favorites = snippets.filter((s) => s.isFavorite).length;
 
   return (
+    <SubscriptionGuard requiredPlan={['pro_monthly', 'pro_yearly']} showBlurred>
     <div className="analytics-page">
       <div className="analytics-page__header">
         <h1 className="analytics-page__heading">Analytics</h1>
@@ -60,5 +62,6 @@ export default function AnalyticsPage() {
         <StatChart title="Prompts Over Time" entries={byMonth} />
       </div>
     </div>
+    </SubscriptionGuard>
   );
 }
