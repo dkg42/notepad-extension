@@ -20,6 +20,7 @@ import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-s
 import type { AuthError } from 'firebase/auth/web-extension';
 import type { NotebookAnnotation } from '@/types';
 import { authStorageService, type OAuthCredentialPayload } from '@/services/auth-storage-service';
+import { verifyFirebaseIdToken } from '@/services/firebase-claims-verifier';
 import {
   TOKEN_REFRESH_ALARM,
   handleRefreshAlarm,
@@ -246,6 +247,17 @@ function handleAuthSessionMessage(
         console.log('[AUTH][BG] Auth complete, storing profile and session token');
         await authStorageService.saveAuthData(credential);
         void scheduleRefreshAlarm();
+        // Verify Firebase ID token and store subscription claims.
+        // Non-blocking: a verification failure does not prevent sign-in.
+        verifyFirebaseIdToken(credential._tokenResponse.idToken).then((result) => {
+          if (result.ok) {
+            void authStorageService.saveAuthClaims(result.claims);
+          } else {
+            console.warn('[AUTH][BG] ID token claim verification failed:', result.reason);
+          }
+        }).catch((err: unknown) => {
+          console.warn('[AUTH][BG] Unexpected error verifying ID token claims:', err);
+        });
         // Attribute any pre-sign-in local data to this user on first sign-in
         const stored = await chrome.storage.local.get(MIGRATION_KEY);
         const existing = stored[MIGRATION_KEY] as { uid: string | null } | undefined;

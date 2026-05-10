@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
-import type { StoredAuthProfile } from '@/types';
+import type { StoredAuthProfile, AuthClaims } from '@/types';
 import './UserMenu.css';
 
 function getInitials(name: string | null): string {
@@ -28,11 +28,21 @@ function getAvatarColor(uid: string | null): string {
 
 interface UserMenuProps {
   user: StoredAuthProfile;
+  claims?: AuthClaims | null;
   onClose: () => void;
   onSignOut: () => void;
 }
 
-export default function UserMenu({ user, onClose, onSignOut }: UserMenuProps) {
+function getPlanLabel(claims?: AuthClaims | null): string {
+  if (!claims?.subscriptionPlan) return 'Free';
+  return claims.subscriptionPlan === 'pro_monthly' || claims.subscriptionPlan === 'pro_yearly'
+    ? 'Pro'
+    : 'Free';
+}
+
+export default function UserMenu({ user, claims, onClose, onSignOut }: UserMenuProps) {
+  const planLabel = getPlanLabel(claims);
+  const isActivePlan = claims?.subscriptionStatus === 'active';
   return (
     <>
       <div className="user-menu__backdrop" onClick={onClose} />
@@ -69,8 +79,8 @@ export default function UserMenu({ user, onClose, onSignOut }: UserMenuProps) {
           <div className="user-menu__plan-row">
             <span className="user-menu__plan-label">Plan</span>
             <span className="user-menu__plan-badge">
-              <span className="user-menu__plan-dot" />
-              Free
+              <span className={`user-menu__plan-dot${isActivePlan ? ' user-menu__plan-dot--active' : ''}`} />
+              {planLabel}
             </span>
           </div>
         </div>

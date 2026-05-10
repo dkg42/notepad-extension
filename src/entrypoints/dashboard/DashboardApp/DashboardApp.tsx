@@ -35,10 +35,13 @@ import { useCommandPalette } from '@/components/dashboard/CommandPalette/useComm
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { SnippetsProvider } from '@/contexts/SnippetsContext';
 import { NavigationProvider } from '@/contexts/NavigationContext';
+import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useDashboardApp } from './useDashboardApp';
 import './DashboardApp.css';
 
 export default function DashboardApp() {
+  const subscriptionValue = useSubscriptionState();
+
   const {
     // Global audio
     audioUrl,
@@ -350,6 +353,7 @@ export default function DashboardApp() {
       initialTheme={settings.theme}
       onThemeChange={(theme) => handleSettingsChange({ theme })}
     >
+      <SubscriptionProvider value={subscriptionValue}>
       <NavigationProvider value={navigationValue}>
         <SnippetsProvider value={snippetsValue}>
           <div className="dashboard-app">
@@ -395,6 +399,7 @@ export default function DashboardApp() {
           )}
         </SnippetsProvider>
       </NavigationProvider>
+      </SubscriptionProvider>
     </ThemeProvider>
   );
 }

@@ -1,0 +1,67 @@
+.sub-guard__wrapper {
+  position: relative;
+}
+
+.sub-guard__blurred {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.4;
+}
+
+.sub-guard__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklch, var(--bg) 80%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.sub-guard__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  max-width: 280px;
+}
+
+.sub-guard__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  color: var(--fg-2);
+}
+
+.sub-guard__message {
+  font-size: 13px;
+  color: var(--fg-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.sub-guard__cta {
+  padding: 7px 16px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sub-guard__cta:hover {
+  opacity: 0.88;
+}

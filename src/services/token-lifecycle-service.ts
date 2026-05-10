@@ -22,6 +22,7 @@
  */
 
 import { authStorageService } from './auth-storage-service';
+import { verifyFirebaseIdToken } from './firebase-claims-verifier';
 import { refreshAccessToken, revokeToken as revokeTokenHttp } from './token-refresh-service';
 import type { TokenRefreshResult } from './token-refresh-service';
 
@@ -195,6 +196,14 @@ async function runRefresh(): Promise<TokenRefreshResult | null> {
       result.expiresAt,
       result.scopes,
     );
+    // Re-verify and update subscription claims when the refresh response includes a new ID token.
+    if (result.idToken) {
+      verifyFirebaseIdToken(result.idToken).then((claimsResult) => {
+        if (claimsResult.ok) {
+          void authStorageService.saveAuthClaims(claimsResult.claims);
+        }
+      }).catch(() => {});
+    }
   }
 
   return result;

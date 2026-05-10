@@ -20,7 +20,7 @@
  *   returned by the BFF and are always populated after sign-in.
  */
 
-import type { StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, OAuthCredentialPayload } from '@/types';
+import type { StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, OAuthCredentialPayload, AuthClaims } from '@/types';
 import { encryptToken, decryptToken } from './token-crypto-service';
 
 // Re-export so existing importers don't need to change.
@@ -29,6 +29,7 @@ export type { OAuthCredentialPayload };
 const AUTH_PROFILE_KEY = 'authProfile';
 const AUTH_REFRESH_KEY = 'authRefreshToken';
 const AUTH_SESSION_KEY = 'authSession';
+const AUTH_CLAIMS_KEY = 'authClaims';
 
 export const authStorageService = {
   /**
@@ -132,10 +133,39 @@ export const authStorageService = {
     }
   },
 
+  /** Stores verified subscription claims extracted from a Firebase ID token. */
+  async saveAuthClaims(claims: AuthClaims): Promise<void> {
+    await chrome.storage.local.set({ [AUTH_CLAIMS_KEY]: claims });
+  },
+
+  /** Returns the stored subscription claims, or null if not signed in or claims unavailable. */
+  async getAuthClaims(): Promise<AuthClaims | null> {
+    const result = await chrome.storage.local.get(AUTH_CLAIMS_KEY);
+    return (result[AUTH_CLAIMS_KEY] as AuthClaims) ?? null;
+  },
+
+  /**
+   * Subscribes to subscription claim changes in chrome.storage.local.
+   * Fires when the background writes or removes the authClaims key.
+   * Returns an unsubscribe function.
+   */
+  onClaimsChanged(callback: (claims: AuthClaims | null) => void): () => void {
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area !== 'local' || !(AUTH_CLAIMS_KEY in changes)) return;
+      const claims = (changes[AUTH_CLAIMS_KEY].newValue as AuthClaims) ?? null;
+      callback(claims);
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  },
+
   /** Removes all auth data from both local and session storage. */
   async clearAll(): Promise<void> {
     await Promise.all([
-      chrome.storage.local.remove([AUTH_PROFILE_KEY, AUTH_REFRESH_KEY]),
+      chrome.storage.local.remove([AUTH_PROFILE_KEY, AUTH_REFRESH_KEY, AUTH_CLAIMS_KEY]),
       (chrome.storage.session as typeof chrome.storage.local).remove(AUTH_SESSION_KEY),
     ]);
   },

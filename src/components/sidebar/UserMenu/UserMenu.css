@@ -105,6 +105,10 @@
   background: var(--accent);
 }
 
+.user-menu__plan-dot--active {
+  background: oklch(0.65 0.18 145);
+}
+
 .user-menu__item {
   display: flex;
   align-items: center;

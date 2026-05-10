@@ -33,7 +33,7 @@ const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
 export type TokenRefreshResult =
-  | { ok: true; accessToken: string; expiresAt: number; scopes: string[] }
+  | { ok: true; accessToken: string; expiresAt: number; scopes: string[]; idToken: string | undefined }
   | { ok: false; reason: 'invalid_grant' | 'network_error' | 'server_error'; error: string };
 
 /**
@@ -96,6 +96,7 @@ export async function refreshAccessToken(
     accessToken: data.access_token,
     expiresAt: Date.now() + data.expires_in * 1000,
     scopes: data.scope ? data.scope.split(' ').filter(Boolean) : [],
+    idToken: data.id_token,
   };
 }
 

@@ -244,6 +244,20 @@ export interface GoogleTokenRefreshResponse {
   id_token?: string;
 }
 
+// ── Subscription types ─────────────────────────────────────────────────────────
+
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'on_hold' | 'none';
+export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
+
+/** Subscription claims extracted from the Firebase ID token and stored in chrome.storage.local. */
+export interface AuthClaims {
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionPlan: SubscriptionPlan | null;
+  subscriptionId: string | null;
+  customerId: string | null;
+  currentPeriodEnd: string | null;
+}
+
 // ── Notebook types ─────────────────────────────────────────────────────────────
 
 /** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */

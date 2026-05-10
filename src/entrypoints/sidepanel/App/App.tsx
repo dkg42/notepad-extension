@@ -16,6 +16,7 @@ import NotebookView from '@/components/sidebar/NotebookView/NotebookView';
 import UserMenu from '@/components/sidebar/UserMenu/UserMenu';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
+import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
 import { useApp } from './useApp';
 import './App.css';
@@ -59,6 +60,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const [dark, setDark] = useState(() => localStorage.getItem(DARK_KEY) === 'true');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  const subscriptionValue = useSubscriptionState();
   const appData = useApp();
   const clipboardData = useClipboardTab();
 
@@ -85,6 +87,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   };
 
   return (
+    <SubscriptionProvider value={subscriptionValue}>
     <div className={`app-shell${dark ? ' dark' : ''}`}>
       <SidebarHeader
         view={view}
@@ -145,10 +148,12 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
       {userMenuOpen && user && (
         <UserMenu
           user={user}
+          claims={subscriptionValue.claims}
           onClose={() => setUserMenuOpen(false)}
           onSignOut={handleSignOut}
         />
       )}
     </div>
+    </SubscriptionProvider>
   );
 }
