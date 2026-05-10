@@ -2,7 +2,7 @@
 /**
  * @module token-lifecycle-service
  * @description Orchestrates the full Google OAuth token lifecycle for the extension: validating stored tokens, triggering just-in-time or proactive refreshes, scheduling Chrome alarms to pre-empt expiry, and handling invalid_grant by clearing auth state and notifying open pages. This is the single entry point for any code needing a valid access token; callers do not interact with refresh logic or alarm scheduling directly. A module-level deduplication guard prevents concurrent refresh races.
- * @dependencies auth-storage-service, token-refresh-service
+ * @dependencies auth-storage-service, token-proxy-service
  * @public getValidToken, scheduleRefreshAlarm, handleRefreshAlarm, cancelRefreshAlarm, revokeToken, TOKEN_REFRESH_ALARM, GetTokenResult
  */
 /**
@@ -23,10 +23,10 @@
 
 import { authStorageService } from './auth-storage-service';
 import { verifyFirebaseIdToken } from './firebase-claims-verifier';
-import { refreshAccessToken, revokeToken as revokeTokenHttp } from './token-refresh-service';
-import type { TokenRefreshResult } from './token-refresh-service';
+import { refreshAccessToken, revokeToken } from './token-proxy-service';
+import type { TokenRefreshResult } from './token-proxy-service';
 
-export { revokeToken } from './token-refresh-service';
+export { revokeToken };
 
 export const TOKEN_REFRESH_ALARM = 'token-refresh';
 
@@ -44,18 +44,6 @@ export type GetTokenResult =
 // Deduplicates concurrent refresh calls (alarm + just-in-time race).
 // Both callers await the same in-flight promise and get the same result.
 let refreshInProgress: Promise<TokenRefreshResult> | null = null;
-
-// ── Credential helpers ─────────────────────────────────────────────────────────
-
-function getClientId(): string {
-  // Injected at build time from wxt.config.ts / vite env.
-  return import.meta.env.VITE_GOOGLE_CLIENT_ID as string ?? '';
-}
-
-function getClientSecret(): string {
-  // Injected at build time from .env.local (NEVER committed to git).
-  return import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string ?? '';
-}
 
 // ── Core token operations ──────────────────────────────────────────────────────
 
@@ -175,16 +163,16 @@ export async function cancelRefreshAlarm(): Promise<void> {
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
 /**
- * Reads the stored refresh token and calls the token endpoint.
- * Returns null if no refresh token is stored.
+ * Calls the token proxy (Cloud Function) to get a new access token.
+ * Returns null if the user is not signed in (no Firebase refresh token).
  * Deduplicates concurrent calls via the module-level guard.
  */
 async function runRefresh(): Promise<TokenRefreshResult | null> {
-  const refreshToken = await authStorageService.getRefreshToken();
-  if (!refreshToken) return null;
+  const firebaseRefreshToken = await authStorageService.getFirebaseRefreshToken();
+  if (!firebaseRefreshToken) return null;
 
   if (!refreshInProgress) {
-    refreshInProgress = refreshAccessToken(refreshToken, getClientId(), getClientSecret())
+    refreshInProgress = refreshAccessToken()
       .finally(() => { refreshInProgress = null; });
   }
 

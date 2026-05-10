@@ -1,7 +1,7 @@
 /**
  * @module auth-storage-service
  * @description Single source of truth for all auth-related chrome.storage reads and writes, spanning three storage areas: authProfile (plaintext user identity) in chrome.storage.local, the AES-GCM encrypted Google OAuth refresh token in chrome.storage.local, and the volatile session access token in chrome.storage.session (cleared on browser close). Centralising storage here ensures the token encryption contract and storage-area split are enforced consistently across background, popup, and dashboard contexts.
- * @dependencies token-crypto-service
+ * @dependencies (none)
  * @public authStorageService, OAuthCredentialPayload
  */
 /**
@@ -20,14 +20,15 @@
  *   returned by the BFF and are always populated after sign-in.
  */
 
-import type { StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, OAuthCredentialPayload, AuthClaims } from '@/types';
-import { encryptToken, decryptToken } from './token-crypto-service';
+import type { StoredAuthProfile, SessionTokenData, OAuthCredentialPayload, AuthClaims } from '@/types';
 
 // Re-export so existing importers don't need to change.
 export type { OAuthCredentialPayload };
 
 const AUTH_PROFILE_KEY = 'authProfile';
-const AUTH_REFRESH_KEY = 'authRefreshToken';
+// Firebase refresh token — stored plaintext (safe: Firebase tokens are designed for client storage
+// and only work at securetoken.googleapis.com, which requires no client_secret).
+const AUTH_FIREBASE_REFRESH_KEY = 'authFirebaseRefreshToken';
 const AUTH_SESSION_KEY = 'authSession';
 const AUTH_CLAIMS_KEY = 'authClaims';
 
@@ -76,8 +77,13 @@ export const authStorageService = {
       [AUTH_SESSION_KEY]: sessionData,
     });
 
-    // 3. Google OAuth refresh token → encrypted in chrome.storage.local.
-    await this.saveRefreshToken(credential._tokenResponse.refreshToken);
+    // 3. Firebase refresh token → plaintext in chrome.storage.local.
+    //    Used only at securetoken.googleapis.com (no client_secret needed).
+    //    Google OAuth refresh is proxied through the refreshGoogleToken Cloud Function.
+    const firebaseRefreshToken = credential.user.stsTokenManager?.refreshToken;
+    if (firebaseRefreshToken) {
+      await this.saveFirebaseRefreshToken(firebaseRefreshToken);
+    }
   },
 
   /**
@@ -95,13 +101,9 @@ export const authStorageService = {
     });
   },
 
-  /**
-   * Encrypts and stores a refresh token in chrome.storage.local.
-   * Call this when Firebase user.refreshToken becomes available.
-   */
-  async saveRefreshToken(refreshToken: string): Promise<void> {
-    const encrypted = await encryptToken(refreshToken);
-    await chrome.storage.local.set({ [AUTH_REFRESH_KEY]: encrypted });
+  /** Stores the Firebase refresh token in chrome.storage.local (plaintext — no client_secret required). */
+  async saveFirebaseRefreshToken(refreshToken: string): Promise<void> {
+    await chrome.storage.local.set({ [AUTH_FIREBASE_REFRESH_KEY]: refreshToken });
   },
 
   /** Returns the stored user profile, or null if not signed in. */
@@ -118,19 +120,10 @@ export const authStorageService = {
     return (result[AUTH_SESSION_KEY] as SessionTokenData) ?? null;
   },
 
-  /**
-   * Decrypts and returns the stored refresh token, or null if not available.
-   * Returns null silently if decryption fails (e.g., after extension reinstall).
-   */
-  async getRefreshToken(): Promise<string | null> {
-    const result = await chrome.storage.local.get(AUTH_REFRESH_KEY);
-    const blob = result[AUTH_REFRESH_KEY] as EncryptedTokenBlob | undefined;
-    if (!blob) return null;
-    try {
-      return await decryptToken(blob);
-    } catch {
-      return null;
-    }
+  /** Returns the stored Firebase refresh token, or null if not available. */
+  async getFirebaseRefreshToken(): Promise<string | null> {
+    const result = await chrome.storage.local.get(AUTH_FIREBASE_REFRESH_KEY);
+    return (result[AUTH_FIREBASE_REFRESH_KEY] as string) || null;
   },
 
   /** Stores verified subscription claims extracted from a Firebase ID token. */
@@ -165,7 +158,7 @@ export const authStorageService = {
   /** Removes all auth data from both local and session storage. */
   async clearAll(): Promise<void> {
     await Promise.all([
-      chrome.storage.local.remove([AUTH_PROFILE_KEY, AUTH_REFRESH_KEY, AUTH_CLAIMS_KEY]),
+      chrome.storage.local.remove([AUTH_PROFILE_KEY, AUTH_FIREBASE_REFRESH_KEY, AUTH_CLAIMS_KEY]),
       (chrome.storage.session as typeof chrome.storage.local).remove(AUTH_SESSION_KEY),
     ]);
   },

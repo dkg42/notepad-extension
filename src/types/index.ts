@@ -214,8 +214,12 @@ export interface FirebaseTokenResponse {
   oauthAccessToken: string;
   /** Seconds until oauthAccessToken expires (~3600). */
   oauthExpireIn: number;
-  /** Google OAuth refresh token (same value as stsTokenManager.refreshToken). */
-  refreshToken: string;
+  /**
+   * Google OAuth refresh token. Intentionally omitted from the website auth iframe response —
+   * it is stored server-side via the storeGoogleToken Cloud Function instead.
+   * The extension manages Firebase auth state using stsTokenManager.refreshToken directly.
+   */
+  refreshToken?: string | null;
   /** JSON string; contains `granted_scopes` (space-separated) and profile fields. */
   rawUserInfo: string;
   /** Firebase ID token (same as stsTokenManager.accessToken). */

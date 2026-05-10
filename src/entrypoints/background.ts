@@ -318,19 +318,12 @@ function handleAuthSessionMessage(
         // Cancel the refresh alarm first so no stale refresh fires during clean-up.
         await cancelRefreshAlarm();
 
-        // Revoke the refresh token (preferred — invalidates the entire OAuth grant).
-        // Fall back to the access token if the refresh token is unavailable.
-        // Revocation is best-effort: a failure must not block sign-out.
-        const [sessionData, refreshToken] = await Promise.all([
-          authStorageService.getAccessToken(),
-          authStorageService.getRefreshToken(),
-        ]);
-        const tokenToRevoke = refreshToken ?? sessionData?.accessToken;
-        if (tokenToRevoke) {
-          await revokeToken(tokenToRevoke).catch((err: unknown) => {
-            console.warn('[AUTH][BG] Token revocation failed (non-fatal):', err);
-          });
-        }
+        // Revoke the Google OAuth token server-side (Cloud Function reads + revokes
+        // the refresh token from Firestore and deletes the Firestore doc).
+        // Best-effort: a failure must not block sign-out.
+        await revokeToken().catch((err: unknown) => {
+          console.warn('[AUTH][BG] Token revocation failed (non-fatal):', err);
+        });
 
         // Tear down Drive sync: cancel pending writes and clear session cache
         // before clearing auth data so no stale writes fire after sign-out.
