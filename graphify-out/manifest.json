@@ -1,4 +1,184 @@
 {
+  "/Users/deepak/git-clones/notepad-extension/wxt.config.ts": {
+    "mtime": 1778414728.4059682,
+    "hash": "f7c4fa8244d3206020062ea9426c5ff4"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/drive-handler.ts": {
+    "mtime": 1777628339.29043,
+    "hash": "de8cce35586190b4e77a905adf27177e"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/import-handler.ts": {
+    "mtime": 1777628296.5118458,
+    "hash": "86c08d8f60d3854b3a2060178497845a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/audio-handler.ts": {
+    "mtime": 1777628249.1038125,
+    "hash": "ad853c08e98a203288c69b29b03d62a3"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/shared.ts": {
+    "mtime": 1778398895.3275387,
+    "hash": "eeee788d3fb80e4c7b59046eef668364"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/chat-history-handler.ts": {
+    "mtime": 1778398907.2521293,
+    "hash": "4468dc3e88c3fa451ec373a28c575e42"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/screenshot-handler.ts": {
+    "mtime": 1777885577.5371737,
+    "hash": "9748bea68c2b545c5972f3e729e2c34c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/pipeline-handler.ts": {
+    "mtime": 1778398952.872176,
+    "hash": "e055de8f8835b93d76cb00a4b2549b10"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/notebook-handler.ts": {
+    "mtime": 1777917988.4543982,
+    "hash": "6fe6b025aef3b68a0140b8e9fe5a526b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/background/source-handler.ts": {
+    "mtime": 1778398926.0891526,
+    "hash": "9bee2e9196e9e1ab9251a5aa90461be5"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/chat-history.ts": {
+    "mtime": 1777671329.1915991,
+    "hash": "8f9aa7e5d3ab13ed2d764cc27c59e98f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/tab-groups.ts": {
+    "mtime": 1777712401.7202156,
+    "hash": "b43e8e61e5c7feb1edbb493ef9c251d7"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/screenshot.ts": {
+    "mtime": 1777883953.5009944,
+    "hash": "db84a712f3d98473283a4fdfc6d0eb35"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/messages.ts": {
+    "mtime": 1778150014.9710429,
+    "hash": "0be345c60ad382114a1efa4c326c9c3c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/pipeline.ts": {
+    "mtime": 1777563241.5336585,
+    "hash": "3a51ea6be4ce083e22c776fea17bfd58"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/dashboard.ts": {
+    "mtime": 1778091749.5893083,
+    "hash": "a39b475825f0b365bae91ab48641134a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/vite-raw.d.ts": {
+    "mtime": 1775755496.626942,
+    "hash": "181d354c8b99e77123b803fe82ebabc7"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/index.ts": {
+    "mtime": 1778414738.3339522,
+    "hash": "2b4a737878043f81a4e415dad5f275c1"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/types/import.ts": {
+    "mtime": 1777563246.7244244,
+    "hash": "2fb8e357dd146b1d4cc79fcb8568dcbc"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/contexts/SnippetsContext.tsx": {
+    "mtime": 1778000365.378581,
+    "hash": "4eacb957ae7fe2f0d0d51c27f7de71f2"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/contexts/NavigationContext.tsx": {
+    "mtime": 1778091756.6056702,
+    "hash": "55a438124565279795522eaca3c61b13"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/contexts/SubscriptionContext.tsx": {
+    "mtime": 1778358248.2139869,
+    "hash": "1ddf6cc96ec129ffd548643b189ec206"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/send-to-chat.ts": {
+    "mtime": 1777563174.6394365,
+    "hash": "db76a014b5d8e249cb4c5066d0c2a084"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/format-picker.ts": {
+    "mtime": 1777563162.8399339,
+    "hash": "10365bfae5dc5a39d01dd45c7bccbaf4"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/clipboard-monitor.ts": {
+    "mtime": 1777609735.4484315,
+    "hash": "9e59b0e7bc298bdff68a6ef7ffa4abbd"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/chat-save-handler.ts": {
+    "mtime": 1777672800.4627054,
+    "hash": "7e54fec64fa64bcb5e683c7f253f5e31"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/header-injector.ts": {
+    "mtime": 1777563169.039637,
+    "hash": "c1aed0fcc6b103c12105266a7e71248a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/studio-panel-enhancer/studio-panel-enhancer.ts": {
+    "mtime": 1777563199.6474824,
+    "hash": "fa97e79bc00b019eacb59878d6b6a9d2"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-panel-enhancer/source-panel-enhancer.ts": {
+    "mtime": 1777563193.0199819,
+    "hash": "7bb51181c2d90ebc386beced72b2d24e"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-export-modal/source-export-modal.ts": {
+    "mtime": 1777563186.2865977,
+    "hash": "ec5a5287921c1a2a262af4712458990f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-delete-modal/source-delete-modal.ts": {
+    "mtime": 1777563180.555255,
+    "hash": "8feb20fd0ed60cd5f2de7ea2a25ecc6b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/utils/dom.ts": {
+    "mtime": 1777563204.7162778,
+    "hash": "4f5944d02e0e451eb5777bbcc643f316"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/utils/folder-utils.ts": {
+    "mtime": 1777610399.0804615,
+    "hash": "b7262ba89fc19e1e644b25f9d0353e6f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/utils/filter-snippets.ts": {
+    "mtime": 1777983625.6535919,
+    "hash": "4502ce108bde24f25d5a0d73c14fd692"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/notebooklm.adapter.ts": {
+    "mtime": 1777610150.8745153,
+    "hash": "5f56ee4290219879a0aa3eccfbc1f8af"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/perplexity.adapter.ts": {
+    "mtime": 1777563139.0944426,
+    "hash": "63d22901e42a507427a90bbd1071f3c7"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/source-panel-adapter.interface.ts": {
+    "mtime": 1777563123.2982237,
+    "hash": "9cec3e5c8594963a1aa6ff3fd3d7f288"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/adapter-registry.ts": {
+    "mtime": 1777563112.9658906,
+    "hash": "2605a578b3552d8d2904fabd2c142f59"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/site-adapter.interface.ts": {
+    "mtime": 1777563119.3040228,
+    "hash": "9004aa588365f061c6146c3734221034"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/copilot.adapter.ts": {
+    "mtime": 1777563142.1672246,
+    "hash": "c9e066bb028ce4d46c5ec70e5310e869"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/adapter.interface.ts": {
+    "mtime": 1777563116.3946774,
+    "hash": "e9232e35f9978fe5bf12de19bbfe282b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/chatgpt.adapter.ts": {
+    "mtime": 1777563129.5004191,
+    "hash": "f02ca84f325a3a4c93a7fadfe1f5ece0"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/claude.adapter.ts": {
+    "mtime": 1777563133.3585773,
+    "hash": "a692912d5844473823a0681a776b7840"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/gemini.adapter.ts": {
+    "mtime": 1777563136.4124413,
+    "hash": "2fca043ad75b7721d83dd117aa1e55c6"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/adapters/studio-panel-adapter.interface.ts": {
+    "mtime": 1777563125.9522464,
+    "hash": "5b223c46b2178595fd2351fa3f6a79f1"
+  },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/TabManagerView/useTabManagerView.ts": {
     "mtime": 1777715984.1086617,
     "hash": "45fb09866a7f76a83d376fdf73fa45b1"
@@ -11,33 +191,41 @@
     "mtime": 1777609838.2566655,
     "hash": "88950f0209912a747168cdf9277442ec"
   },
+  "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/NotebookView/useNotebookView.ts": {
+    "mtime": 1777896692.776038,
+    "hash": "30c86bd5b3b71831dcc12dbee238b2f8"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/NotebookView/NotebookView.tsx": {
+    "mtime": 1778403610.9406376,
+    "hash": "f06955810755f717195f1919b584793b"
+  },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/ChatHistoryView/ChatHistoryView.tsx": {
-    "mtime": 1777671413.4684682,
-    "hash": "a56fd972f106da2f94a5af77032bb464"
+    "mtime": 1778403593.203053,
+    "hash": "70754000e655f1cf39b1589903f45784"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/ChatHistoryView/useChatHistoryView.ts": {
     "mtime": 1777672817.6201217,
     "hash": "35e8996b0f6cb6339f83416e8c5972f6"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/ScreenshotView/useScreenshotView.ts": {
-    "mtime": 1777730791.1519907,
-    "hash": "e49091e4e180636370821f120f96e794"
+    "mtime": 1777885478.4718692,
+    "hash": "839cdb89187e6f898d709aa58751a50f"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/ScreenshotView/ScreenshotView.tsx": {
-    "mtime": 1777732112.0325933,
-    "hash": "82be3ff1a13457d27515bc9b6514a6eb"
+    "mtime": 1777885562.4778926,
+    "hash": "ca2bf935ba6b161ed7eed6a1c25f189b"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/HomeView/HomeView.tsx": {
-    "mtime": 1777730913.850728,
-    "hash": "7389a426bd3380e52541a86773301719"
+    "mtime": 1778403708.2339518,
+    "hash": "a79fa170d21456ec01559d885b460969"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/UserMenu/UserMenu.tsx": {
-    "mtime": 1777609841.0750663,
-    "hash": "c013764968ed33fcaf5d897143ca2905"
+    "mtime": 1778358345.151912,
+    "hash": "5b9768f619ba4a294eb8868ab82ccb33"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/PromptHubView/PromptHubView.tsx": {
-    "mtime": 1777609854.5449433,
-    "hash": "e378d95d82134fedacb7bf7fa4d2913d"
+    "mtime": 1778425940.5854452,
+    "hash": "2e3fd6f48af69f8ffe146716dc28baef"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/sidebar/PromptHubView/usePromptHubView.ts": {
     "mtime": 1777609850.8672862,
@@ -50,6 +238,10 @@
   "/Users/deepak/git-clones/notepad-extension/src/components/ui/accordion.tsx": {
     "mtime": 1777610569.37335,
     "hash": "cf7a9e5cc30004f7da22ebb050b4161b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/ui/SubscriptionGuard/SubscriptionGuard.tsx": {
+    "mtime": 1778358283.4462817,
+    "hash": "c96ebd8bc42fa538313fff624875c400"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/SnippetItem/useSnippetItem.ts": {
     "mtime": 1777609826.5405395,
@@ -112,12 +304,12 @@
     "hash": "722d02837eb62e0c221bb59643419f24"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/Sidebar/Sidebar.tsx": {
-    "mtime": 1777629553.4663155,
-    "hash": "0fc9a38c124a39b0e978b9f4c7f7bae2"
+    "mtime": 1778091833.4742496,
+    "hash": "6883a9a60a9583e6d16c18f3695a5ddf"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/PromptsPage/PromptsPage.tsx": {
-    "mtime": 1777629884.7084126,
-    "hash": "07e6d6fbb84560038f6f73e79667ba05"
+    "mtime": 1778425165.3350003,
+    "hash": "71aacd068f455d697a2267978135dc85"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/Pagination/Pagination.tsx": {
     "mtime": 1777610647.4504418,
@@ -140,8 +332,8 @@
     "hash": "b2e1ef444a569d3ea1ef2f6adef25448"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/NotebooksPage/useNotebooksPage.ts": {
-    "mtime": 1777609887.9244874,
-    "hash": "6eae14fc5648946622044e742cf87571"
+    "mtime": 1777917410.1292667,
+    "hash": "54e0314818bac2e7a8b62dddbe300733"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/NotebooksPage/NotebooksPage.tsx": {
     "mtime": 1777629814.4607549,
@@ -152,8 +344,8 @@
     "hash": "ca87a003d9aa7bec12fb72fb12f150db"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ThemeProvider/ThemeProvider.tsx": {
-    "mtime": 1777610673.826819,
-    "hash": "658367f648b45a77ab4288876535c732"
+    "mtime": 1777907669.4069264,
+    "hash": "88cee86e71276e1103dd57c3a2516385"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/RssFeedForm/RssFeedForm.tsx": {
     "mtime": 1777610681.3791423,
@@ -172,8 +364,8 @@
     "hash": "98646e0a8168bff2e0b7a15126ae9753"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AllSourcesPage/useAllSourcesPage.ts": {
-    "mtime": 1777609870.056633,
-    "hash": "1f994ddd326a29fcc60d0609a72f670e"
+    "mtime": 1777918074.7751582,
+    "hash": "a7115d2434c5d375e02f1a2217cb79b3"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AllSourcesPage/AllSourcesPage.tsx": {
     "mtime": 1777610694.2095428,
@@ -212,12 +404,12 @@
     "hash": "b00ccff7dcda272ba34bb42700aefbaa"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/DashboardHome/DashboardHome.tsx": {
-    "mtime": 1777629509.4358246,
-    "hash": "b6e29e851d221dc8c799d11b188c9567"
+    "mtime": 1777907801.2782695,
+    "hash": "e53213078e1f18555b46d13c97bd6612"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/DashboardHome/useDashboardHome.ts": {
-    "mtime": 1777609913.378993,
-    "hash": "03f799d45ba35cb1f75c8d5d722b670e"
+    "mtime": 1777907758.5040793,
+    "hash": "89a819c10c6a922ee365f2356d74e81b"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ExportHistoryPage/useExportHistoryPage.ts": {
     "mtime": 1777609926.633188,
@@ -244,24 +436,24 @@
     "hash": "771ee01cf4bd9c2ca2a15565661a63ce"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ChatHistoryDetailPage/ChatHistoryDetailPage.tsx": {
-    "mtime": 1777629751.3629234,
-    "hash": "d24e6a4da1598e44191dc4d411cf631f"
+    "mtime": 1778150140.8839142,
+    "hash": "5fddbbc4d3c50b4acf2dc45dc3618830"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ChatHistoryDetailPage/useChatHistoryDetailPage.ts": {
-    "mtime": 1777609879.8861125,
-    "hash": "b44ea83c51694d282a60ab70f47667f5"
+    "mtime": 1778150117.162788,
+    "hash": "6049a20169c82f16cfe6a9ff22e147eb"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AllArtifactsPage/AllArtifactsPage.tsx": {
     "mtime": 1777610605.4709399,
     "hash": "b2fdd3a455e992856d87c30c61769ac2"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AllArtifactsPage/useAllArtifactsPage.ts": {
-    "mtime": 1777609863.4704716,
-    "hash": "b5815b0321b9485c5d8343485ca78834"
+    "mtime": 1777918084.9632587,
+    "hash": "37c5ac1e21b405c74ab99b97b889c41c"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/SettingsPage/SettingsPage.tsx": {
-    "mtime": 1777629579.917307,
-    "hash": "fe3c3259ebfc2bcc11ea4ff8f684f030"
+    "mtime": 1778403625.9903364,
+    "hash": "4bbbc19d4489fc31802394160b3ccafd"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/SettingsPage/useSettingsPage.ts": {
     "mtime": 1777609904.4205346,
@@ -284,8 +476,8 @@
     "hash": "3075cae07ecb3756038e4bc7b9519a55"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/PodcastsPage/PodcastsPage.tsx": {
-    "mtime": 1777629834.6550188,
-    "hash": "f9ea2235b2dc5e37e7fe8c2c739e42e4"
+    "mtime": 1778399055.2411847,
+    "hash": "5ee88f39d523c4822e208f58df59d1b2"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel.tsx": {
     "mtime": 1777610617.998352,
@@ -307,6 +499,22 @@
     "mtime": 1777610623.7468843,
     "hash": "74ea34885551094d93ec9b81ff1d456f"
   },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotEditor/ScreenshotEditor.tsx": {
+    "mtime": 1778403644.990583,
+    "hash": "7d725085e9491b8f71604db11260bf5c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotEditor/useScreenshotEditor.ts": {
+    "mtime": 1778094701.2157059,
+    "hash": "ef39608ad1b2bbb0b104a986f066eead"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotEditor/AnnotatePanel/AnnotatePanel.tsx": {
+    "mtime": 1778092026.8348157,
+    "hash": "1f26a5fdbc975dc6b80d0c6b56cdc4f9"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotEditor/GeneralPanel/GeneralPanel.tsx": {
+    "mtime": 1778403658.0241425,
+    "hash": "a717a16527d0b7a13a5a794ff8e58ac8"
+  },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ImportSourcesModal/ImportSourcesModal.tsx": {
     "mtime": 1777610626.9095347,
     "hash": "0b33df34e8df91cc7ba5e25ba6cc367d"
@@ -314,6 +522,14 @@
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ImportSourcesModal/useImportSources.ts": {
     "mtime": 1777609920.5463307,
     "hash": "858502f150271a93674cd608e0b7419f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotsPage/useScreenshotsPage.ts": {
+    "mtime": 1778092489.5291793,
+    "hash": "651daba447196cbec572038b4a79a9bb"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ScreenshotsPage/ScreenshotsPage.tsx": {
+    "mtime": 1778091863.5793338,
+    "hash": "f81f9510664dbaf85dfdd2a4751f2e21"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/PodcastDetailPage/usePodcastDetailPage.ts": {
     "mtime": 1777609901.346855,
@@ -336,8 +552,8 @@
     "hash": "12af30ec4c38f614f9e96511cae55db4"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/PipelinesPage/PipelinesPage.tsx": {
-    "mtime": 1777610639.282863,
-    "hash": "4b26b0ad6d471e8b49d408a4f76695ed"
+    "mtime": 1778405197.8966475,
+    "hash": "15aa519eda9d188b07dcc2e0b3a242bb"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/BrowserTabsForm/useBrowserTabsForm.ts": {
     "mtime": 1777610374.5906801,
@@ -356,28 +572,28 @@
     "hash": "fdb72c5977e8590dcffcc264c74c2327"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/CommandPalette/CommandPalette.tsx": {
-    "mtime": 1777610649.763407,
-    "hash": "be8035a07a11e967d5b094e6ddc06b37"
+    "mtime": 1777985129.4283721,
+    "hash": "e34383677372df463fd380284a6ded1b"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/CommandPalette/useCommandPalette.ts": {
-    "mtime": 1777609923.9928303,
-    "hash": "3a8abea28afd825ae4349e2b950f3a67"
+    "mtime": 1778000397.5444293,
+    "hash": "216aa189ee39db92fed6bc7997a8633d"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ChatHistoryPage/ChatHistoryPage.tsx": {
-    "mtime": 1777671484.9623263,
-    "hash": "78235ce0464c6903bc6e83c4d165e1bd"
+    "mtime": 1778150070.3463175,
+    "hash": "ec72290472b101746a906af2cb4ed382"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/ChatHistoryPage/useChatHistoryPage.ts": {
-    "mtime": 1777671463.4099283,
-    "hash": "72f7babdcfb9caeb3eb76b8fd8720bde"
+    "mtime": 1778150046.6119547,
+    "hash": "efdcb4b98f03edc1da65bd13faa872e5"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/FolderTree/FolderTree.tsx": {
     "mtime": 1777610655.9900649,
     "hash": "6357ed2d96267c2646fa64f613be763d"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AnalyticsPage/AnalyticsPage.tsx": {
-    "mtime": 1777629494.7142818,
-    "hash": "61070d92d8dcf5e124eb2d4184c40730"
+    "mtime": 1778399038.4932492,
+    "hash": "a96dbe093cc3bb20a1a93687b8d20d6c"
   },
   "/Users/deepak/git-clones/notepad-extension/src/components/dashboard/AnalyticsPage/useAnalyticsPage.ts": {
     "mtime": 1777609873.9654388,
@@ -411,8 +627,316 @@
     "mtime": 1777610672.576305,
     "hash": "2bf32ac66f19818e037782eee8151027"
   },
+  "/Users/deepak/git-clones/notepad-extension/src/hooks/useColumnResize.ts": {
+    "mtime": 1777563273.8990624,
+    "hash": "dfa389f52b05f35ac9a2935260c87223"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/hooks/useUsageLimit.ts": {
+    "mtime": 1778403584.9413002,
+    "hash": "e2bd280c44a00966bdccc3c7e2c929d9"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/hooks/useGlobalAudio.ts": {
+    "mtime": 1777563279.8739338,
+    "hash": "ce5e76ef70e3f3634172a7c69730623b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/hooks/useKeyboardShortcuts.ts": {
+    "mtime": 1777563285.2121296,
+    "hash": "815b0b7c46ae087b8c50156ca30a47b5"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/content.ts": {
+    "mtime": 1777671998.046516,
+    "hash": "757a4b4b092e619078d9551a0cf5acec"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/clipboard-monitor.content.ts": {
+    "mtime": 1777610410.533104,
+    "hash": "649da6eefd543b79328242c3335e0106"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/background.ts": {
+    "mtime": 1778414698.946974,
+    "hash": "e27450d4f08bed4da94753d39c90dbeb"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/capture-strip.content.ts": {
+    "mtime": 1777885445.6871235,
+    "hash": "b51ebe9d9815f89bb625d950de355097"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/offscreen/offscreen.ts": {
+    "mtime": 1777563268.540954,
+    "hash": "83806589337af4bded6b754e3816a50f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/sidepanel/main.tsx": {
+    "mtime": 1777610674.865132,
+    "hash": "75db4bba705e2fdfdb823a7b1e29bf91"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/sidepanel/App/App.tsx": {
+    "mtime": 1778358330.6012604,
+    "hash": "22a267ad252fd984ecd236447dbf047c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/sidepanel/App/useApp.ts": {
+    "mtime": 1778423328.484835,
+    "hash": "253b9848ea2edc3b4be7273489fae015"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/dashboard/main.tsx": {
+    "mtime": 1777610681.08207,
+    "hash": "5969740c37d1868b203ff3dfc6ffe8f9"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/dashboard/DashboardApp/useDashboardApp.ts": {
+    "mtime": 1778423326.4133058,
+    "hash": "54542992e541d8e9520533f6e4524d39"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/dashboard/DashboardApp/DashboardApp.tsx": {
+    "mtime": 1778358311.1834824,
+    "hash": "6b050293bd2139a8e63a4bb2f319f408"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/plain-text.export.ts": {
+    "mtime": 1777563162.1030095,
+    "hash": "99cd4e44ccf30d1fb9c1bb45dd44486b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-export-registry.ts": {
+    "mtime": 1777563172.9083507,
+    "hash": "3f9a5a376c349f556349afc5ac0694c3"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/export-registry.ts": {
+    "mtime": 1777563155.4998827,
+    "hash": "9e111eb4d3d4dfb57053e0040e807c1f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-pdf.export.ts": {
+    "mtime": 1777563181.3018606,
+    "hash": "b5f952ee0fe4230f73c1423b929acf50"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-google-doc.export.ts": {
+    "mtime": 1777563183.5899086,
+    "hash": "cd6f9b9e2aa060701b937d7beee15877"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/pdf.export.ts": {
+    "mtime": 1777610119.8271554,
+    "hash": "e727f22928e6d44d1aadcf31cdf1e80b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/google-doc.export.ts": {
+    "mtime": 1777563167.5828419,
+    "hash": "27e4f2c3ff22d4830f5a422f40f62738"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-markdown.export.ts": {
+    "mtime": 1777563175.5528367,
+    "hash": "4e3fc59b35ec9cb0c16ef232a257da10"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-export-strategy.interface.ts": {
+    "mtime": 1777563170.2390292,
+    "hash": "7913641bfe5e163fca1b477f7f0e85c2"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/markdown.export.ts": {
+    "mtime": 1777563158.9261708,
+    "hash": "4f57cedb0a76ec75ae2d0522a785f7f3"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/export-strategy.interface.ts": {
+    "mtime": 1777563152.0471492,
+    "hash": "7f71babab17752d3aed50b5834aa7d44"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/export/source-plain-text.export.ts": {
+    "mtime": 1777563177.7698689,
+    "hash": "14b13d1b1cef6da06c01d466a3d6cde7"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/import/csv-parser.ts": {
+    "mtime": 1777563292.1368873,
+    "hash": "9df18a7348127cd5767dcec0a24e5487"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/firebase-claims-verifier.ts": {
+    "mtime": 1778358399.5155249,
+    "hash": "016a74bb9fcde8dd85f458831589f2c1"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/chat-history-storage.ts": {
+    "mtime": 1778150004.9940274,
+    "hash": "dff72f1babcbb1e1e983153618d5781a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/podcast-audio-service.ts": {
+    "mtime": 1777563251.710634,
+    "hash": "c0f3cd5f0f544e70974d62025c513d2c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage-service.ts": {
+    "mtime": 1777627604.1733408,
+    "hash": "2d45b7bee3e4bd2a6a90a1f841b153d4"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/notebook-annotation-service.ts": {
+    "mtime": 1777627821.8208537,
+    "hash": "6c3138a844e42331571c89e16c286711"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/source-count-cache-service.ts": {
+    "mtime": 1777917358.6006613,
+    "hash": "feeb08305b86454281f668bc5b6d324c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/screenshot-storage.ts": {
+    "mtime": 1777884347.3791776,
+    "hash": "180bc2c0ba74341f5e22b73fc8924ac3"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/all-sources-cache-service.ts": {
+    "mtime": 1777917947.3154557,
+    "hash": "c1e41442fc78a8df11dd469ebabd7f3c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/clipboard-session-service.ts": {
+    "mtime": 1777610687.2321498,
+    "hash": "e0879949b342704433628db34dc369cf"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/google-session-service.ts": {
+    "mtime": 1777610380.7411165,
+    "hash": "cdca668bf474cb7ee28f82329c112e13"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/rss-parser-service.ts": {
+    "mtime": 1777563233.4995255,
+    "hash": "5a42a9c1b2048705ed873e1058a0fbc9"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/import-job-service.ts": {
+    "mtime": 1777563227.2074509,
+    "hash": "dfec9c1979343727e8eec0e06cb41de1"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/audio-cache-service.ts": {
+    "mtime": 1777563245.7732232,
+    "hash": "d36ca90a89e885eecc31219d1e53cf2a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/auth-storage-service.ts": {
+    "mtime": 1778414681.6963205,
+    "hash": "1636d9277e8905ee6090aa1a90d09b3b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/pipeline-templates.ts": {
+    "mtime": 1777563183.305769,
+    "hash": "7f34dc47090800b06c0773a6fc7587ba"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/tab-groups-storage.ts": {
+    "mtime": 1777673846.0481129,
+    "hash": "5f6c80044a9a1134170706c08426a970"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/web-crawler-service.ts": {
+    "mtime": 1777563239.540956,
+    "hash": "699763dfa18df1e93342f8c18d84912d"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/all-artifacts-cache-service.ts": {
+    "mtime": 1777917952.5992725,
+    "hash": "c917546fdd5343cf6d1333ba9c1bf824"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/usage-limit-service.ts": {
+    "mtime": 1778398883.4122262,
+    "hash": "b748114c12d59f5959784f3da2587c9b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/pipeline-executor.ts": {
+    "mtime": 1777609899.41693,
+    "hash": "26cd3f668b8ff90afb3420f7a6d76ae6"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/notebook-sync-service.ts": {
+    "mtime": 1777563258.6476188,
+    "hash": "a931bc2fe27e463319e63f18ed80157b"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/auth-service.ts": {
+    "mtime": 1777563140.5293925,
+    "hash": "66fd0edbc9df2879abe0550ad2f80923"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/domain-router-service.ts": {
+    "mtime": 1777627837.4129446,
+    "hash": "48f74d663d7ec7b0cb2848cfef26b318"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/pipeline-service.ts": {
+    "mtime": 1777627805.0735044,
+    "hash": "b5bc050dd749093ac6a6117f6ea0f29d"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/notebooklm-api.ts": {
+    "mtime": 1777917365.7143714,
+    "hash": "1eafb4e10171b04163f5dbd88269b634"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/settings-storage.ts": {
+    "mtime": 1777627557.1905518,
+    "hash": "5da5d83cbdb7a3c999bbb6d115a84e5c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/tag-storage.ts": {
+    "mtime": 1777627550.4948578,
+    "hash": "5927a15d4681dee94c3fc888eb1c820a"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/snippet-storage.ts": {
+    "mtime": 1778000349.1685967,
+    "hash": "b2bc5a188a608a96203ae9d1230f7bfd"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/data-storage.ts": {
+    "mtime": 1777627597.581985,
+    "hash": "d564eaf88e0cf6450ba73ed2eeef95c0"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/shared.ts": {
+    "mtime": 1777627471.5794506,
+    "hash": "1839c049be38771d828196cec47d2710"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/export-history-storage.ts": {
+    "mtime": 1777627565.6101491,
+    "hash": "bf68d994f19bf7c4b0bb1cc6a857051e"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/folder-storage.ts": {
+    "mtime": 1777627535.5492673,
+    "hash": "6f94b2e343d89e758833972c33283263"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/storage/podcast-storage.ts": {
+    "mtime": 1777627576.0360081,
+    "hash": "09f3d2bb49ea44f6c675a10fe89189ab"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-sync-service.ts": {
+    "mtime": 1778407688.8992977,
+    "hash": "39db03916f241815e5a3563a2dccff9d"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-write-queue.ts": {
+    "mtime": 1777609848.387194,
+    "hash": "ba8a79553ec708872230acacc840227c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-cache-service.ts": {
+    "mtime": 1778063646.142207,
+    "hash": "b59be2d30aaff7688b9bccc6fb19e8e3"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-manifest-service.ts": {
+    "mtime": 1777609839.7518046,
+    "hash": "31a478099fd4f5aacfb8208c642ce242"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-init-service.ts": {
+    "mtime": 1778407712.2117848,
+    "hash": "093fb981d4b642973c1d85bf84fed46f"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/drive-io-service.ts": {
+    "mtime": 1777609812.1159241,
+    "hash": "7afe826813e5ccf0f64b8c44cb8adb31"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/services/drive/types/drive-schemas.ts": {
+    "mtime": 1778063628.2738652,
+    "hash": "80b511702ee097a3ae5ea7b6e4ea166c"
+  },
+  "/Users/deepak/git-clones/notepad-extension/CLAUDE.md": {
+    "mtime": 1775755496.602849,
+    "hash": "373ab68ff5e0b2d1f6938fdbec92bfde"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/format-picker.html": {
+    "mtime": 1775755496.6203914,
+    "hash": "2f1009da073c04a3cbf9c45a5487248e"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/studio-panel-enhancer/studio-panel-enhancer.html": {
+    "mtime": 1775755496.6218555,
+    "hash": "643cb18602d2b512305b7d10bc981083"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-panel-enhancer/source-panel-enhancer.html": {
+    "mtime": 1775755496.6215522,
+    "hash": "a615496aa52ff6d567a65712f8f984e1"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-export-modal/source-export-modal.html": {
+    "mtime": 1775755496.6212418,
+    "hash": "96daf6915aeddd73b557907b40e2b3af"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/content/source-delete-modal/source-delete-modal.html": {
+    "mtime": 1775755496.6209087,
+    "hash": "b0c1cc9388e933dbb7569a81154b8590"
+  },
   "/Users/deepak/git-clones/notepad-extension/src/components/TagFilter/TagFilter.html": {
     "mtime": 1775755496.6071079,
     "hash": "0db0ef737a1910c00ab06ee7b27f3015"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/offscreen/index.html": {
+    "mtime": 1775755496.622951,
+    "hash": "9d16f152e8c9629ffde33baa771904ec"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/sidepanel/index.html": {
+    "mtime": 1776701205.414772,
+    "hash": "877732cf2eed51f03b87a92244f27bf1"
+  },
+  "/Users/deepak/git-clones/notepad-extension/src/entrypoints/dashboard/index.html": {
+    "mtime": 1775755496.6227236,
+    "hash": "3f478db6aef8dfc6a6b23902453dc873"
   }
 }
