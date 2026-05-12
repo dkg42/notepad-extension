@@ -112,7 +112,8 @@ export default function NotebooksPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="notebooks-page__header">
         <div>
-          <h1 className="notebooks-page__title">Notebooks</h1>
+          <span className="notebooks-page__eyebrow">Notebooks</span>
+          <h1 className="notebooks-page__title">Your notebooks</h1>
           <p className="notebooks-page__subtitle">
             Synced from your Google NotebookLM account
           </p>

@@ -5,6 +5,7 @@
  * @public NotebookDetailPage
  */
 import React, { useState } from 'react';
+import { Headphones, Play, FileText, Video, PresentationIcon, RefreshCw } from 'lucide-react';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
@@ -48,6 +49,38 @@ function formatDate(timestamp: number): string {
     day: 'numeric',
   });
 }
+
+function formatRelativeTime(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+type ArtifactTypeMeta = {
+  Icon: React.ElementType;
+  colorClass: string;
+  label: string;
+};
+
+function getArtifactTypeMeta(typeCode: number): ArtifactTypeMeta {
+  switch (typeCode) {
+    case 1:  return { Icon: Headphones,        colorClass: 'audio',       label: 'Audio'       };
+    case 2:  return { Icon: Video,             colorClass: 'video',       label: 'Video'       };
+    case 3:  return { Icon: PresentationIcon,  colorClass: 'slides',      label: 'Slides'      };
+    default: return { Icon: FileText,          colorClass: 'default',     label: `Type ${typeCode}` };
+  }
+}
+
+const ARTIFACT_STATUS: Record<number, { label: string; cls: string }> = {
+  1: { label: 'Processing', cls: 'processing' },
+  2: { label: 'Pending',    cls: 'pending'    },
+  3: { label: 'Completed',  cls: 'completed'  },
+};
 
 
 export default function NotebookDetailPage() {
@@ -295,6 +328,103 @@ export default function NotebookDetailPage() {
         ) : null}
       </div>
 
+      {/* ── Artifacts section ───────────────────────────────────────────────── */}
+      <div className="notebook-detail__section">
+        <div className="notebook-detail__section-header">
+          <span className="notebook-detail__section-title">
+            Artifacts
+            <span className="notebook-detail__section-count">({artifacts.length})</span>
+          </span>
+          <div className="notebook-detail__section-actions">
+            <button
+              className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
+              onClick={() => void handleRefreshAll()}
+              disabled={isLoadingArtifacts}
+              title="Refresh"
+            >
+              <RefreshCw size={12} strokeWidth={2} />
+            </button>
+            <button
+              className="notebook-detail__action-btn"
+              onClick={() => setShowAudioDialog(true)}
+              disabled={isGeneratingAudio}
+            >
+              {isGeneratingAudio ? (
+                <>
+                  <span className="notebook-detail__spinner" />
+                  Generating…
+                </>
+              ) : (
+                'Generate audio'
+              )}
+            </button>
+          </div>
+        </div>
+
+        {audioGenerationError && (
+          <div className="notebook-detail__section-error">
+            {audioGenerationError}
+          </div>
+        )}
+        {artifactsError && (
+          <div className="notebook-detail__section-error">
+            {artifactsError}
+          </div>
+        )}
+
+        {isLoadingArtifacts ? (
+          <div className="notebook-detail__loading">
+            <span className="notebook-detail__spinner" />
+            Loading artifacts…
+          </div>
+        ) : artifacts.length === 0 ? (
+          <div className="notebook-detail__section-empty">
+            No artifacts yet. Generate an audio overview to get started.
+          </div>
+        ) : (
+          <div className="notebook-artifacts-grid">
+            {artifacts.map((artifact) => {
+              const typeMeta = getArtifactTypeMeta(artifact.typeCode);
+              const statusMeta = ARTIFACT_STATUS[artifact.status ?? 0] ?? { label: 'Unknown', cls: 'pending' };
+              const canPlay = artifact.status === 3 && !!artifact.mediaUrl;
+
+              return (
+                <div key={artifact.id} className="notebook-artifact-card">
+                  <div className="notebook-artifact-card__top">
+                    <div className={`notebook-artifact-card__icon notebook-artifact-card__icon--${typeMeta.colorClass}`}>
+                      <typeMeta.Icon size={16} strokeWidth={1.7} />
+                    </div>
+                    <div className="notebook-artifact-card__info">
+                      <div className="notebook-artifact-card__title">{artifact.title}</div>
+                      <div className="notebook-artifact-card__meta">
+                        <span className={`notebook-artifact-card__status notebook-artifact-card__status--${statusMeta.cls}`}>
+                          {statusMeta.label}
+                        </span>
+                        {artifact.createdAt && (
+                          <span className="notebook-artifact-card__time">
+                            {formatRelativeTime(artifact.createdAt)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {canPlay && (
+                      <button
+                        className="notebook-artifact-card__play-btn"
+                        onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
+                        disabled={isLoadingAudio}
+                        title="Play"
+                      >
+                        <Play size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* ── Sources section ─────────────────────────────────────────────────── */}
       <div className="notebook-detail__section">
         <div className="notebook-detail__section-header">
@@ -447,89 +577,6 @@ export default function NotebookDetailPage() {
                 </div>
                 {expandedNoteId === note.id && (
                   <div className="notebook-detail__note-content">{note.content}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Artifacts section ───────────────────────────────────────────────── */}
-      <div className="notebook-detail__section">
-        <div className="notebook-detail__section-header">
-          <span className="notebook-detail__section-title">
-            Artifacts
-            <span className="notebook-detail__section-count">({artifacts.length})</span>
-          </span>
-          <div className="notebook-detail__section-actions">
-            <button
-              className="notebook-detail__action-btn"
-              onClick={() => setShowAudioDialog(true)}
-              disabled={isGeneratingAudio}
-            >
-              {isGeneratingAudio ? (
-                <>
-                  <span className="notebook-detail__spinner" />
-                  Generating Audio…
-                </>
-              ) : (
-                'Generate Audio'
-              )}
-            </button>
-            <button
-              className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
-              onClick={() => void handleRefreshAll()}
-              disabled={isLoadingArtifacts}
-              title="Refresh artifacts"
-            >
-              ↻
-            </button>
-          </div>
-        </div>
-        {audioGenerationError && (
-          <div className="notebook-detail__section-error">
-            {audioGenerationError}
-          </div>
-        )}
-        {artifactsError && (
-          <div className="notebook-detail__section-error">
-            {artifactsError}
-          </div>
-        )}
-        {isLoadingArtifacts ? (
-          <div className="notebook-detail__loading">
-            <span className="notebook-detail__spinner" />
-            Loading artifacts…
-          </div>
-        ) : artifacts.length === 0 ? (
-          <div className="notebook-detail__section-empty">
-            No artifacts yet. Generate an audio overview to get started.
-          </div>
-        ) : (
-          <div className="notebook-detail__section-body">
-            {artifacts.map((artifact) => (
-              <div key={artifact.id} className="notebook-detail__artifact-row">
-                <span className="notebook-detail__artifact-type-badge">
-                  {artifact.typeCode === 1 ? 'Audio' : `Type ${artifact.typeCode}`}
-                </span>
-                <span className="notebook-detail__artifact-title">{artifact.title}</span>
-                {artifact.status === 1 && (
-                  <span className="notebook-detail__artifact-status">Processing…</span>
-                )}
-                {artifact.status === 2 && (
-                  <span className="notebook-detail__artifact-status">Pending…</span>
-                )}
-                {artifact.mediaUrl && artifact.status === 3 && (
-                  <button
-                    className="notebook-detail__play-btn"
-                    onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
-                    disabled={isLoadingAudio}
-                  >
-                    {isLoadingAudio ? 'Loading…' : '▶ Play'}
-                  </button>
-                )}
-                {!artifact.mediaUrl && artifact.status === 3 && (
-                  <span className="notebook-detail__artifact-status">Completed</span>
                 )}
               </div>
             ))}
