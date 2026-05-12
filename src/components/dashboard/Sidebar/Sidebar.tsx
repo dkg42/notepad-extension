@@ -337,64 +337,42 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar__footer">
-        {!user && (
-          <div className="sidebar__upgrade-banner">
-            <div className="sidebar__upgrade-banner-title">
-              <Zap size={11} />
-              Upgrade to Pro
-            </div>
-            <div className="sidebar__upgrade-banner-body">
-              Unlock pipelines, NotebookLM, cloud sync. <strong>$5/mo.</strong>
-            </div>
-          </div>
-        )}
-
-        {user ? (
-          (() => {
-            const { displayName = null, email = null, photoURL = null } = user ?? {};
-            return (
-              <button
-                className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
-                onClick={() => onNavigate('account')}
-                title={email ?? ''}
-              >
-                <div className="sidebar__user-avatar">
-                  {photoURL ? (
-                    <img
-                      src={photoURL}
-                      alt={displayName ?? 'User avatar'}
-                      className="sidebar__user-avatar-img"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <span className="sidebar__user-avatar-initials">
-                      {getInitials(displayName ?? email ?? '?')}
-                    </span>
-                  )}
-                </div>
-                <div className="sidebar__user-info">
-                  <span className="sidebar__user-name">
-                    {displayName ?? email ?? 'Signed in'}
+        {user && (() => {
+          const { displayName = null, email = null, photoURL = null } = user;
+          return (
+            <button
+              className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
+              onClick={() => onNavigate('account')}
+              title={email ?? ''}
+            >
+              <div className="sidebar__user-avatar">
+                {photoURL ? (
+                  <img
+                    src={photoURL}
+                    alt={displayName ?? 'User avatar'}
+                    className="sidebar__user-avatar-img"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="sidebar__user-avatar-initials">
+                    {getInitials(displayName ?? email ?? '?')}
                   </span>
-                  {email && displayName && (
-                    <span className="sidebar__user-email">{email}</span>
-                  )}
-                </div>
-                <span className="sidebar__user-settings-icon">
-                  <Settings size={13} strokeWidth={1.75} />
+                )}
+              </div>
+              <div className="sidebar__user-info">
+                <span className="sidebar__user-name">
+                  {displayName ?? email ?? 'Signed in'}
                 </span>
-              </button>
-            );
-          })()
-        ) : (
-          <button
-            className={`sidebar__nav-item${currentView === 'account' ? ' sidebar__nav-item--active' : ''}`}
-            onClick={() => onNavigate('account')}
-            title="Account"
-          >
-            <span className="sidebar__nav-label">Account</span>
-          </button>
-        )}
+                {email && displayName && (
+                  <span className="sidebar__user-email">{email}</span>
+                )}
+              </div>
+              <span className="sidebar__user-settings-icon">
+                <Settings size={13} strokeWidth={1.75} />
+              </span>
+            </button>
+          );
+        })()}
 
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}

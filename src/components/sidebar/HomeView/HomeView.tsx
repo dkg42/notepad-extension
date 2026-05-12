@@ -12,7 +12,6 @@ import {
   Camera,
   Layers,
   BookOpen,
-  User,
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
@@ -163,30 +162,12 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
 
 interface HomeViewProps {
   onNavigate: (view: string) => void;
-  signedOut: boolean;
   user: StoredAuthProfile | null;
-  onSignIn: () => void;
 }
 
-export default function HomeView({ onNavigate, signedOut, onSignIn }: HomeViewProps) {
+export default function HomeView({ onNavigate }: HomeViewProps) {
   return (
     <div className="home-view">
-      {signedOut && (
-        <div className="home-view__signin-nudge">
-          <div className="home-view__signin-nudge-icon">
-            <User size={13} strokeWidth={1.8} />
-          </div>
-          <div className="home-view__signin-nudge-text">
-            <div className="home-view__signin-nudge-title">Sign in to sync across devices</div>
-            <div className="home-view__signin-nudge-sub">
-              You're using Notehublm anonymously — saves stay on this browser.
-            </div>
-          </div>
-          <button className="home-view__signin-nudge-btn" onClick={onSignIn}>
-            Sign in
-          </button>
-        </div>
-      )}
 
       <div className="home-view__section-label">Tools</div>
 

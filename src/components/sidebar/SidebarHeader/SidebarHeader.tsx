@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Moon,
   Sun,
-  User,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
 import './SidebarHeader.css';
@@ -35,7 +34,6 @@ interface SidebarHeaderProps {
   onToggleDark: () => void;
   onOpenDashboard: () => void;
   onUserClick: () => void;
-  onSignIn: () => void;
 }
 
 function getInitials(name: string | null): string {
@@ -64,7 +62,6 @@ export default function SidebarHeader({
   onToggleDark,
   onOpenDashboard,
   onUserClick,
-  onSignIn,
 }: SidebarHeaderProps) {
   const isHome = view === 'home';
 
@@ -110,7 +107,7 @@ export default function SidebarHeader({
         {dark ? <Sun size={15} /> : <Moon size={15} />}
       </button>
 
-      {user ? (
+      {user && (
         <button
           className={`sidebar-header__avatar-btn${userMenuOpen ? ' sidebar-header__avatar-btn--menu-open' : ''}`}
           title={user.displayName ?? user.email ?? 'Account'}
@@ -126,14 +123,6 @@ export default function SidebarHeader({
           ) : (
             getInitials(user.displayName)
           )}
-        </button>
-      ) : (
-        <button
-          className="sidebar-header__signin-btn"
-          title="Sign in to sync"
-          onClick={onSignIn}
-        >
-          <User size={14} />
         </button>
       )}
     </div>

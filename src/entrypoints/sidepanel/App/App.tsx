@@ -14,6 +14,7 @@ import TabManagerView from '@/components/sidebar/TabManagerView/TabManagerView';
 import ScreenshotView from '@/components/sidebar/ScreenshotView/ScreenshotView';
 import NotebookView from '@/components/sidebar/NotebookView/NotebookView';
 import UserMenu from '@/components/sidebar/UserMenu/UserMenu';
+import AuthButton from '@/components/AuthButton/AuthButton';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
@@ -52,7 +53,12 @@ export default function App() {
     );
   }
 
-  return <AppContent user={authUser} />;
+  return (
+    <>
+      <AppContent user={authUser} />
+      {!authUser && <AuthButton />}
+    </>
+  );
 }
 
 function AppContent({ user }: { user: StoredAuthProfile | null }) {
@@ -70,10 +76,6 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
       localStorage.setItem(DARK_KEY, String(next));
       return next;
     });
-  };
-
-  const handleSignIn = () => {
-    authService.signIn().catch(() => {});
   };
 
   const handleSignOut = () => {
@@ -98,15 +100,12 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
         onToggleDark={toggleDark}
         onOpenDashboard={() => chrome.runtime.openOptionsPage()}
         onUserClick={() => setUserMenuOpen((o) => !o)}
-        onSignIn={handleSignIn}
       />
 
       {view === 'home' && (
         <HomeView
           onNavigate={handleNavigate}
-          signedOut={!user}
           user={user}
-          onSignIn={handleSignIn}
         />
       )}
 

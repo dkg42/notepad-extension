@@ -49,7 +49,6 @@ import { handleDriveMessage } from '@/background/drive-handler';
 import { handleScreenshotMessage } from '@/background/screenshot-handler';
 
 const ALARM_NAME = 'notebooklm-sync';
-const MIGRATION_KEY = 'preSignInDataMigratedToUid';
 const OFFSCREEN_DOCUMENT_PATH = '/offscreen.html';
 const SYNC_INTERVAL_MINUTES = 30;
 const AUDIO_CLEANUP_ALARM = 'audio-cache-cleanup';
@@ -258,15 +257,6 @@ function handleAuthSessionMessage(
         }).catch((err: unknown) => {
           console.warn('[AUTH][BG] Unexpected error verifying ID token claims:', err);
         });
-        // Attribute any pre-sign-in local data to this user on first sign-in
-        const stored = await chrome.storage.local.get(MIGRATION_KEY);
-        const existing = stored[MIGRATION_KEY] as { uid: string | null } | undefined;
-        if (!existing) {
-          await chrome.storage.local.set({
-            [MIGRATION_KEY]: { uid: incomingUid, migratedAt: Date.now() },
-          });
-          chrome.runtime.sendMessage({ type: 'local-data-migrated', uid: incomingUid }).catch(() => {});
-        }
         console.log('[AUTH][BG] Auth complete, sending ok to popup');
         sendResponse({ ok: true });
         // Proactively establish the NotebookLM Google session so batchRPC
@@ -331,7 +321,6 @@ function handleAuthSessionMessage(
 
         return Promise.all([
           authStorageService.clearAll(),
-          chrome.storage.local.remove([MIGRATION_KEY]),
           storageService.clearAllData(),
           chatHistoryStorage.clearAllData(),
           pipelineService.clearAllData(),
