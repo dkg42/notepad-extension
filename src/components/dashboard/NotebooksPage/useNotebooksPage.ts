@@ -234,7 +234,6 @@ export function useNotebooksPage() {
   const handleCreateFolder = useCallback(
     async (name: string, parentId?: string): Promise<string> => {
       const folder = await notebookFolderService.createFolder(name, parentId);
-      setFolders((prev) => [...prev, folder]);
       return folder.id;
     },
     [],
