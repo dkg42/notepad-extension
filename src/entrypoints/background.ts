@@ -402,7 +402,7 @@ export default defineBackground(() => {
   });
 
   // Storage change listener for annotation-driven pipeline triggers
-  chrome.storage.sync.onChanged.addListener((changes) => {
+  chrome.storage.local.onChanged.addListener((changes) => {
     if ('notebookAnnotations' in changes) {
       const newAnnotations = (changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? [];
       const oldAnnotations = (changes.notebookAnnotations.oldValue as NotebookAnnotation[]) ?? [];

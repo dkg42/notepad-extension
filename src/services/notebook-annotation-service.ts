@@ -1,6 +1,6 @@
 /**
  * @module notebook-annotation-service
- * @description Persists user-defined notebook annotations (tags, folder assignments, archived flag) in chrome.storage.sync. Kept intentionally separate from notebookSyncService so that periodic background API syncs which overwrite NotebookMeta can never clobber user-authored metadata. Each mutation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
+ * @description Persists user-defined notebook annotations (tags, folder assignments, archived flag) in chrome.storage.local. Kept intentionally separate from notebookSyncService so that periodic background API syncs which overwrite NotebookMeta can never clobber user-authored metadata. Each mutation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
  * @dependencies token-lifecycle-service, drive/drive-sync-service
  * @public notebookAnnotationService
  */
@@ -23,7 +23,7 @@ function syncToDrive(callback: (token: string) => void | Promise<void>): void {
 
 export const notebookAnnotationService = {
   async getAllAnnotations(): Promise<NotebookAnnotation[]> {
-    const result = await chrome.storage.sync.get(ANNOTATIONS_KEY);
+    const result = await chrome.storage.local.get(ANNOTATIONS_KEY);
     return (result[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
   },
 
@@ -35,7 +35,7 @@ export const notebookAnnotationService = {
     } else {
       all.push(annotation);
     }
-    await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: all });
+    await chrome.storage.local.set({ [ANNOTATIONS_KEY]: all });
     syncToDrive(async (t) => {
       const folders = await notebookFolderService.getFolders();
       driveSyncService.saveAnnotations(all, folders, t);
@@ -45,7 +45,7 @@ export const notebookAnnotationService = {
   async removeAnnotation(notebookId: string): Promise<void> {
     const all = await this.getAllAnnotations();
     const filtered = all.filter((a) => a.notebookId !== notebookId);
-    await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: filtered });
+    await chrome.storage.local.set({ [ANNOTATIONS_KEY]: filtered });
     syncToDrive(async (t) => {
       const folders = await notebookFolderService.getFolders();
       driveSyncService.saveAnnotations(filtered, folders, t);
@@ -53,6 +53,6 @@ export const notebookAnnotationService = {
   },
 
   async clearAllData(): Promise<void> {
-    await chrome.storage.sync.remove([ANNOTATIONS_KEY]);
+    await chrome.storage.local.remove([ANNOTATIONS_KEY]);
   },
 };

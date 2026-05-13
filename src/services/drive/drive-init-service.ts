@@ -540,7 +540,7 @@ async function applyDriveData(
     case 'notebook-annotations.json': {
       const annotations = (driveFile.annotations as unknown[]) ?? [];
       const notebookFolders = (driveFile.folders as unknown[]) ?? [];
-      await chrome.storage.sync.set({ notebookAnnotations: annotations, notebookFolders });
+      await chrome.storage.local.set({ notebookAnnotations: annotations, notebookFolders });
       break;
     }
     case 'pipelines.json': {

@@ -1,6 +1,6 @@
 /**
  * @module notebook-folder-service
- * @description Persists user-defined notebook folders (nested tree structure) in chrome.storage.sync. On folder deletion, cascade-unassigns notebooks in the subtree rather than deleting them. Includes Drive sync tail-calls.
+ * @description Persists user-defined notebook folders (nested tree structure) in chrome.storage.local. On folder deletion, cascade-unassigns notebooks in the subtree rather than deleting them. Includes Drive sync tail-calls.
  * @dependencies @/types, @/utils/folder-utils, token-lifecycle-service, drive/drive-sync-service
  * @public notebookFolderService
  */
@@ -24,7 +24,7 @@ function syncToDrive(callback: (token: string) => void | Promise<void>): void {
 
 export const notebookFolderService = {
   async getFolders(): Promise<Folder[]> {
-    const result = await chrome.storage.sync.get(NOTEBOOK_FOLDERS_KEY);
+    const result = await chrome.storage.local.get(NOTEBOOK_FOLDERS_KEY);
     return (result[NOTEBOOK_FOLDERS_KEY] as Folder[]) ?? [];
   },
 
@@ -43,9 +43,9 @@ export const notebookFolderService = {
       sortOrder: siblings.length,
     };
     const updated = [...existing, folder];
-    await chrome.storage.sync.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
+    await chrome.storage.local.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
     syncToDrive(async (t) => {
-      const annotationsResult = await chrome.storage.sync.get(ANNOTATIONS_KEY);
+      const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
       driveSyncService.saveAnnotations(annotations, updated, t);
     });
@@ -60,9 +60,9 @@ export const notebookFolderService = {
       throw new Error(`A folder named "${trimmed}" already exists here.`);
     }
     const updated = existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f));
-    await chrome.storage.sync.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
+    await chrome.storage.local.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
     syncToDrive(async (t) => {
-      const annotationsResult = await chrome.storage.sync.get(ANNOTATIONS_KEY);
+      const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
       driveSyncService.saveAnnotations(annotations, updated, t);
     });
@@ -74,7 +74,7 @@ export const notebookFolderService = {
   async deleteFolder(id: string): Promise<void> {
     const [folders, annotationsResult] = await Promise.all([
       notebookFolderService.getFolders(),
-      chrome.storage.sync.get(ANNOTATIONS_KEY),
+      chrome.storage.local.get(ANNOTATIONS_KEY),
     ]);
     const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
     const subtreeIds = getFolderSubtreeIds(id, folders);
@@ -84,7 +84,7 @@ export const notebookFolderService = {
       a.folderId && subtreeIds.has(a.folderId) ? { ...a, folderId: undefined } : a,
     );
 
-    await chrome.storage.sync.set({
+    await chrome.storage.local.set({
       [NOTEBOOK_FOLDERS_KEY]: updatedFolders,
       [ANNOTATIONS_KEY]: updatedAnnotations,
     });
@@ -100,9 +100,9 @@ export const notebookFolderService = {
       }
     }
     const updated = existing.map((f) => (f.id === id ? { ...f, parentId: newParentId } : f));
-    await chrome.storage.sync.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
+    await chrome.storage.local.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
     syncToDrive(async (t) => {
-      const annotationsResult = await chrome.storage.sync.get(ANNOTATIONS_KEY);
+      const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
       driveSyncService.saveAnnotations(annotations, updated, t);
     });
@@ -114,9 +114,9 @@ export const notebookFolderService = {
     const updated = existing.map((f) =>
       orderMap.has(f.id) ? { ...f, sortOrder: orderMap.get(f.id)! } : f,
     );
-    await chrome.storage.sync.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
+    await chrome.storage.local.set({ [NOTEBOOK_FOLDERS_KEY]: updated });
     syncToDrive(async (t) => {
-      const annotationsResult = await chrome.storage.sync.get(ANNOTATIONS_KEY);
+      const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
       driveSyncService.saveAnnotations(annotations, updated, t);
     });

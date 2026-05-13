@@ -1,6 +1,6 @@
 /**
  * @module useNotebooksPage
- * @description Hook for the Notebooks dashboard page managing notebook list, annotations, folders, row selection, and CRUD operations. Listens to chrome.storage.sync for live updates and auto-fetches source counts after the initial load.
+ * @description Hook for the Notebooks dashboard page managing notebook list, annotations, folders, row selection, and CRUD operations. Listens to chrome.storage.local for live updates and auto-fetches source counts after the initial load.
  * @dependencies @/types, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/services/notebook-folder-service, @/export/source-export-registry, @/utils/folder-utils
  * @public useNotebooksPage, UNFILED_FILTER_ID
  */
@@ -86,8 +86,8 @@ export function useNotebooksPage() {
         setFolders((changes.notebookFolders.newValue as Folder[]) ?? []);
       }
     };
-    chrome.storage.sync.onChanged.addListener(listener);
-    return () => chrome.storage.sync.onChanged.removeListener(listener);
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
   }, []);
 
   // ── Auto-fetch source counts once notebooks are loaded ────────────────────

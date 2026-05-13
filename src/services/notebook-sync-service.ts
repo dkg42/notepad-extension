@@ -1,14 +1,13 @@
 /**
  * @module notebook-sync-service
- * @description Persists NotebookLM notebook metadata (titles, URLs, sync timestamps) in chrome.storage.sync so data propagates automatically across all of the user's signed-in Chrome devices. Enforces a cap of 150 notebooks and trims the payload to under 90 KB to stay within Chrome's sync storage quota. Notebook metadata is stored separately from user annotations so that background API syncs cannot overwrite user-authored tags or collection assignments.
- * @dependencies (none — uses only chrome.storage.sync)
+ * @description Persists NotebookLM notebook metadata (titles, URLs, sync timestamps) in chrome.storage.local. Multi-device sync is handled exclusively through Google Drive. Notebook metadata is stored separately from user annotations so that background API syncs cannot overwrite user-authored tags or collection assignments.
+ * @dependencies (none — uses only chrome.storage.local)
  * @public notebookSyncService, SyncMeta
  */
 import type { NotebookMeta } from '@/types';
 
 const NOTEBOOKS_KEY = 'notebooksMeta';
 const SYNC_META_KEY = 'notebooksSyncMeta';
-const MAX_NOTEBOOKS = 150;
 
 export interface SyncMeta {
   lastSyncedAt: number;
@@ -17,15 +16,12 @@ export interface SyncMeta {
 }
 
 /**
- * Service for persisting NotebookLM notebook metadata in chrome.storage.sync.
- *
- * Uses chrome.storage.sync (not local) so data propagates across all Chrome
- * sign-in devices automatically. Enforces a cap of MAX_NOTEBOOKS entries to
- * stay within the 100 KB sync quota.
+ * Service for persisting NotebookLM notebook metadata in chrome.storage.local.
+ * Multi-device sync is handled through Google Drive, not chrome.storage.sync.
  */
 export const notebookSyncService = {
   async getAll(): Promise<NotebookMeta[]> {
-    const result = await chrome.storage.sync.get(NOTEBOOKS_KEY);
+    const result = await chrome.storage.local.get(NOTEBOOKS_KEY);
     const notebooks: NotebookMeta[] = result[NOTEBOOKS_KEY] ?? [];
     return notebooks.sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
   },
@@ -38,35 +34,27 @@ export const notebookSyncService = {
       map.set(notebook.id, notebook);
     }
 
-    let sorted = Array.from(map.values()).sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
-    sorted = sorted.slice(0, MAX_NOTEBOOKS);
+    const sorted = Array.from(map.values()).sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
 
-    // Quota guard: trim from oldest until payload fits
-    while (sorted.length > 0) {
-      const payload = JSON.stringify(sorted);
-      if (payload.length < 90_000) break;
-      sorted.pop();
-    }
-
-    await chrome.storage.sync.set({ [NOTEBOOKS_KEY]: sorted });
+    await chrome.storage.local.set({ [NOTEBOOKS_KEY]: sorted });
   },
 
   async remove(id: string): Promise<void> {
     const notebooks = await this.getAll();
     const filtered = notebooks.filter((n) => n.id !== id);
-    await chrome.storage.sync.set({ [NOTEBOOKS_KEY]: filtered });
+    await chrome.storage.local.set({ [NOTEBOOKS_KEY]: filtered });
   },
 
   async clear(): Promise<void> {
-    await chrome.storage.sync.remove([NOTEBOOKS_KEY, SYNC_META_KEY]);
+    await chrome.storage.local.remove([NOTEBOOKS_KEY, SYNC_META_KEY]);
   },
 
   async getSyncMeta(): Promise<SyncMeta | null> {
-    const result = await chrome.storage.sync.get(SYNC_META_KEY);
+    const result = await chrome.storage.local.get(SYNC_META_KEY);
     return (result[SYNC_META_KEY] as SyncMeta) ?? null;
   },
 
   async setSyncMeta(meta: SyncMeta): Promise<void> {
-    await chrome.storage.sync.set({ [SYNC_META_KEY]: meta });
+    await chrome.storage.local.set({ [SYNC_META_KEY]: meta });
   },
 };

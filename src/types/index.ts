@@ -256,7 +256,7 @@ export interface AuthClaims {
 
 // ── Notebook types ─────────────────────────────────────────────────────────────
 
-/** Metadata for a NotebookLM notebook, synced via chrome.storage.sync for cross-device access. */
+/** Metadata for a NotebookLM notebook, persisted in chrome.storage.local. Multi-device sync via Drive. */
 export interface NotebookMeta {
   /** Notebook ID from the batchexecute API response. */
   id: string;

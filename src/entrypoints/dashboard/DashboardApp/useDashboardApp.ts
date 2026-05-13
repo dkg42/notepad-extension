@@ -87,7 +87,7 @@ export function useDashboardApp() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Update notebooks count and annotations when sync storage changes
+  // Update notebooks count and annotations when local storage changes
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if ('notebooksMeta' in changes) {
@@ -100,8 +100,8 @@ export function useDashboardApp() {
         setNotebookAnnotations(updated);
       }
     };
-    chrome.storage.sync.onChanged.addListener(listener);
-    return () => chrome.storage.sync.onChanged.removeListener(listener);
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
   }, []);
 
   // Load initial chat history count
