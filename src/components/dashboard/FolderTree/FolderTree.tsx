@@ -1,15 +1,16 @@
 /**
  * @module FolderTree
- * @description Renders a recursive, collapsible folder tree with per-node snippet counts and optional context-menu actions for creating subfolders, renaming, deleting, or moving folders.
+ * @description Renders a recursive, collapsible folder tree with per-node snippet counts and a ⋯ dropdown for context-menu actions (new subfolder, rename, move, delete).
  * @dependencies @/types (Folder)
  * @public FolderTree
  */
-import React, { useState } from 'react';
-import type { Folder } from '@/types';
+import React, { useEffect, useState } from 'react';
+import { Folder, MoreHorizontal } from 'lucide-react';
+import type { Folder as FolderType } from '@/types';
 import './FolderTree.css';
 
 interface FolderTreeProps {
-  folders: Folder[];
+  folders: FolderType[];
   parentId?: string;
   depth?: number;
   selectedId?: string;
@@ -24,7 +25,7 @@ interface FolderTreeProps {
 }
 
 interface FolderTreeNodeProps extends Omit<FolderTreeProps, 'parentId' | 'depth'> {
-  folder: Folder;
+  folder: FolderType;
   depth: number;
 }
 
@@ -42,6 +43,14 @@ function FolderTreeNode({
   disabledIds,
 }: FolderTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [menuOpen]);
 
   const children = folders
     .filter((f) => f.parentId === folder.id)
@@ -79,7 +88,9 @@ function FolderTreeNode({
           {folder.color && (
             <span className="folder-tree__dot" style={{ background: folder.color }} />
           )}
-          <span className="folder-tree__icon">◫</span>
+          <span className="folder-tree__icon">
+            <Folder size={13} strokeWidth={1.5} />
+          </span>
           <span className="folder-tree__name">{folder.name}</span>
           {count !== undefined && (
             <span className="folder-tree__count">{count}</span>
@@ -87,42 +98,49 @@ function FolderTreeNode({
         </button>
 
         {hasActions && (
-          <div className="folder-tree__actions">
-            {onCreateSubfolder && (
-              <button
-                className="folder-tree__action-btn"
-                onClick={() => onCreateSubfolder(folder.id)}
-                title="Add subfolder"
-              >
-                + Sub
-              </button>
-            )}
-            {onRename && (
-              <button
-                className="folder-tree__action-btn"
-                onClick={() => onRename(folder.id, folder.name)}
-                title="Rename"
-              >
-                ✎
-              </button>
-            )}
-            {onMove && (
-              <button
-                className="folder-tree__action-btn"
-                onClick={() => onMove(folder.id)}
-                title="Move to…"
-              >
-                ↪
-              </button>
-            )}
-            {onDelete && (
-              <button
-                className="folder-tree__action-btn folder-tree__action-btn--danger"
-                onClick={() => onDelete(folder.id)}
-                title="Delete"
-              >
-                ✕
-              </button>
+          <div className="folder-tree__menu-wrap" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="folder-tree__more-btn"
+              onClick={() => setMenuOpen((v) => !v)}
+              title="More options"
+            >
+              <MoreHorizontal size={13} />
+            </button>
+            {menuOpen && (
+              <div className="folder-tree__dropdown">
+                {onCreateSubfolder && (
+                  <button
+                    className="folder-tree__dropdown-item"
+                    onClick={() => { setMenuOpen(false); onCreateSubfolder(folder.id); }}
+                  >
+                    New subfolder
+                  </button>
+                )}
+                {onRename && (
+                  <button
+                    className="folder-tree__dropdown-item"
+                    onClick={() => { setMenuOpen(false); onRename(folder.id, folder.name); }}
+                  >
+                    Rename
+                  </button>
+                )}
+                {onMove && (
+                  <button
+                    className="folder-tree__dropdown-item"
+                    onClick={() => { setMenuOpen(false); onMove(folder.id); }}
+                  >
+                    Move to…
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    className="folder-tree__dropdown-item folder-tree__dropdown-item--danger"
+                    onClick={() => { setMenuOpen(false); onDelete(folder.id); }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

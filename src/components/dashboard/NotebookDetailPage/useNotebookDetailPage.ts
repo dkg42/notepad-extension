@@ -5,10 +5,11 @@
  * @public useNotebookDetailPage
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ArtifactRecord, NoteDetailRecord, NotebookAnnotation, NotebookCollection, NotebookMeta, SourceDetailRecord } from '@/types';
+import type { ArtifactRecord, Folder, NoteDetailRecord, NotebookAnnotation, NotebookMeta, SourceDetailRecord } from '@/types';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { notebookFolderService } from '@/services/notebook-folder-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 
 interface MessageResult<T = unknown> {
@@ -57,9 +58,9 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
   const [isDeletingNotebook, setIsDeletingNotebook] = useState(false);
   const [isDeletingSource, setIsDeletingSource] = useState<string | null>(null);
 
-  // ── Annotation & collections ───────────────────────────────────────────────
+  // ── Annotation & folders ───────────────────────────────────────────────────
   const [annotation, setAnnotation] = useState<NotebookAnnotation>({ notebookId, tags: [] });
-  const [collections, setCollections] = useState<NotebookCollection[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
   // ── Export ─────────────────────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
@@ -72,15 +73,15 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     if (hasFetched.current) return;
     hasFetched.current = true;
 
-    // Load notebook meta + annotation + collections from storage (instant)
+    // Load notebook meta + annotation + folders from storage (instant)
     Promise.all([
       notebookSyncService.getAll(),
       notebookAnnotationService.getAllAnnotations(),
-      notebookAnnotationService.getAllCollections(),
-    ]).then(([all, allAnnotations, allCollections]) => {
+      notebookFolderService.getFolders(),
+    ]).then(([all, allAnnotations, allFolders]) => {
       setNotebook(all.find((n) => n.id === notebookId) ?? null);
       setAnnotation(allAnnotations.find((a) => a.notebookId === notebookId) ?? { notebookId, tags: [] });
-      setCollections(allCollections);
+      setFolders(allFolders);
       setIsLoadingMeta(false);
     });
 
@@ -236,25 +237,20 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     }
   }, [notebookId, onBack]);
 
-  const handleAssignCollection = useCallback(
-    async (collectionId: string | undefined) => {
-      const updated = { ...annotation, collectionId };
+  const handleAssignFolder = useCallback(
+    async (folderId: string | undefined) => {
+      const updated = { ...annotation, folderId };
       await notebookAnnotationService.setAnnotation(updated);
       setAnnotation(updated);
     },
     [annotation],
   );
 
-  const handleCreateCollection = useCallback(
-    async (name: string): Promise<string> => {
-      const collection: NotebookCollection = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        createdAt: Date.now(),
-      };
-      await notebookAnnotationService.upsertCollection(collection);
-      setCollections((prev) => [...prev, collection]);
-      return collection.id;
+  const handleCreateFolder = useCallback(
+    async (name: string, parentId?: string): Promise<string> => {
+      const folder = await notebookFolderService.createFolder(name.trim(), parentId);
+      setFolders((prev) => [...prev, folder]);
+      return folder.id;
     },
     [],
   );
@@ -334,7 +330,7 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
   return {
     notebook,
     annotation,
-    collections,
+    folders,
     isLoadingMeta,
     sources,
     isLoadingSources,
@@ -357,8 +353,8 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
-    handleAssignCollection,
-    handleCreateCollection,
+    handleAssignFolder,
+    handleCreateFolder,
     handleAddTag,
     handleRemoveTag,
     handleGenerateBrief,

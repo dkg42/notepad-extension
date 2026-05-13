@@ -359,7 +359,7 @@ export default function DashboardApp() {
           <div className="dashboard-app">
             <Sidebar />
             <div className="dashboard-app__content">
-              <main className="dashboard-app__main">{renderContent()}</main>
+              <main className={`dashboard-app__main${currentView === 'notebooks' || currentView === 'notebook-detail' ? ' dashboard-app__main--flush' : ''}`}>{renderContent()}</main>
             </div>
           </div>
 

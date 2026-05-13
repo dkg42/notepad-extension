@@ -2,7 +2,7 @@
  * @module index
  * @description Central type barrel for the extension — re-exports all domain types from their sub-modules and defines the core shared interfaces (Snippet, Folder, ChatMessage, ClipboardEntry, auth tokens, podcast structures, and NotebookLM records) that are consumed across content scripts, background, and the dashboard UI.
  * @dependencies @/types/dashboard, @/types/import, @/types/chat-history, @/types/pipeline
- * @public Folder, TagMeta, Snippet, ClipboardEntry, ChatMessage, UNCATEGORIZED_ID, SourceRecord, SourceDetailRecord, ArtifactRecord, NoteRecord, NoteDetailRecord, NotebookCollection, NotebookAnnotation, EpisodeTrackSource, EpisodeTrack, PodcastEpisode, CustomAudioEntry, StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, StsTokenManager, FirebaseUserData, FirebaseTokenResponse, OAuthCredentialPayload, GoogleTokenRefreshResponse, NotebookMeta
+ * @public Folder, TagMeta, Snippet, ClipboardEntry, ChatMessage, UNCATEGORIZED_ID, SourceRecord, SourceDetailRecord, ArtifactRecord, NoteRecord, NoteDetailRecord, NotebookAnnotation, EpisodeTrackSource, EpisodeTrack, PodcastEpisode, CustomAudioEntry, StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, StsTokenManager, FirebaseUserData, FirebaseTokenResponse, OAuthCredentialPayload, GoogleTokenRefreshResponse, NotebookMeta
  */
 export * from './dashboard';
 export * from './import';
@@ -101,19 +101,11 @@ export interface NoteRecord {
   content: string;
 }
 
-/** A user-defined collection for grouping notebooks. */
-export interface NotebookCollection {
-  id: string;
-  name: string;
-  color?: string;
-  createdAt: number;
-}
-
-/** User annotations for a single notebook: tags and optional collection assignment. Stored separately from NotebookMeta so API syncs never clobber user data. */
+/** User annotations for a single notebook: tags, optional folder assignment, and archived flag. Stored separately from NotebookMeta so API syncs never clobber user data. */
 export interface NotebookAnnotation {
   notebookId: string;
   tags: string[];
-  collectionId?: string;
+  folderId?: string;
   /** Set by the 'archive-notebook' pipeline action. Hides the notebook from the default notebooks view. */
   archived?: boolean;
 }

@@ -5,14 +5,14 @@
  * @public usePipelinesPage
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { NotebookCollection, Pipeline, PipelineRun } from '@/types';
+import type { Folder, Pipeline, PipelineRun } from '@/types';
 import { PIPELINE_TEMPLATES } from '@/services/pipeline-templates';
-import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { notebookFolderService } from '@/services/notebook-folder-service';
 
 export function usePipelinesPage() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [runs, setRuns] = useState<PipelineRun[]>([]);
-  const [collections, setCollections] = useState<NotebookCollection[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
@@ -24,14 +24,14 @@ export function usePipelinesPage() {
   const loadAll = useCallback(async () => {
     setError(null);
     try {
-      const [pipelinesRes, runsRes, loadedCollections] = await Promise.all([
+      const [pipelinesRes, runsRes, loadedFolders] = await Promise.all([
         chrome.runtime.sendMessage({ type: 'GET_PIPELINES' }) as Promise<{
           ok: boolean; pipelines?: Pipeline[]; error?: string;
         }>,
         chrome.runtime.sendMessage({ type: 'GET_PIPELINE_RUNS' }) as Promise<{
           ok: boolean; runs?: PipelineRun[]; error?: string;
         }>,
-        notebookAnnotationService.getAllCollections(),
+        notebookFolderService.getFolders(),
       ]);
 
       if (pipelinesRes.ok) setPipelines(pipelinesRes.pipelines ?? []);
@@ -39,7 +39,7 @@ export function usePipelinesPage() {
 
       if (runsRes.ok) setRuns(runsRes.runs ?? []);
 
-      setCollections(loadedCollections);
+      setFolders(loadedFolders);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -135,7 +135,7 @@ export function usePipelinesPage() {
   return {
     pipelines,
     runs: runs.slice(0, 20), // Show last 20 runs
-    collections,
+    folders,
     templates: PIPELINE_TEMPLATES,
     isLoading,
     error,

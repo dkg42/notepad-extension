@@ -65,7 +65,7 @@ authStorageService.onClaimsChanged((claims) => {
   _driveEnabled = claims?.subscriptionStatus === 'active' &&
     (claims.subscriptionPlan === 'pro_monthly' || claims.subscriptionPlan === 'pro_yearly');
 });
-import type { Snippet, Folder, TagMeta, NotebookAnnotation, NotebookCollection, PodcastEpisode } from '@/types';
+import type { Snippet, Folder, TagMeta, NotebookAnnotation, PodcastEpisode } from '@/types';
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 import type { Pipeline, PipelineRun } from '@/types/pipeline';
 import type { DomainRouterRule } from '@/types/import';
@@ -313,24 +313,24 @@ export async function appendExportRecord(record: ExportRecord, token: string): P
 
 // ── Notebook annotations ───────────────────────────────────────────────────────
 
-export async function getAnnotations(token: string): Promise<{ annotations: NotebookAnnotation[]; collections: NotebookCollection[] }> {
+export async function getAnnotations(token: string): Promise<{ annotations: NotebookAnnotation[]; folders: Folder[] }> {
   const cached = await cacheGet<DriveNotebookAnnotationsFile>(CacheKeys.annotations);
-  if (cached) return { annotations: cached.annotations, collections: cached.collections };
+  if (cached) return { annotations: cached.annotations, folders: cached.folders ?? [] };
 
   const file = await readJsonFromDrive<DriveNotebookAnnotationsFile>('notebook-annotations.json', CacheKeys.annotations, token);
-  return { annotations: file?.annotations ?? [], collections: file?.collections ?? [] };
+  return { annotations: file?.annotations ?? [], folders: file?.folders ?? [] };
 }
 
 export function saveAnnotations(
   annotations: NotebookAnnotation[],
-  collections: NotebookCollection[],
+  folders: Folder[],
   token: string,
 ): void {
   const file: DriveNotebookAnnotationsFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     annotations,
-    collections,
+    folders,
   };
   writeJson('notebook-annotations.json', CacheKeys.annotations, file, token);
 }
@@ -483,7 +483,7 @@ export async function writeAllFromLocal(data: {
   settings: DashboardSettings;
   exportHistory: ExportRecord[];
   annotations: NotebookAnnotation[];
-  collections: NotebookCollection[];
+  notebookFolders: Folder[];
   pipelines: Pipeline[];
   pipelineRuns: PipelineRun[];
   podcastEpisodes: PodcastEpisode[];
@@ -513,7 +513,7 @@ export async function writeAllFromLocal(data: {
   };
   writeHistoryData(historyFile, token);
 
-  saveAnnotations(data.annotations, data.collections, token);
+  saveAnnotations(data.annotations, data.notebookFolders, token);
   savePipelines(data.pipelines, token);
   saveChatConversationsMeta(data.conversations, data.chatSyncMeta, token);
 }

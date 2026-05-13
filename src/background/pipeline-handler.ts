@@ -9,6 +9,7 @@ import { pipelineService } from '@/services/pipeline-service';
 import { evaluateAndRun } from '@/services/pipeline-executor';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { notebookFolderService } from '@/services/notebook-folder-service';
 import { authStorageService } from '@/services/auth-storage-service';
 import { fetchSourceCounts, listArtifacts } from '@/services/notebooklm-api';
 import { ensureSignedIn, isProUser } from './shared';
@@ -39,11 +40,11 @@ export async function runPipelineCheck(): Promise<void> {
     const pollable = pipelines.filter((p) => p.enabled && needsPolling(p));
     if (pollable.length === 0) return;
 
-    const [notebooks, annotations, collections, sourceBaseline, artifactBaseline] =
+    const [notebooks, annotations, folders, sourceBaseline, artifactBaseline] =
       await Promise.all([
         notebookSyncService.getAll(),
         notebookAnnotationService.getAllAnnotations(),
-        notebookAnnotationService.getAllCollections(),
+        notebookFolderService.getFolders(),
         pipelineService.getSourceBaseline(),
         pipelineService.getArtifactBaseline(),
       ]);
@@ -72,7 +73,7 @@ export async function runPipelineCheck(): Promise<void> {
     const runs = await evaluateAndRun(pollable, {
       notebooks,
       annotations,
-      collections,
+      folders,
       sourceCounts,
       sourceBaseline,
       artifactIds,
@@ -113,13 +114,13 @@ export async function runPipelineAnnotationTriggers(
     const eventDriven = pipelines.filter(
       (p) =>
         p.enabled &&
-        ['notebook-tag-added', 'moved-to-collection', 'title-contains'].includes(p.trigger.type),
+        ['notebook-tag-added', 'moved-to-folder', 'title-contains'].includes(p.trigger.type),
     );
     if (eventDriven.length === 0) return;
 
-    const [notebooks, collections] = await Promise.all([
+    const [notebooks, folders] = await Promise.all([
       notebookSyncService.getAll(),
-      notebookAnnotationService.getAllCollections(),
+      notebookFolderService.getFolders(),
     ]);
 
     // Find annotations that changed
@@ -141,7 +142,7 @@ export async function runPipelineAnnotationTriggers(
       const runs = await evaluateAndRun(eventDriven, {
         notebooks,
         annotations: newAnnotations,
-        collections,
+        folders,
         changedNotebookId: current.notebookId,
         changedAnnotation: current,
         previousAnnotation: previous,
@@ -158,7 +159,7 @@ export async function runPipelineAnnotationTriggers(
       const runs = await evaluateAndRun(titlePipelines, {
         notebooks,
         annotations: newAnnotations,
-        collections,
+        folders,
       });
       for (const run of runs) {
         await pipelineService.appendRun(run);
@@ -241,15 +242,15 @@ export function handlePipelineMessage(
       const allowed = await usageLimitService.canUse('pipeline_run', pro);
       if (!allowed) return { ok: false, reason: 'daily_limit' };
 
-      const [notebooks, annotations, collections] = await Promise.all([
+      const [notebooks, annotations, folders] = await Promise.all([
         notebookSyncService.getAll(),
         notebookAnnotationService.getAllAnnotations(),
-        notebookAnnotationService.getAllCollections(),
+        notebookFolderService.getFolders(),
       ]);
       const runs = await evaluateAndRun([pipeline], {
         notebooks,
         annotations,
-        collections,
+        folders,
       });
       for (const run of runs) {
         await pipelineService.appendRun(run);

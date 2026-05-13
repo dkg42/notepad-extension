@@ -30,7 +30,6 @@ import type {
   Folder,
   TagMeta,
   NotebookAnnotation,
-  NotebookCollection,
   PodcastEpisode,
   EpisodeTrack,
   EpisodeTrackSource,
@@ -173,7 +172,8 @@ export interface DriveHistoryDataFile extends DriveFileEnvelope {
 
 export interface DriveNotebookAnnotationsFile extends DriveFileEnvelope {
   annotations: NotebookAnnotation[];
-  collections: NotebookCollection[];
+  /** Notebook folders (nested tree). Replaces legacy flat `collections` field. */
+  folders: Folder[];
 }
 
 // ── pipelines.json ────────────────────────────────────────────────────────────

@@ -36,6 +36,13 @@ body {
   padding: 28px 32px;
 }
 
+.dashboard-app__main--flush {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .dashboard-app__loading {
   display: flex;
   align-items: center;

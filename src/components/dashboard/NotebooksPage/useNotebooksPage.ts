@@ -1,15 +1,17 @@
 /**
  * @module useNotebooksPage
- * @description Hook for the Notebooks dashboard page managing notebook list, annotations, collections, row selection, and CRUD operations. Listens to chrome.storage.sync for live updates and auto-fetches source counts after the initial load.
- * @dependencies @/types, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/export/source-export-registry
- * @public useNotebooksPage, UNCOLLECTED_FILTER_ID
+ * @description Hook for the Notebooks dashboard page managing notebook list, annotations, folders, row selection, and CRUD operations. Listens to chrome.storage.sync for live updates and auto-fetches source counts after the initial load.
+ * @dependencies @/types, @/services/notebook-sync-service, @/services/notebook-annotation-service, @/services/notebook-folder-service, @/export/source-export-registry, @/utils/folder-utils
+ * @public useNotebooksPage, UNFILED_FILTER_ID
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { NotebookAnnotation, NotebookCollection, NotebookMeta, SourceRecord } from '@/types';
+import type { Folder, NotebookAnnotation, NotebookMeta, SourceRecord } from '@/types';
 import { notebookSyncService, type SyncMeta } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { notebookFolderService } from '@/services/notebook-folder-service';
 import { sourceCountCacheService, type SourceCountsCache } from '@/services/source-count-cache-service';
 import { sourceExportStrategies } from '@/export/source-export-registry';
+import { getFolderSubtreeIds } from '@/utils/folder-utils';
 
 interface DeleteResult {
   ok: boolean;
@@ -23,8 +25,8 @@ interface FetchSourcesResult {
   error?: string;
 }
 
-/** Sentinel used in activeCollectionId to show notebooks with no collection. */
-export const UNCOLLECTED_FILTER_ID = '__uncollected__';
+/** Sentinel used in activeFolderId to show notebooks with no folder assigned. */
+export const UNFILED_FILTER_ID = '__unfiled__';
 
 export function useNotebooksPage() {
   const [notebooks, setNotebooks] = useState<NotebookMeta[]>([]);
@@ -32,8 +34,8 @@ export function useNotebooksPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMeta, setSyncMeta] = useState<SyncMeta | null>(null);
   const [annotations, setAnnotations] = useState<NotebookAnnotation[]>([]);
-  const [collections, setCollections] = useState<NotebookCollection[]>([]);
-  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -49,14 +51,14 @@ export function useNotebooksPage() {
       notebookSyncService.getAll(),
       notebookSyncService.getSyncMeta(),
       notebookAnnotationService.getAllAnnotations(),
-      notebookAnnotationService.getAllCollections(),
+      notebookFolderService.getFolders(),
       sourceCountCacheService.get(),
     ])
-      .then(([loaded, meta, loadedAnnotations, loadedCollections, cachedCounts]) => {
+      .then(([loaded, meta, loadedAnnotations, loadedFolders, cachedCounts]) => {
         setNotebooks(loaded);
         setSyncMeta(meta);
         setAnnotations(loadedAnnotations);
-        setCollections(loadedCollections);
+        setFolders(loadedFolders);
         if (cachedCounts) {
           setSourceCounts(cachedCounts.counts);
           setHasFreshCache(!cachedCounts.isStale);
@@ -80,8 +82,8 @@ export function useNotebooksPage() {
       if ('notebookAnnotations' in changes) {
         setAnnotations((changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? []);
       }
-      if ('notebookCollections' in changes) {
-        setCollections((changes.notebookCollections.newValue as NotebookCollection[]) ?? []);
+      if ('notebookFolders' in changes) {
+        setFolders((changes.notebookFolders.newValue as Folder[]) ?? []);
       }
     };
     chrome.storage.sync.onChanged.addListener(listener);
@@ -89,7 +91,6 @@ export function useNotebooksPage() {
   }, []);
 
   // ── Auto-fetch source counts once notebooks are loaded ────────────────────
-  // Skipped when a fresh cache was loaded on mount; only runs if cache is absent or stale.
 
   const hasFetchedCounts = useRef(false);
 
@@ -135,13 +136,30 @@ export function useNotebooksPage() {
     [annotations],
   );
 
-  const filteredNotebooks = useMemo(() => {
-    if (activeCollectionId === null) return notebooks;
-    if (activeCollectionId === UNCOLLECTED_FILTER_ID) {
-      return notebooks.filter((n) => !getAnnotation(n.id).collectionId);
+  const notebookCountByFolder = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const folder of folders) {
+      const subtree = getFolderSubtreeIds(folder.id, folders);
+      const count = notebooks.filter((n) => {
+        const fid = getAnnotation(n.id).folderId;
+        return fid !== undefined && subtree.has(fid);
+      }).length;
+      map.set(folder.id, count);
     }
-    return notebooks.filter((n) => getAnnotation(n.id).collectionId === activeCollectionId);
-  }, [notebooks, annotations, activeCollectionId, getAnnotation]);
+    return map;
+  }, [notebooks, annotations, folders, getAnnotation]);
+
+  const filteredNotebooks = useMemo(() => {
+    if (activeFolderId === null) return notebooks;
+    if (activeFolderId === UNFILED_FILTER_ID) {
+      return notebooks.filter((n) => !getAnnotation(n.id).folderId);
+    }
+    const subtree = getFolderSubtreeIds(activeFolderId, folders);
+    return notebooks.filter((n) => {
+      const fid = getAnnotation(n.id).folderId;
+      return fid !== undefined && subtree.has(fid);
+    });
+  }, [notebooks, annotations, activeFolderId, folders, getAnnotation]);
 
   // ── Notebook handlers ───────────────────────────────────────────────────────
 
@@ -168,8 +186,6 @@ export function useNotebooksPage() {
         return false;
       }
 
-      // Background already removed the notebook from notebooksMeta storage;
-      // clean up the local annotation as well.
       await notebookAnnotationService.removeAnnotation(id);
       setNotebooks((prev) => prev.filter((n) => n.id !== id));
       setAnnotations((prev) => prev.filter((a) => a.notebookId !== id));
@@ -213,42 +229,67 @@ export function useNotebooksPage() {
     [getAnnotation],
   );
 
-  // ── Collection handlers ─────────────────────────────────────────────────────
+  // ── Folder handlers ─────────────────────────────────────────────────────────
 
-  const handleCreateCollection = useCallback(
-    async (name: string): Promise<string> => {
-      const collection: NotebookCollection = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        createdAt: Date.now(),
-      };
-      await notebookAnnotationService.upsertCollection(collection);
-      setCollections((prev) => [...prev, collection]);
-      return collection.id;
+  const handleCreateFolder = useCallback(
+    async (name: string, parentId?: string): Promise<string> => {
+      const folder = await notebookFolderService.createFolder(name, parentId);
+      setFolders((prev) => [...prev, folder]);
+      return folder.id;
     },
     [],
   );
 
-  const handleDeleteCollection = useCallback(
-    async (collectionId: string) => {
-      await notebookAnnotationService.removeCollection(collectionId);
-      setCollections((prev) => prev.filter((c) => c.id !== collectionId));
-      setAnnotations((prev) =>
-        prev.map((a) =>
-          a.collectionId === collectionId ? { ...a, collectionId: undefined } : a,
-        ),
-      );
-      if (activeCollectionId === collectionId) {
-        setActiveCollectionId(null);
-      }
+  const handleRenameFolder = useCallback(
+    async (id: string, name: string) => {
+      await notebookFolderService.renameFolder(id, name);
+      setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
     },
-    [activeCollectionId],
+    [],
   );
 
-  const handleAssignCollection = useCallback(
-    async (notebookId: string, collectionId: string | undefined) => {
+  const handleDeleteFolder = useCallback(
+    async (id: string) => {
+      const subtree = getFolderSubtreeIds(id, folders);
+      await notebookFolderService.deleteFolder(id);
+      setFolders((prev) => prev.filter((f) => !subtree.has(f.id)));
+      setAnnotations((prev) =>
+        prev.map((a) =>
+          a.folderId && subtree.has(a.folderId) ? { ...a, folderId: undefined } : a,
+        ),
+      );
+      if (activeFolderId && subtree.has(activeFolderId)) {
+        setActiveFolderId(null);
+      }
+    },
+    [folders, activeFolderId],
+  );
+
+  const handleMoveFolder = useCallback(
+    async (id: string, newParentId: string | undefined) => {
+      await notebookFolderService.moveFolder(id, newParentId);
+      setFolders((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, parentId: newParentId } : f)),
+      );
+    },
+    [],
+  );
+
+  const handleFolderReorder = useCallback(
+    async (updates: Array<{ id: string; sortOrder: number }>) => {
+      await notebookFolderService.bulkUpdateFolderSortOrders(updates);
+      const orderMap = new Map(updates.map((u) => [u.id, u.sortOrder]));
+      setFolders((prev) =>
+        prev.map((f) => (orderMap.has(f.id) ? { ...f, sortOrder: orderMap.get(f.id)! } : f)),
+      );
+    },
+    [],
+  );
+
+  const handleAssignFolder = useCallback(
+    async (notebookId: string, folderId: string | undefined) => {
       const annotation = getAnnotation(notebookId);
-      const updated = { ...annotation, collectionId };
+      const updated = { ...annotation, folderId };
       await notebookAnnotationService.setAnnotation(updated);
       setAnnotations((prev) => {
         const idx = prev.findIndex((a) => a.notebookId === notebookId);
@@ -258,6 +299,30 @@ export function useNotebooksPage() {
       });
     },
     [getAnnotation],
+  );
+
+  const handleBulkAssignFolder = useCallback(
+    async (ids: string[], folderId: string | undefined) => {
+      await Promise.all(
+        ids.map((notebookId) => {
+          const annotation = annotations.find((a) => a.notebookId === notebookId) ?? { notebookId, tags: [] };
+          return notebookAnnotationService.setAnnotation({ ...annotation, folderId });
+        }),
+      );
+      setAnnotations((prev) => {
+        const idSet = new Set(ids);
+        const updated = prev.map((a) =>
+          idSet.has(a.notebookId) ? { ...a, folderId } : a,
+        );
+        const existing = new Set(updated.map((a) => a.notebookId));
+        const fresh = ids
+          .filter((id) => !existing.has(id))
+          .map((notebookId) => ({ notebookId, tags: [], folderId }));
+        return [...updated, ...fresh];
+      });
+      setSelectedIds(new Set());
+    },
+    [annotations],
   );
 
   // ── Selection helpers ───────────────────────────────────────────────────────
@@ -282,31 +347,6 @@ export function useNotebooksPage() {
   );
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-
-  const handleBulkAssignCollection = useCallback(
-    async (ids: string[], collectionId: string | undefined) => {
-      await Promise.all(
-        ids.map((notebookId) => {
-          const annotation = annotations.find((a) => a.notebookId === notebookId) ?? { notebookId, tags: [] };
-          return notebookAnnotationService.setAnnotation({ ...annotation, collectionId });
-        }),
-      );
-      setAnnotations((prev) => {
-        const idSet = new Set(ids);
-        const updated = prev.map((a) =>
-          idSet.has(a.notebookId) ? { ...a, collectionId } : a,
-        );
-        // Add annotations for notebooks that didn't have one yet
-        const existing = new Set(updated.map((a) => a.notebookId));
-        const fresh = ids
-          .filter((id) => !existing.has(id))
-          .map((notebookId) => ({ notebookId, tags: [], collectionId }));
-        return [...updated, ...fresh];
-      });
-      setSelectedIds(new Set());
-    },
-    [annotations],
-  );
 
   const handleExportSources = useCallback(
     async (notebookId: string, notebookTitle: string, strategyType: string) => {
@@ -343,6 +383,7 @@ export function useNotebooksPage() {
   return {
     notebooks,
     filteredNotebooks,
+    notebookCountByFolder,
     isLoading,
     isSyncing,
     lastSyncedAt: syncMeta?.lastSyncedAt ?? null,
@@ -356,9 +397,9 @@ export function useNotebooksPage() {
     setSourceExportError,
     handleExportSources,
     annotations,
-    collections,
-    activeCollectionId,
-    setActiveCollectionId,
+    folders,
+    activeFolderId,
+    setActiveFolderId,
     selectedIds,
     toggleSelectNotebook,
     toggleSelectAll,
@@ -368,9 +409,12 @@ export function useNotebooksPage() {
     handleDelete,
     handleAddTag,
     handleRemoveTag,
-    handleCreateCollection,
-    handleDeleteCollection,
-    handleAssignCollection,
-    handleBulkAssignCollection,
+    handleCreateFolder,
+    handleRenameFolder,
+    handleDeleteFolder,
+    handleMoveFolder,
+    handleFolderReorder,
+    handleAssignFolder,
+    handleBulkAssignFolder,
   };
 }

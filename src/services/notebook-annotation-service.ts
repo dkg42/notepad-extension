@@ -1,15 +1,15 @@
 /**
  * @module notebook-annotation-service
- * @description Persists user-defined notebook annotations (tags, collection assignments, archived flag) and named collections in chrome.storage.sync. Kept intentionally separate from notebookSyncService so that periodic background API syncs which overwrite NotebookMeta can never clobber user-authored metadata. Each mutation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
+ * @description Persists user-defined notebook annotations (tags, folder assignments, archived flag) in chrome.storage.sync. Kept intentionally separate from notebookSyncService so that periodic background API syncs which overwrite NotebookMeta can never clobber user-authored metadata. Each mutation also fires a best-effort Drive sync tail-call if the user has granted Drive scope.
  * @dependencies token-lifecycle-service, drive/drive-sync-service
  * @public notebookAnnotationService
  */
-import type { NotebookAnnotation, NotebookCollection } from '@/types';
+import type { NotebookAnnotation } from '@/types';
+import { notebookFolderService } from './notebook-folder-service';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
 const ANNOTATIONS_KEY = 'notebookAnnotations';
-const COLLECTIONS_KEY = 'notebookCollections';
 
 async function getDriveToken(): Promise<string | null> {
   const result = await getValidToken();
@@ -21,16 +21,7 @@ function syncToDrive(callback: (token: string) => void | Promise<void>): void {
   void getDriveToken().then((t) => { if (t) void callback(t); });
 }
 
-/**
- * Service for persisting user-defined notebook annotations (tags, collection
- * assignments) and collections in chrome.storage.sync.
- *
- * Kept separate from notebookSyncService so that background API syncs
- * (which overwrite NotebookMeta) never clobber user-authored data.
- */
 export const notebookAnnotationService = {
-  // ── Annotations ────────────────────────────────────────────────────────────
-
   async getAllAnnotations(): Promise<NotebookAnnotation[]> {
     const result = await chrome.storage.sync.get(ANNOTATIONS_KEY);
     return (result[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
@@ -46,8 +37,8 @@ export const notebookAnnotationService = {
     }
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: all });
     syncToDrive(async (t) => {
-      const collections = await this.getAllCollections();
-      driveSyncService.saveAnnotations(all, collections, t);
+      const folders = await notebookFolderService.getFolders();
+      driveSyncService.saveAnnotations(all, folders, t);
     });
   },
 
@@ -56,54 +47,12 @@ export const notebookAnnotationService = {
     const filtered = all.filter((a) => a.notebookId !== notebookId);
     await chrome.storage.sync.set({ [ANNOTATIONS_KEY]: filtered });
     syncToDrive(async (t) => {
-      const collections = await this.getAllCollections();
-      driveSyncService.saveAnnotations(filtered, collections, t);
+      const folders = await notebookFolderService.getFolders();
+      driveSyncService.saveAnnotations(filtered, folders, t);
     });
-  },
-
-  // ── Collections ─────────────────────────────────────────────────────────────
-
-  async getAllCollections(): Promise<NotebookCollection[]> {
-    const result = await chrome.storage.sync.get(COLLECTIONS_KEY);
-    return (result[COLLECTIONS_KEY] as NotebookCollection[]) ?? [];
-  },
-
-  async upsertCollection(collection: NotebookCollection): Promise<void> {
-    const all = await this.getAllCollections();
-    const idx = all.findIndex((c) => c.id === collection.id);
-    if (idx >= 0) {
-      all[idx] = collection;
-    } else {
-      all.push(collection);
-    }
-    await chrome.storage.sync.set({ [COLLECTIONS_KEY]: all });
-    syncToDrive(async (t) => {
-      const annotations = await this.getAllAnnotations();
-      driveSyncService.saveAnnotations(annotations, all, t);
-    });
-  },
-
-  /**
-   * Removes a collection and unassigns any notebooks that belonged to it.
-   * Both writes are batched into a single chrome.storage.sync.set call.
-   */
-  async removeCollection(collectionId: string): Promise<void> {
-    const [collections, annotations] = await Promise.all([
-      this.getAllCollections(),
-      this.getAllAnnotations(),
-    ]);
-    const updatedCollections = collections.filter((c) => c.id !== collectionId);
-    const updatedAnnotations = annotations.map((a) =>
-      a.collectionId === collectionId ? { ...a, collectionId: undefined } : a,
-    );
-    await chrome.storage.sync.set({
-      [COLLECTIONS_KEY]: updatedCollections,
-      [ANNOTATIONS_KEY]: updatedAnnotations,
-    });
-    syncToDrive((t) => driveSyncService.saveAnnotations(updatedAnnotations, updatedCollections, t));
   },
 
   async clearAllData(): Promise<void> {
-    await chrome.storage.sync.remove([ANNOTATIONS_KEY, COLLECTIONS_KEY]);
+    await chrome.storage.sync.remove([ANNOTATIONS_KEY]);
   },
 };

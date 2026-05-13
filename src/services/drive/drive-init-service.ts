@@ -56,6 +56,7 @@ import { snippetTextFilename } from './types/drive-schemas';
 import type { DriveFilename, DriveSnippetMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { notebookFolderService } from '@/services/notebook-folder-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { domainRouterService } from '@/services/domain-router-service';
@@ -303,7 +304,7 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     settings,
     exportHistory,
     annotations,
-    collections,
+    notebookFolders,
     pipelines,
     pipelineRuns,
     podcastEpisodes,
@@ -317,7 +318,7 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     storageService.getSettings(),
     storageService.getExportHistory(),
     notebookAnnotationService.getAllAnnotations(),
-    notebookAnnotationService.getAllCollections(),
+    notebookFolderService.getFolders(),
     pipelineService.getAll(),
     pipelineService.getRuns(),
     storageService.getPodcastEpisodes(),
@@ -333,7 +334,7 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     settings,
     exportHistory,
     annotations,
-    collections,
+    notebookFolders,
     pipelines,
     pipelineRuns,
     podcastEpisodes,
@@ -538,8 +539,8 @@ async function applyDriveData(
     }
     case 'notebook-annotations.json': {
       const annotations = (driveFile.annotations as unknown[]) ?? [];
-      const collections = (driveFile.collections as unknown[]) ?? [];
-      await chrome.storage.sync.set({ notebookAnnotations: annotations, notebookCollections: collections });
+      const notebookFolders = (driveFile.folders as unknown[]) ?? [];
+      await chrome.storage.sync.set({ notebookAnnotations: annotations, notebookFolders });
       break;
     }
     case 'pipelines.json': {
@@ -589,8 +590,8 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
     }
     case 'notebook-annotations.json': {
       const annotations = await notebookAnnotationService.getAllAnnotations();
-      const collections = await notebookAnnotationService.getAllCollections();
-      driveSyncService.saveAnnotations(annotations, collections, token);
+      const notebookFolders = await notebookFolderService.getFolders();
+      driveSyncService.saveAnnotations(annotations, notebookFolders, token);
       break;
     }
     case 'pipelines.json': {

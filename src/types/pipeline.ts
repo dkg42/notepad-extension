@@ -8,7 +8,7 @@
 
 export type TriggerType =
   | 'notebook-tag-added'
-  | 'moved-to-collection'
+  | 'moved-to-folder'
   | 'title-contains'
   | 'source-added'
   | 'audio-generated'
@@ -16,7 +16,7 @@ export type TriggerType =
 
 export type PipelineTrigger =
   | { type: 'notebook-tag-added'; tag: string }
-  | { type: 'moved-to-collection'; collectionId: string }
+  | { type: 'moved-to-folder'; folderId: string }
   | { type: 'title-contains'; substring: string }
   | { type: 'source-added' }
   | { type: 'audio-generated' }
@@ -25,7 +25,7 @@ export type PipelineTrigger =
 // ── Action types ───────────────────────────────────────────────────────────────
 
 export type ActionType =
-  | 'move-to-collection'
+  | 'move-to-folder'
   | 'add-tag'
   | 'remove-tag'
   | 'generate-audio'
@@ -34,7 +34,7 @@ export type ActionType =
   | 'archive-notebook';
 
 export type PipelineAction =
-  | { type: 'move-to-collection'; collectionId: string }
+  | { type: 'move-to-folder'; folderId: string }
   | { type: 'add-tag'; tag: string }
   | { type: 'remove-tag'; tag: string }
   | { type: 'generate-audio'; format?: number; language?: string; length?: number; focus?: string }
@@ -47,7 +47,7 @@ export type PipelineAction =
 /** Narrows which notebooks a pipeline applies to. */
 export type PipelineScope =
   | { kind: 'all' }
-  | { kind: 'collection'; collectionId: string }
+  | { kind: 'folder'; folderId: string }
   | { kind: 'notebook'; notebookId: string };
 
 // ── Pipeline record ────────────────────────────────────────────────────────────

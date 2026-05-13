@@ -32,12 +32,12 @@ export const PIPELINE_TEMPLATES: Pipeline[] = [
     id: 'template-escalator',
     name: 'The Escalator',
     description:
-      'When the "ready" tag is added to a notebook, removes the "draft" tag and moves it to the "Published" collection.',
+      'When the "ready" tag is added to a notebook, removes the "draft" tag and moves it to the "Published" folder.',
     enabled: false,
     trigger: { type: 'notebook-tag-added', tag: 'ready' },
     actions: [
       { type: 'remove-tag', tag: 'draft' },
-      { type: 'move-to-collection', collectionId: '' }, // user fills in collectionId
+      { type: 'move-to-folder', folderId: '' }, // user fills in folderId
     ],
     scope: { kind: 'all' },
     createdAt: 0,
@@ -48,11 +48,11 @@ export const PIPELINE_TEMPLATES: Pipeline[] = [
     id: 'template-podcast-pipeline',
     name: 'Podcast Pipeline',
     description:
-      'When audio is generated for a notebook, moves it to the "Podcast Ready" collection and tags it with "podcast".',
+      'When audio is generated for a notebook, moves it to the "Podcast Ready" folder and tags it with "podcast".',
     enabled: false,
     trigger: { type: 'audio-generated' },
     actions: [
-      { type: 'move-to-collection', collectionId: '' }, // user fills in collectionId
+      { type: 'move-to-folder', folderId: '' }, // user fills in folderId
       { type: 'add-tag', tag: 'podcast' },
     ],
     scope: { kind: 'all' },
@@ -64,10 +64,10 @@ export const PIPELINE_TEMPLATES: Pipeline[] = [
     id: 'template-smart-sort',
     name: 'Smart Sort',
     description:
-      'When a notebook is moved to a collection, automatically tags it with the collection name for easy cross-view filtering.',
+      'When a notebook is moved to a folder, automatically tags it with the folder name for easy cross-view filtering.',
     enabled: false,
-    trigger: { type: 'moved-to-collection', collectionId: '' }, // user fills in collectionId
-    actions: [{ type: 'add-tag', tag: '' }], // user fills in tag to match collection name
+    trigger: { type: 'moved-to-folder', folderId: '' }, // user fills in folderId
+    actions: [{ type: 'add-tag', tag: '' }], // user fills in tag to match folder name
     scope: { kind: 'all' },
     createdAt: 0,
     updatedAt: 0,
@@ -90,9 +90,9 @@ export const PIPELINE_TEMPLATES: Pipeline[] = [
     id: 'template-template-engine',
     name: 'Template Engine',
     description:
-      'When a notebook is moved to a specific collection, automatically adds a starter source URL (e.g. a research template).',
+      'When a notebook is moved to a specific folder, automatically adds a starter source URL (e.g. a research template).',
     enabled: false,
-    trigger: { type: 'moved-to-collection', collectionId: '' }, // user fills in collectionId
+    trigger: { type: 'moved-to-folder', folderId: '' }, // user fills in folderId
     actions: [{ type: 'add-source-url', url: '' }], // user fills in template URL
     scope: { kind: 'all' },
     createdAt: 0,

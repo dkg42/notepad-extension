@@ -13,7 +13,7 @@ export default defineConfig({
       open_in_tab: true,
     },
     content_security_policy: {
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://notebooklm.google.com https://accounts.google.com https://oauth2.googleapis.com https://*.cloudfunctions.net https://localhost:3000;",
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://notebooklm.google.com https://accounts.google.com https://oauth2.googleapis.com https://*.cloudfunctions.net https://localhost:3000 https://lh3.googleusercontent.com https://lh3.google.com https://*.usercontent.google.com;",
     },
     background: {
       service_worker: "background.js"

@@ -5,8 +5,8 @@
  * @public evaluateAndRun, ExecutionContext
  */
 import type {
+  Folder,
   NotebookAnnotation,
-  NotebookCollection,
   NotebookMeta,
   Pipeline,
   PipelineAction,
@@ -26,7 +26,7 @@ import { notebookAnnotationService } from './notebook-annotation-service';
 export interface ExecutionContext {
   notebooks: NotebookMeta[];
   annotations: NotebookAnnotation[];
-  collections: NotebookCollection[];
+  folders: Folder[];
   /** Source count per notebookId from the most recent API poll. */
   sourceCounts?: Record<string, number>;
   /** Source count per notebookId from the previous poll (baseline). */
@@ -61,13 +61,13 @@ function notebooksInScope(pipeline: Pipeline, ctx: ExecutionContext): NotebookMe
       return ctx.notebooks;
     case 'notebook':
       return ctx.notebooks.filter((n) => n.id === scope.notebookId);
-    case 'collection': {
-      const inCollection = new Set(
+    case 'folder': {
+      const inFolder = new Set(
         ctx.annotations
-          .filter((a) => a.collectionId === scope.collectionId)
+          .filter((a) => a.folderId === scope.folderId)
           .map((a) => a.notebookId),
       );
-      return ctx.notebooks.filter((n) => inCollection.has(n.id));
+      return ctx.notebooks.filter((n) => inFolder.has(n.id));
     }
   }
 }
@@ -106,13 +106,13 @@ function evaluateTrigger(
       return !hadTag && hasTag ? [ctx.changedNotebookId] : [];
     }
 
-    case 'moved-to-collection': {
+    case 'moved-to-folder': {
       if (!ctx.changedAnnotation || !ctx.changedNotebookId) return [];
       const inScope = candidates.some((n) => n.id === ctx.changedNotebookId);
       if (!inScope) return [];
-      const wasInCollection = ctx.previousAnnotation?.collectionId === trigger.collectionId;
-      const isInCollection = ctx.changedAnnotation.collectionId === trigger.collectionId;
-      return !wasInCollection && isInCollection ? [ctx.changedNotebookId] : [];
+      const wasInFolder = ctx.previousAnnotation?.folderId === trigger.folderId;
+      const isInFolder = ctx.changedAnnotation.folderId === trigger.folderId;
+      return !wasInFolder && isInFolder ? [ctx.changedNotebookId] : [];
     }
 
     case 'title-contains': {
@@ -191,11 +191,11 @@ async function executeAction(
         break;
       }
 
-      case 'move-to-collection': {
+      case 'move-to-folder': {
         const ann = getAnnotation(notebookId, ctx);
         await notebookAnnotationService.setAnnotation({
           ...ann,
-          collectionId: action.collectionId,
+          folderId: action.folderId,
         });
         break;
       }

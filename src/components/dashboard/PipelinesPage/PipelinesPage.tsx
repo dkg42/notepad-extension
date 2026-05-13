@@ -22,7 +22,7 @@ function triggerSummary(pipeline: Pipeline): string {
   const { trigger } = pipeline;
   switch (trigger.type) {
     case 'notebook-tag-added': return `Tag "${trigger.tag}" added`;
-    case 'moved-to-collection': return 'Moved to collection';
+    case 'moved-to-folder': return 'Moved to folder';
     case 'title-contains': return `Title contains "${trigger.substring}"`;
     case 'source-added': return 'Source added';
     case 'audio-generated': return 'Audio generated';
@@ -40,7 +40,7 @@ export default function PipelinesPage() {
   const {
     pipelines,
     runs,
-    collections,
+    folders,
     templates,
     isLoading,
     error,
@@ -250,7 +250,7 @@ export default function PipelinesPage() {
       {isBuilderOpen && (
         <PipelineBuilder
           initial={selectedPipeline}
-          collections={collections}
+          folders={folders}
           onSave={(pipeline) => void handleSave(pipeline)}
           onClose={closeBuilder}
         />

@@ -7,7 +7,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type {
-  NotebookCollection,
+  Folder,
   Pipeline,
   PipelineAction,
   PipelineScope,
@@ -18,14 +18,14 @@ import type {
 
 interface PipelineBuilderProps {
   initial?: Pipeline | null;
-  collections: NotebookCollection[];
+  folders: Folder[];
   onSave: (pipeline: Pipeline) => void;
   onClose: () => void;
 }
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   'notebook-tag-added': 'Notebook tag added',
-  'moved-to-collection': 'Moved to collection',
+  'moved-to-folder': 'Moved to folder',
   'title-contains': 'Title contains text',
   'source-added': 'Source is added',
   'audio-generated': 'Audio is generated',
@@ -33,7 +33,7 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 };
 
 const ACTION_LABELS: Record<ActionType, string> = {
-  'move-to-collection': 'Move to collection',
+  'move-to-folder': 'Move to folder',
   'add-tag': 'Add tag',
   'remove-tag': 'Remove tag',
   'generate-audio': 'Generate audio',
@@ -52,7 +52,7 @@ const AUDIO_FORMAT_LABELS: Record<number, string> = {
 function makeTrigger(type: TriggerType): PipelineTrigger {
   switch (type) {
     case 'notebook-tag-added': return { type, tag: '' };
-    case 'moved-to-collection': return { type, collectionId: '' };
+    case 'moved-to-folder': return { type, folderId: '' };
     case 'title-contains': return { type, substring: '' };
     case 'source-added': return { type };
     case 'audio-generated': return { type };
@@ -62,7 +62,7 @@ function makeTrigger(type: TriggerType): PipelineTrigger {
 
 function makeAction(type: ActionType): PipelineAction {
   switch (type) {
-    case 'move-to-collection': return { type, collectionId: '' };
+    case 'move-to-folder': return { type, folderId: '' };
     case 'add-tag': return { type, tag: '' };
     case 'remove-tag': return { type, tag: '' };
     case 'generate-audio': return { type, format: 1 };
@@ -72,7 +72,7 @@ function makeAction(type: ActionType): PipelineAction {
   }
 }
 
-export default function PipelineBuilder({ initial, collections, onSave, onClose }: PipelineBuilderProps) {
+export default function PipelineBuilder({ initial, folders, onSave, onClose }: PipelineBuilderProps) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
@@ -161,15 +161,15 @@ export default function PipelineBuilder({ initial, collections, onSave, onClose 
         {/* Step content */}
         <div className="pipeline-builder__body">
           {step === 0 && (
-            <TriggerStep trigger={trigger} collections={collections} onTypeChange={handleTriggerTypeChange} onChange={setTrigger} />
+            <TriggerStep trigger={trigger} folders={folders} onTypeChange={handleTriggerTypeChange} onChange={setTrigger} />
           )}
           {step === 1 && (
-            <ScopeStep scope={scope} collections={collections} onChange={setScope} />
+            <ScopeStep scope={scope} folders={folders} onChange={setScope} />
           )}
           {step === 2 && (
             <ActionsStep
               actions={actions}
-              collections={collections}
+              folders={folders}
               onAdd={addAction}
               onRemove={removeAction}
               onUpdate={updateAction}
@@ -223,12 +223,12 @@ export default function PipelineBuilder({ initial, collections, onSave, onClose 
 
 function TriggerStep({
   trigger,
-  collections,
+  folders,
   onTypeChange,
   onChange,
 }: {
   trigger: PipelineTrigger;
-  collections: NotebookCollection[];
+  folders: Folder[];
   onTypeChange: (t: TriggerType) => void;
   onChange: (t: PipelineTrigger) => void;
 }) {
@@ -257,17 +257,17 @@ function TriggerStep({
         </div>
       )}
 
-      {trigger.type === 'moved-to-collection' && (
+      {trigger.type === 'moved-to-folder' && (
         <div className="pipeline-builder__field">
-          <label className="pipeline-builder__label">Target collection</label>
+          <label className="pipeline-builder__label">Target folder</label>
           <select
             className="pipeline-builder__select"
-            value={trigger.collectionId}
-            onChange={(e) => onChange({ ...trigger, collectionId: e.target.value })}
+            value={trigger.folderId}
+            onChange={(e) => onChange({ ...trigger, folderId: e.target.value })}
           >
-            <option value="">— Select collection —</option>
-            {collections.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            <option value="">— Select folder —</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </select>
         </div>
@@ -310,18 +310,18 @@ function TriggerStep({
 
 function ScopeStep({
   scope,
-  collections,
+  folders,
   onChange,
 }: {
   scope: PipelineScope;
-  collections: NotebookCollection[];
+  folders: Folder[];
   onChange: (s: PipelineScope) => void;
 }) {
   return (
     <div className="pipeline-builder__step-content">
       <label className="pipeline-builder__label">Apply to</label>
       <div className="pipeline-builder__radio-group">
-        {(['all', 'collection', 'notebook'] as const).map((kind) => (
+        {(['all', 'folder', 'notebook'] as const).map((kind) => (
           <label key={kind} className="pipeline-builder__radio">
             <input
               type="radio"
@@ -330,26 +330,26 @@ function ScopeStep({
               checked={scope.kind === kind}
               onChange={() => {
                 if (kind === 'all') onChange({ kind: 'all' });
-                else if (kind === 'collection') onChange({ kind: 'collection', collectionId: '' });
+                else if (kind === 'folder') onChange({ kind: 'folder', folderId: '' });
                 else onChange({ kind: 'notebook', notebookId: '' });
               }}
             />
-            {kind === 'all' ? 'All notebooks' : kind === 'collection' ? 'Specific collection' : 'Specific notebook ID'}
+            {kind === 'all' ? 'All notebooks' : kind === 'folder' ? 'Specific folder' : 'Specific notebook ID'}
           </label>
         ))}
       </div>
 
-      {scope.kind === 'collection' && (
+      {scope.kind === 'folder' && (
         <div className="pipeline-builder__field">
-          <label className="pipeline-builder__label">Collection</label>
+          <label className="pipeline-builder__label">Folder</label>
           <select
             className="pipeline-builder__select"
-            value={scope.collectionId}
-            onChange={(e) => onChange({ kind: 'collection', collectionId: e.target.value })}
+            value={scope.folderId}
+            onChange={(e) => onChange({ kind: 'folder', folderId: e.target.value })}
           >
-            <option value="">— Select collection —</option>
-            {collections.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            <option value="">— Select folder —</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </select>
         </div>
@@ -372,14 +372,14 @@ function ScopeStep({
 
 function ActionsStep({
   actions,
-  collections,
+  folders,
   onAdd,
   onRemove,
   onUpdate,
   onTypeChange,
 }: {
   actions: PipelineAction[];
-  collections: NotebookCollection[];
+  folders: Folder[];
   onAdd: () => void;
   onRemove: (idx: number) => void;
   onUpdate: (idx: number, action: PipelineAction) => void;
@@ -420,15 +420,15 @@ function ActionsStep({
               onChange={(e) => onUpdate(idx, { ...action, tag: e.target.value })}
             />
           )}
-          {action.type === 'move-to-collection' && (
+          {action.type === 'move-to-folder' && (
             <select
               className="pipeline-builder__select pipeline-builder__select--inline"
-              value={action.collectionId}
-              onChange={(e) => onUpdate(idx, { ...action, collectionId: e.target.value })}
+              value={action.folderId}
+              onChange={(e) => onUpdate(idx, { ...action, folderId: e.target.value })}
             >
               <option value="">— Select —</option>
-              {collections.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
           )}

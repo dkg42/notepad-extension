@@ -10,8 +10,9 @@ import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
-import AssignCollectionModal from '@/components/dashboard/AssignCollectionModal/AssignCollectionModal';
+import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { getFolderPath } from '@/utils/folder-utils';
 import './NotebookDetailPage.css';
 
 const AUDIO_FORMATS = [
@@ -97,7 +98,7 @@ export default function NotebookDetailPage() {
   const {
     notebook,
     annotation,
-    collections,
+    folders,
     isLoadingMeta,
     sources,
     isLoadingSources,
@@ -117,8 +118,8 @@ export default function NotebookDetailPage() {
     isDeletingNotebook,
     isDeletingSource,
     isExporting,
-    handleAssignCollection,
-    handleCreateCollection,
+    handleAssignFolder,
+    handleCreateFolder,
     handleAddTag,
     handleRemoveTag,
     handleGenerateBrief,
@@ -222,18 +223,18 @@ export default function NotebookDetailPage() {
         </div>
       </div>
 
-      {/* ── Collection & Tags bar ───────────────────────────────────────────── */}
+      {/* ── Folder & Tags bar ──────────────────────────────────────────────── */}
       <div className="notebook-detail__meta-bar">
-        {/* Collection */}
+        {/* Folder */}
         <div className="notebook-detail__meta-item">
-          <span className="notebook-detail__meta-label">Collection</span>
-          <span className={`notebook-detail__collection-value${annotation.collectionId ? ' notebook-detail__collection-value--assigned' : ''}`}>
-            {collections.find((c) => c.id === annotation.collectionId)?.name ?? 'None'}
+          <span className="notebook-detail__meta-label">Folder</span>
+          <span className={`notebook-detail__collection-value${annotation.folderId ? ' notebook-detail__collection-value--assigned' : ''}`}>
+            {annotation.folderId ? (getFolderPath(annotation.folderId, folders) ?? 'None') : 'None'}
           </span>
           <button
             className="notebook-detail__collection-change-btn"
             onClick={() => setShowCollectionModal(true)}
-            title="Change collection"
+            title="Change folder"
           >
             Change
           </button>
@@ -584,14 +585,14 @@ export default function NotebookDetailPage() {
         )}
       </div>
 
-      {/* ── Audio customization dialog ──────────────────────────────────────── */}
+      {/* ── Folder assignment modal ─────────────────────────────────────────── */}
       {showCollectionModal && (
-        <AssignCollectionModal
-          collections={collections}
-          currentCollectionId={annotation.collectionId}
+        <NotebookFolderModal
+          folders={folders}
+          currentFolderId={annotation.folderId}
           subjectLabel={notebook.title}
-          onConfirm={(collectionId) => void handleAssignCollection(collectionId)}
-          onCreateCollection={handleCreateCollection}
+          onConfirm={(folderId) => void handleAssignFolder(folderId)}
+          onCreateFolder={handleCreateFolder}
           onClose={() => setShowCollectionModal(false)}
         />
       )}
