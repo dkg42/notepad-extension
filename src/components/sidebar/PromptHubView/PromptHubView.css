@@ -575,6 +575,26 @@
   color: var(--fg-3);
 }
 
+.prompt-hub__card-enhance {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  color: var(--fg-3);
+  opacity: 0;
+  transition: color 0.12s, opacity 0.12s;
+}
+
+.prompt-hub__card:hover .prompt-hub__card-enhance {
+  opacity: 1;
+}
+
+.prompt-hub__card-enhance:hover {
+  color: var(--accent);
+}
+
 .prompt-hub__card-footer {
   display: flex;
   align-items: center;
@@ -1181,6 +1201,15 @@
   color: var(--accent);
 }
 
+.prompt-hub__icon-btn--danger {
+  color: var(--fg-3);
+}
+
+.prompt-hub__icon-btn--danger:hover {
+  color: oklch(0.55 0.18 25);
+  background: oklch(0.55 0.18 25 / 0.08);
+}
+
 /* ── Send to chat ── */
 .prompt-hub__send-hint {
   padding: 5px 14px 8px;
@@ -1223,4 +1252,37 @@
   font-size: inherit;
   cursor: pointer;
   text-decoration: underline;
+}
+
+.prompt-hub__enhance-preview {
+  margin: 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-soft);
+  border-radius: 8px;
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-hub__enhance-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.prompt-hub__enhance-preview-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+
+.prompt-hub__enhance-preview-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
 }

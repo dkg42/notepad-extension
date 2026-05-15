@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { tabGroupsStorage } from '@/services/tab-groups-storage';
+import { aiService } from '@/services/ai-service';
 
 export const FREE_PLAN_MAX_GROUPS = 3;
 export const COLORS: GroupColor[] = ['primary', 'green', 'sky', 'rose', 'violet'];
@@ -21,6 +22,7 @@ export function useTabManagerView() {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState<GroupColor>('primary');
+  const [generatingContextId, setGeneratingContextId] = useState<string | null>(null);
 
   // Cache tab metadata so it's available when onRemoved fires (chrome only gives us the ID)
   const tabMetadataCacheRef = useRef<Map<number, chrome.tabs.Tab>>(new Map());
@@ -244,6 +246,37 @@ export function useTabManagerView() {
     [groups, persistGroups],
   );
 
+  const handleGenerateContext = useCallback(
+    async (groupId: string) => {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+
+      const liveTabs = openTabs
+        .filter((t) => t.id != null && group.tabIds.includes(t.id!))
+        .map((t) => ({ title: t.title ?? 'Untitled', url: t.url ?? '' }));
+      const stashed = (group.stashedTabs ?? []).map((s) => ({ title: s.title, url: s.url }));
+      const allTabs = [...liveTabs, ...stashed].filter((t) => t.url.startsWith('http'));
+      if (allTabs.length === 0) return;
+
+      setGeneratingContextId(groupId);
+      try {
+        const summary = await aiService.summarizeTabs(allTabs);
+        await persistGroups(
+          groups.map((g) =>
+            g.id === groupId
+              ? { ...g, context: summary, aiContext: true, updatedAt: Date.now() }
+              : g,
+          ),
+        );
+      } catch {
+        // silent — user can retry; spinner clears in finally
+      } finally {
+        setGeneratingContextId(null);
+      }
+    },
+    [groups, openTabs, persistGroups],
+  );
+
   const handleAddTabToGroup = useCallback(
     async (tabId: number, groupId: string) => {
       const tab = openTabs.find((t) => t.id === tabId);
@@ -361,6 +394,8 @@ export function useTabManagerView() {
     handleTogglePin,
     handleColorChange,
     handleContextChange,
+    handleGenerateContext,
+    generatingContextId,
     handleAddTabToGroup,
     handleRemoveTabFromGroup,
     handleOpenAllTabs,

@@ -4,7 +4,7 @@
  * @dependencies @/types, @/utils/folder-utils, @/utils/filter-snippets, ./usePromptHubView
  * @public PromptHubView (default export)
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Search,
   X,
@@ -29,6 +29,8 @@ import { getFolderTreeItems, getFolderPath } from '@/utils/folder-utils';
 import { filterSnippets } from '@/utils/filter-snippets';
 import { usePromptHubView, type SortOrder } from './usePromptHubView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { aiService } from '@/services/ai-service';
+import { snippetStorage } from '@/services/storage/snippet-storage';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -394,10 +396,11 @@ interface PromptCardProps {
   snippet: Snippet;
   onClick: () => void;
   onStar: (id: string) => void;
+  onEnhance: () => void;
   searchQuery: string;
 }
 
-function PromptCard({ snippet, onClick, onStar, searchQuery }: PromptCardProps) {
+function PromptCard({ snippet, onClick, onStar, onEnhance, searchQuery }: PromptCardProps) {
   const title = getSnippetTitle(snippet);
   const tags = snippet.tags ?? [];
 
@@ -422,6 +425,13 @@ function PromptCard({ snippet, onClick, onStar, searchQuery }: PromptCardProps) 
       </div>
       <div className="prompt-hub__card-footer">
         {tags.slice(0, 3).map((t) => <TagPill key={t} tag={t} />)}
+        <button
+          className="prompt-hub__card-enhance"
+          onClick={(e) => { e.stopPropagation(); onEnhance(); }}
+          title="Enhance with AI"
+        >
+          <Sparkles size={11} strokeWidth={1.8} />
+        </button>
         <span style={{ flex: 1 }} />
         <span className="prompt-hub__card-time">{formatAge(snippet.savedAt)}</span>
       </div>
@@ -502,16 +512,22 @@ interface PromptDetailProps {
   onCopy: (text: string) => void;
   onDuplicate: () => void;
   onMove: (folderId: string | undefined) => void;
+  autoEnhance?: boolean;
+  onAutoEnhanceDone: () => void;
 }
 
 type SendStatus = 'idle' | 'sending' | 'sent' | 'no_target' | 'failed';
 
-function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit, onSave, onDelete, onCopy, onDuplicate, onMove }: PromptDetailProps) {
+function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit, onSave, onDelete, onCopy, onDuplicate, onMove, autoEnhance, onAutoEnhanceDone }: PromptDetailProps) {
   const [editTitle, setEditTitle] = useState(getSnippetTitle(snippet));
   const [editBody, setEditBody] = useState(snippet.text);
   const [copied, setCopied] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [sendStatus, setSendStatus] = useState<SendStatus>('idle');
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancedText, setEnhancedText] = useState<string | null>(null);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
+  const didAutoEnhance = useRef(false);
 
   const breadcrumb = useMemo(() => {
     if (!snippet.folderId) return null;
@@ -549,6 +565,32 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
     }
   };
 
+  const handleEnhance = async () => {
+    setEnhancing(true);
+    setEnhanceError(null);
+    setEnhancedText(null);
+    try {
+      const result = await aiService.enhancePrompt(snippet.text);
+      setEnhancedText(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'AI_UNSUPPORTED') setEnhanceError('Chrome AI is not available in this browser.');
+      else if (msg === 'AI_AFTER-DOWNLOAD') setEnhanceError('AI model is downloading. Try again shortly.');
+      else if (msg === 'AI_UNAVAILABLE') setEnhanceError('AI model unavailable. Check chrome://flags/#optimization-guide-on-device-model.');
+      else setEnhanceError(`Enhancement failed: ${msg}`);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (autoEnhance && !didAutoEnhance.current) {
+      didAutoEnhance.current = true;
+      onAutoEnhanceDone();
+      void handleEnhance();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="prompt-hub__detail">
       <div className="prompt-hub__detail-bar">
@@ -559,6 +601,14 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
           <div className="prompt-hub__detail-breadcrumb">{breadcrumb}</div>
         )}
         <span className="prompt-hub__detail-bar-spacer" />
+        <button
+          className={`prompt-hub__icon-btn${enhancing ? ' prompt-hub__icon-btn--active' : ''}`}
+          title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
+          disabled={enhancing || editing}
+          onClick={handleEnhance}
+        >
+          {enhancing ? <span className="prompt-hub__send-spinner" /> : <Sparkles size={14} />}
+        </button>
         <button
           className="prompt-hub__icon-btn"
           title={snippet.isFavorite ? 'Unstar' : 'Star'}
@@ -585,6 +635,13 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
             />
           )}
         </div>
+        <button
+          className="prompt-hub__icon-btn prompt-hub__icon-btn--danger"
+          title="Delete prompt"
+          onClick={() => onDelete(snippet.id)}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
 
       <div className="prompt-hub__detail-body">
@@ -626,6 +683,29 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
         </div>
       </div>
 
+      {enhancedText && (
+        <div className="prompt-hub__enhance-preview">
+          <div className="prompt-hub__enhance-preview-label">
+            <Sparkles size={11} /> Enhanced version
+          </div>
+          <div className="prompt-hub__enhance-preview-text">{enhancedText}</div>
+          <div className="prompt-hub__enhance-preview-actions">
+            <button className="prompt-hub__btn-ghost" onClick={() => setEnhancedText(null)}>
+              Discard
+            </button>
+            <button
+              className="prompt-hub__btn-primary"
+              onClick={() => {
+                snippetStorage.updateSnippet(snippet.id, { text: enhancedText }).catch(() => {});
+                setEnhancedText(null);
+              }}
+            >
+              <Check size={13} /> Apply
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="prompt-hub__detail-actions">
         {editing ? (
           <>
@@ -645,14 +725,6 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
               {copied ? 'Copied!' : 'Copy'}
             </button>
             <div className="prompt-hub__detail-actions-spacer" />
-            <button
-              className="prompt-hub__btn-ghost"
-              style={{ color: 'oklch(0.55 0.18 25)' }}
-              onClick={() => onDelete(snippet.id)}
-              title="Delete prompt"
-            >
-              <Trash2 size={13} />
-            </button>
             <button
               className="prompt-hub__btn-primary"
               onClick={handleSendToChat}
@@ -677,6 +749,9 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
             ? 'Click in the chat input first, then try again.'
             : 'Copied to clipboard — paste with Ctrl+V.'}
         </div>
+      )}
+      {enhanceError && (
+        <div className="prompt-hub__send-hint">{enhanceError}</div>
       )}
     </div>
   );
@@ -919,6 +994,7 @@ export default function PromptHubView({
   } = usePromptHubView();
 
   const { canUse: canAddPrompt, count: promptCount, use: usePromptLimit } = useUsageLimit('prompt_hub');
+  const [pendingEnhance, setPendingEnhance] = useState(false);
   const openSnippet = openPromptId ? snippets.find((s) => s.id === openPromptId) : null;
 
   const visibleSnippets = useMemo(() => {
@@ -1004,6 +1080,8 @@ export default function PromptHubView({
             handleMoveToFolder(openSnippet.id, folderId);
             closeDetail();
           }}
+          autoEnhance={pendingEnhance}
+          onAutoEnhanceDone={() => setPendingEnhance(false)}
         />
       ) : (
         <>
@@ -1137,6 +1215,7 @@ export default function PromptHubView({
                         snippet={s}
                         onClick={() => openDetail(s.id)}
                         onStar={handleToggleFavorite}
+                        onEnhance={() => { openDetail(s.id); setPendingEnhance(true); }}
                         searchQuery={searchQuery}
                       />
                     ))

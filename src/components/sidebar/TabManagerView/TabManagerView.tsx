@@ -138,9 +138,11 @@ interface ContextBlockProps {
   onEdit: () => void;
   onSave: (value: string) => void;
   onCancel: () => void;
+  onGenerate: () => void;
+  isGenerating: boolean;
 }
 
-function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel }: ContextBlockProps) {
+function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel, onGenerate, isGenerating }: ContextBlockProps) {
   const [draft, setDraft] = useState(context);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -163,11 +165,15 @@ function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel 
           </span>
           <button
             className="tab-manager-view__context-generate-btn"
-            disabled
-            title="AI summary — coming soon"
-            onClick={(e) => e.stopPropagation()}
+            disabled={isGenerating}
+            title={isGenerating ? 'Generating…' : 'Generate AI summary'}
+            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
           >
-            <Sparkles size={9} strokeWidth={2.2} />
+            <Sparkles
+              size={9}
+              strokeWidth={2.2}
+              className={isGenerating ? 'tab-manager-view__context-generate-spin' : ''}
+            />
           </button>
         </div>
         {isEditing ? (
@@ -474,6 +480,8 @@ interface TabGroupCardProps {
   onTogglePin: () => void;
   onColorChange: (c: GroupColor) => void;
   onContextChange: (context: string) => void;
+  onGenerateContext: () => void;
+  isGeneratingContext: boolean;
   onOpenAll: () => void;
   onCloseAll: () => void;
   onCloseTab: (tabId: number) => void;
@@ -492,6 +500,8 @@ function TabGroupCard({
   onTogglePin,
   onColorChange,
   onContextChange,
+  onGenerateContext,
+  isGeneratingContext,
   onOpenAll,
   onCloseAll,
   onCloseTab,
@@ -617,6 +627,8 @@ function TabGroupCard({
             onEdit={() => setIsEditingContext(true)}
             onSave={(val) => { onContextChange(val); setIsEditingContext(false); }}
             onCancel={() => setIsEditingContext(false)}
+            onGenerate={onGenerateContext}
+            isGenerating={isGeneratingContext}
           />
           {liveTabs.length === 0 && stashedTabs.length === 0 && (
             <div className="tab-manager-view__stashed-hint">
@@ -691,6 +703,8 @@ export default function TabManagerView() {
     handleTogglePin,
     handleColorChange,
     handleContextChange,
+    handleGenerateContext,
+    generatingContextId,
     handleAddTabToGroup,
     handleRemoveTabFromGroup,
     handleOpenAllTabs,
@@ -741,6 +755,8 @@ export default function TabManagerView() {
               onTogglePin={() => void handleTogglePin(group.id)}
               onColorChange={(c) => void handleColorChange(group.id, c)}
               onContextChange={(ctx) => void handleContextChange(group.id, ctx)}
+              onGenerateContext={() => void handleGenerateContext(group.id)}
+              isGeneratingContext={generatingContextId === group.id}
               onOpenAll={() => handleOpenAllTabs(group.id)}
               onCloseAll={() => void handleCloseAllTabs(group.id)}
               onCloseTab={(tabId) => void handleCloseTab(tabId)}

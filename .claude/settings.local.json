@@ -22,7 +22,9 @@
       "Bash(tar -x -C /tmp/notehub-design)",
       "Read(//private/tmp/notehub-design/notehub-sidebar/**)",
       "Bash(gunzip -c \"/Users/deepak/.claude/projects/-Users-deepak-git-clones-notepad-extension/b3d4b85f-33ee-4667-af3e-52eda7078ee2/tool-results/webfetch-1777717217354-on5tnj.bin\")",
-      "Bash(tar -x -O \"notehub-sidebar/project/home.jsx\")"
+      "Bash(tar -x -O \"notehub-sidebar/project/home.jsx\")",
+      "WebFetch(domain:developer.chrome.com)",
+      "WebFetch(domain:gist.github.com)"
     ]
   }
 }
