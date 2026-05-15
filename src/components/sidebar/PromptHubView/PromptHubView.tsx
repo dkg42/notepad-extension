@@ -765,40 +765,27 @@ interface ComposeCardProps {
   folders: FolderType[];
   defaultFolderId?: string;
   onCreate: (title: string, text: string, tags: string[], folderId?: string) => void;
-  onCreateFolder: (name: string, parentId?: string) => void;
 }
 
-function ComposeCard({ open, onToggle, folders, defaultFolderId, onCreate, onCreateFolder }: ComposeCardProps) {
+function ComposeCard({ open, onToggle, folders, defaultFolderId, onCreate }: ComposeCardProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [folderId, setFolderId] = useState<string>(defaultFolderId ?? '');
-  const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
 
   const handleSubmit = () => {
     if (!body.trim()) return;
     const finalTags = tagInput.trim()
       ? [...tags, tagInput.trim().toLowerCase()]
       : tags;
-    onCreate(title.trim(), body.trim(), finalTags, folderId || undefined);
-    setTitle(''); setBody(''); setTags([]); setTagInput(''); setFolderId('');
+    onCreate(title.trim(), body.trim(), finalTags, defaultFolderId || undefined);
+    setTitle(''); setBody(''); setTags([]); setTagInput('');
   };
 
   const commitTag = () => {
     const t = tagInput.trim().toLowerCase();
     if (t && !tags.includes(t)) setTags([...tags, t]);
     setTagInput('');
-  };
-
-  const handleCommitFolder = () => {
-    const name = newFolderName.trim();
-    if (!name) return;
-    onCreateFolder(name);
-    setNewFolderName('');
-    setCreatingFolder(false);
   };
 
   if (!open) {
@@ -818,6 +805,11 @@ function ComposeCard({ open, onToggle, folders, defaultFolderId, onCreate, onCre
     <div className="prompt-hub__compose-card">
       <div className="prompt-hub__compose-header">
         <span className="prompt-hub__compose-header-label">New prompt</span>
+        {defaultFolderId && (
+          <span className="prompt-hub__compose-folder-badge">
+            {getFolderPath(defaultFolderId, folders)}
+          </span>
+        )}
         <span className="prompt-hub__compose-header-spacer" />
         <button className="prompt-hub__compose-close" onClick={onToggle}>
           <X size={13} strokeWidth={2} />
@@ -854,45 +846,6 @@ function ComposeCard({ open, onToggle, folders, defaultFolderId, onCreate, onCre
             }}
             placeholder="add tag…"
           />
-        </div>
-        <div className="prompt-hub__compose-folder-row">
-          {folders.length > 0 && (
-            <select
-              className="prompt-hub__compose-folder-select"
-              value={folderId}
-              onChange={(e) => setFolderId(e.target.value)}
-            >
-              <option value="">No folder</option>
-              {treeItems.map(({ folder, depth }) => (
-                <option key={folder.id} value={folder.id}>
-                  {'  '.repeat(depth)}{folder.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {creatingFolder ? (
-            <div className="prompt-hub__compose-new-folder">
-              <input
-                className="prompt-hub__compose-folder-input"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCommitFolder();
-                  if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
-                }}
-                placeholder="Folder name…"
-                autoFocus
-              />
-              <button className="prompt-hub__btn-ghost prompt-hub__btn-xs" onClick={() => { setCreatingFolder(false); setNewFolderName(''); }}>✕</button>
-              <button className="prompt-hub__btn-primary prompt-hub__btn-xs" onClick={handleCommitFolder} disabled={!newFolderName.trim()}>
-                <Check size={10} strokeWidth={2.4} />
-              </button>
-            </div>
-          ) : (
-            <button className="prompt-hub__compose-folder-create" onClick={() => setCreatingFolder(true)}>
-              <Plus size={10} strokeWidth={2.2} /> {folders.length > 0 ? 'New folder' : 'Create a folder'}
-            </button>
-          )}
         </div>
       </div>
       <div className="prompt-hub__compose-footer">
@@ -1240,7 +1193,6 @@ export default function PromptHubView({
                 void usePromptLimit();
                 setComposeOpen(false);
               }}
-              onCreateFolder={handleCreateFolder}
             />
           ) : (
             <div className="prompt-hub__limit-notice">
