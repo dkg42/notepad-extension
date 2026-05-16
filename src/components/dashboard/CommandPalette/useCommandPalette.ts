@@ -22,7 +22,6 @@ export interface PaletteItem {
 const NAV_ACTIONS: Array<{ view: DashboardView; label: string; icon: string }> = [
   { view: 'home',          label: 'Home',            icon: '⌂' },
   { view: 'prompts',       label: 'Prompt Hub',       icon: '≡' },
-  { view: 'favorites',     label: 'Favorites',        icon: '★' },
   { view: 'notebooks',     label: 'Notebooks',        icon: '◻' },
   { view: 'all-sources',   label: 'All Sources',      icon: '◈' },
   { view: 'all-artifacts', label: 'All Artifacts',    icon: '◷' },

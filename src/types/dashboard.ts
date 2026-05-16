@@ -9,7 +9,6 @@ export type SortDirection = 'asc' | 'desc';
 export type DashboardView =
   | 'home'
   | 'prompts'
-  | 'favorites'
   | 'folders'
   | 'tags'
   | 'analytics'

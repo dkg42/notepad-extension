@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   FileText,
-  Star,
   Tag,
   BookOpen,
   Database,
@@ -55,7 +54,6 @@ interface NavGroup {
 const HOME_NAV: NavItem = { view: 'home', icon: Home, label: 'Home' };
 const PROMPTS_NAV: NavItem = { view: 'prompts', icon: FileText, label: 'Prompt Hub' };
 const TAIL_NAV: NavItem[] = [
-  { view: 'favorites', icon: Star, label: 'Favorites' },
   { view: 'tags', icon: Tag, label: 'Tags' },
   { view: 'screenshots', icon: Camera, label: 'Screenshots' },
 ];
@@ -189,7 +187,7 @@ export default function Sidebar() {
     handleSettingsChange,
   } = useNavigation();
   const { theme, toggleTheme } = useTheme();
-  const { snippets, favoritesCount } = useSnippets();
+  const { snippets } = useSnippets();
   const promptCount = snippets.length;
 
   const [notebooksExpanded, setNotebooksExpanded] = useState(
@@ -210,11 +208,9 @@ export default function Sidebar() {
     const badge =
       item.view === 'prompts' && promptCount > 0
         ? promptCount
-        : item.view === 'favorites' && favoritesCount > 0
-          ? favoritesCount
-          : item.view === 'pipelines' && pipelinesCount > 0
-            ? pipelinesCount
-            : null;
+        : item.view === 'pipelines' && pipelinesCount > 0
+          ? pipelinesCount
+          : null;
 
     return (
       <button

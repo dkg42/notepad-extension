@@ -288,8 +288,6 @@ export default function DashboardApp() {
       case 'prompts':
         return <PromptsPage />;
 
-      case 'favorites':
-        return <PromptsPage initialFolder="__starred" />;
 
       case 'folders':
         return <FolderExplorer />;
