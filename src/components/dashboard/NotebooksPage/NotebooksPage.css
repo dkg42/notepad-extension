@@ -328,6 +328,47 @@
   flex-shrink: 0;
 }
 
+.notebooks-content__title-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.notebooks-content__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.notebooks-content__action-btn:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.notebooks-content__action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notebooks-content__action-btn--primary {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  border-color: var(--accent, #3b82f6);
+}
+
+.notebooks-content__action-btn--primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+  background: var(--accent, #3b82f6);
+}
+
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
 
 .notebooks-content__toolbar {

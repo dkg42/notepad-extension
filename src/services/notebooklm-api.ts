@@ -2,7 +2,7 @@
  * @module notebooklm-api
  * @description Adapter layer for the undocumented NotebookLM internal batchexecute RPC API. Handles CSRF/session token extraction from the NotebookLM homepage (using account-specific authuser indices), constructs and parses batchexecute envelopes, and exposes typed functions for listing/deleting notebooks, fetching sources/notes/artifacts, adding source URLs, creating audio overviews, and downloading audio blobs. Auth failures trigger a session cache invalidation and a single automatic retry.
  * @dependencies google-session-service, auth-storage-service
- * @public fetchNotebooks, deleteNotebook, fetchNotebookSources, fetchSourceCounts, fetchNotebookFullData, fetchNotebookSourcesDetailed, summarizeNotebook, addSourceUrl, deleteSource, createAudioOverview, fetchAudioBlob, listArtifacts, fetchNotebookNotes, NotebookFullData, AudioOverviewOptions
+ * @public fetchNotebooks, deleteNotebook, fetchNotebookSources, fetchSourceCounts, fetchNotebookFullData, fetchNotebookSourcesDetailed, summarizeNotebook, addSourceUrl, addSourceText, addSourcePdf, createNotebook, deleteSource, createAudioOverview, fetchAudioBlob, listArtifacts, fetchNotebookNotes, generateArtifact, generateMindMap, generateReport, generateFlashcards, generateQuiz, generateSlideDeck, NotebookFullData, AudioOverviewOptions, ArtifactKind, ReportOptions, FlashcardOptions, QuizOptions, SlideOptions, MindMapOptions
  */
 import type { ArtifactRecord, NoteDetailRecord, NotebookMeta, SourceDetailRecord, SourceRecord } from '@/types';
 import { ensureGoogleSession, findAuthuserIndex, invalidateSessionCache } from './google-session-service';
@@ -33,8 +33,11 @@ const DELETE_NOTEBOOK_RPC_ID = 'WWINqb';
 
 const SUMMARIZE_NOTEBOOK_RPC_ID = 'VfAZjd';
 const ADD_SOURCE_URL_RPC_ID = 'izAoDd';
+const ADD_SOURCE_TEXT_RPC_ID = 'izAoDd';
 const DELETE_SOURCE_RPC_ID = 'tGMBJ';
+const CREATE_NOTEBOOK_RPC_ID = 'CCqFvf';
 const CREATE_ARTIFACT_RPC_ID = 'R7cb6c';
+const GENERATE_MINDMAP_RPC_ID = 'yyryJe';
 const LIST_ARTIFACTS_RPC_ID = 'gArtLc';
 const GET_NOTES_RPC_ID = 'cFji9';
 
@@ -416,6 +419,345 @@ export async function addSourceUrl(notebookId: string, url: string): Promise<voi
   );
 }
 
+/**
+ * Adds a pasted-text source to a notebook.
+ * Uses the same ADD_SOURCE RPC as URLs but with a different inner entry shape:
+ * the title+content pair sits at position [1] instead of a URL array at [2]/[7].
+ */
+export async function addSourceText(
+  notebookId: string,
+  title: string,
+  content: string,
+): Promise<void> {
+  const sourceEntry: unknown[] = [
+    null,
+    [title, content],
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ];
+  const payload = JSON.stringify([[sourceEntry], notebookId, [2], null, null]);
+  await executeAuthenticatedRpc(
+    ADD_SOURCE_TEXT_RPC_ID,
+    payload,
+    `/notebook/${notebookId}`,
+  );
+}
+
+/**
+ * Adds a PDF file as a source. Not yet implemented — NotebookLM requires a
+ * two-step upload (binary POST to a Google upload endpoint to obtain a file
+ * handle, then a register-source RPC). The upload protocol is not covered by
+ * the public RPC reference. Tracked for a follow-up once we capture the
+ * upload-endpoint contract.
+ */
+export async function addSourcePdf(_notebookId: string, _file: File): Promise<void> {
+  throw new Error('PDF upload not yet implemented');
+}
+
+/**
+ * Creates a new notebook with the given title.
+ * Reference: notebooklm-py docs/rpc-reference.md — CREATE_NOTEBOOK (`CCqFvf`).
+ * Payload: [title, null, null, [2], [1]]
+ *
+ * The response shape from this RPC is not stable enough to share the
+ * fetchNotebooks parser — observed shapes include `[entry]`, `entry`, and
+ * `[…, entry, …]` depending on the backend revision. Rather than guessing the
+ * exact slot, we recursively scan the response tree for the first string that
+ * matches the NotebookLM notebook-ID pattern. The title we already know
+ * (passed in by the caller), so we don't need to recover that from the
+ * response either.
+ */
+export async function createNotebook(title: string): Promise<NotebookMeta> {
+  const payload = JSON.stringify([title, null, null, [2], [1]]);
+  const rpcResult = await executeAuthenticatedRpc(CREATE_NOTEBOOK_RPC_ID, payload, '/');
+  if (!rpcResult) throw new Error('createNotebook: empty RPC response');
+
+  const notebookId = findNotebookIdInTree(rpcResult);
+  if (!notebookId) {
+    // Surface the raw payload to logs so future shape drift is debuggable.
+    console.warn('[createNotebook] could not locate notebook id in response:', rpcResult);
+    throw new Error('createNotebook: could not locate new notebook id in response');
+  }
+
+  const now = Date.now();
+  return {
+    id: notebookId,
+    title: title.trim() || 'Untitled',
+    url: `${NOTEBOOKLM_ORIGIN}/notebook/${notebookId}`,
+    createdAt: now,
+    lastSyncedAt: now,
+    isOwner: true,
+  };
+}
+
+/**
+ * NotebookLM notebook IDs look like `e7c1a9f0-3a2b-4e1d-b0c3-…` (UUID) or
+ * a 20+ char alnum/hyphen/underscore string. We pick the first such string
+ * encountered in DFS order; the response places the new notebook ID near the
+ * front of the tree, so this is reliable in practice.
+ */
+function findNotebookIdInTree(value: unknown, depth = 0): string | undefined {
+  if (depth > 6) return undefined;
+  if (typeof value === 'string') {
+    if (/^[A-Za-z0-9_-]{16,}$/.test(value) && !value.startsWith('http')) {
+      return value;
+    }
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const found = findNotebookIdInTree(child, depth + 1);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Scan an RPC response tree for any string matching the NotebookLM artifact-id
+ * pattern. Used by the generate-* RPCs to confirm the backend actually created
+ * something (a 200 OK with no id means the payload shape was wrong).
+ */
+function findArtifactIdInTree(value: unknown, depth = 0): string | undefined {
+  if (depth > 8) return undefined;
+  if (typeof value === 'string') {
+    if (/^[A-Za-z0-9_-]{16,}$/.test(value) && !value.startsWith('http')) {
+      return value;
+    }
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const found = findArtifactIdInTree(child, depth + 1);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Returns the notebook's source IDs in both nesting shapes that NotebookLM's
+ * generator RPCs expect:
+ *   - triple: `[[[id]], [[id]], ...]` for top-level source slots
+ *   - double: `[[id], [id], ...]` for inner config slots
+ * Throws if the notebook has no sources — generation has nothing to work with.
+ */
+async function fetchSourceIdsForArtifact(notebookId: string): Promise<{
+  triple: string[][][];
+  double: string[][];
+}> {
+  const sources = await fetchNotebookSourcesDetailed(notebookId);
+  if (sources.length === 0) {
+    throw new Error('Cannot generate artifact: notebook has no sources.');
+  }
+  const ids = sources.map((s) => s.id);
+  return {
+    triple: ids.map((id) => [[id]]),
+    double: ids.map((id) => [id]),
+  };
+}
+
+// ── Artifact generation ──────────────────────────────────────────────────────
+
+/** Type discriminator for the generateArtifact dispatcher. */
+export type ArtifactKind = 'mindmap' | 'report' | 'flashcards' | 'quiz' | 'slides';
+
+export interface ReportOptions {
+  /** Optional report title. */
+  title?: string;
+  /** Optional report description / framing. */
+  description?: string;
+  /** Custom prompt for the AI. */
+  prompt?: string;
+  /** Language code, e.g. "en". Default: "en". */
+  language?: string;
+}
+
+export interface FlashcardOptions {
+  /** Custom instructions for the AI. */
+  instructions?: string;
+  /** 1 = easy, 2 = medium, 3 = hard. Default: 2. */
+  difficulty?: number;
+  /** 1 = few, 2 = default, 3 = many. Default: 2. */
+  quantity?: number;
+}
+
+export interface QuizOptions {
+  instructions?: string;
+  /** 1 = easy, 2 = medium, 3 = hard. Default: 2. */
+  difficulty?: number;
+  /** 1 = few, 2 = default, 3 = many. Default: 2. */
+  quantity?: number;
+}
+
+export interface SlideOptions {
+  instructions?: string;
+  language?: string;
+  /** 1 = detailed, 2 = presenter notes, etc. Default: 1. */
+  format?: number;
+  /** 1 = short, 2 = default, 3 = long. Default: 2. */
+  length?: number;
+}
+
+export interface MindMapOptions {
+  /** Custom instructions appended after the [CONTEXT] marker. */
+  instructions?: string;
+  language?: string;
+}
+
+/** Generates an interactive mind map for the notebook. RPC: `yyryJe`. */
+export async function generateMindMap(
+  notebookId: string,
+  options?: MindMapOptions,
+): Promise<void> {
+  const language = options?.language ?? 'en';
+  const instructions = options?.instructions ?? '';
+  const { triple } = await fetchSourceIdsForArtifact(notebookId);
+  const payload = JSON.stringify([
+    triple,
+    null,
+    null,
+    null,
+    null,
+    ['interactive_mindmap', [['[CONTEXT]', instructions]], language],
+    null,
+    [2, null, [1]],
+  ]);
+  const rpcResult = await executeAuthenticatedRpc(GENERATE_MINDMAP_RPC_ID, payload, `/notebook/${notebookId}`);
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[generateMindMap] empty result:', rpcResult);
+    throw new Error('Mind map generation failed — NotebookLM returned an empty result.');
+  }
+}
+
+/** Generates a report / briefing doc / study guide. RPC: `R7cb6c` type 2. */
+export async function generateReport(
+  notebookId: string,
+  options?: ReportOptions,
+): Promise<void> {
+  const title = options?.title ?? '';
+  const description = options?.description ?? '';
+  const prompt = options?.prompt ?? '';
+  const language = options?.language ?? 'en';
+  const { triple, double } = await fetchSourceIdsForArtifact(notebookId);
+  const payload = JSON.stringify([
+    [2],
+    notebookId,
+    [
+      null, null, 2,
+      triple,
+      null, null, null,
+      [null, [title, description, null, double, language, prompt, null, true]],
+    ],
+  ]);
+  const rpcResult = await executeAuthenticatedRpc(CREATE_ARTIFACT_RPC_ID, payload, `/notebook/${notebookId}`);
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[generateReport] empty result:', rpcResult);
+    throw new Error('Report generation failed — NotebookLM returned an empty result.');
+  }
+}
+
+/** Generates a flashcard deck. RPC: `R7cb6c` type 4, variant 1. */
+export async function generateFlashcards(
+  notebookId: string,
+  options?: FlashcardOptions,
+): Promise<void> {
+  const instructions = options?.instructions ?? '';
+  const difficulty = options?.difficulty ?? 2;
+  const quantity = options?.quantity ?? 2;
+  const { triple } = await fetchSourceIdsForArtifact(notebookId);
+  const inner: unknown[] = new Array(10).fill(null);
+  inner[2] = 4;
+  inner[3] = triple;
+  inner[9] = [null, [1, null, instructions, null, null, null, [difficulty, quantity]]];
+  const payload = JSON.stringify([[2], notebookId, inner]);
+  const rpcResult = await executeAuthenticatedRpc(CREATE_ARTIFACT_RPC_ID, payload, `/notebook/${notebookId}`);
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[generateFlashcards] empty result:', rpcResult);
+    throw new Error('Flashcard generation failed — NotebookLM returned an empty result.');
+  }
+}
+
+/** Generates a quiz. RPC: `R7cb6c` type 4, variant 2. */
+export async function generateQuiz(
+  notebookId: string,
+  options?: QuizOptions,
+): Promise<void> {
+  const instructions = options?.instructions ?? '';
+  const difficulty = options?.difficulty ?? 2;
+  const quantity = options?.quantity ?? 2;
+  const { triple } = await fetchSourceIdsForArtifact(notebookId);
+  const inner: unknown[] = new Array(10).fill(null);
+  inner[2] = 4;
+  inner[3] = triple;
+  inner[9] = [null, [2, null, instructions, null, null, null, null, [quantity, difficulty]]];
+  const payload = JSON.stringify([[2], notebookId, inner]);
+  const rpcResult = await executeAuthenticatedRpc(CREATE_ARTIFACT_RPC_ID, payload, `/notebook/${notebookId}`);
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[generateQuiz] empty result:', rpcResult);
+    throw new Error('Quiz generation failed — NotebookLM returned an empty result.');
+  }
+}
+
+/** Generates a slide deck. RPC: `R7cb6c` type 8. */
+export async function generateSlideDeck(
+  notebookId: string,
+  options?: SlideOptions,
+): Promise<void> {
+  const instructions = options?.instructions ?? '';
+  const language = options?.language ?? 'en';
+  const format = options?.format ?? 1;
+  const length = options?.length ?? 2;
+  const { triple } = await fetchSourceIdsForArtifact(notebookId);
+
+  // The slide-specific config sits at inner index 16; intervening slots are
+  // reserved by NotebookLM for fields we don't set.
+  const inner: unknown[] = new Array(17).fill(null);
+  inner[2] = 8;
+  inner[3] = triple;
+  inner[16] = [[instructions, language, format, length]];
+
+  const payload = JSON.stringify([[2], notebookId, inner]);
+  const rpcResult = await executeAuthenticatedRpc(CREATE_ARTIFACT_RPC_ID, payload, `/notebook/${notebookId}`);
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[generateSlideDeck] empty result:', rpcResult);
+    throw new Error('Slide deck generation failed — NotebookLM returned an empty result.');
+  }
+}
+
+/**
+ * Unified dispatcher for the dashboard's "Generate" menu.
+ * Returns the kind that was triggered so the UI can show the right toast.
+ */
+export async function generateArtifact(
+  notebookId: string,
+  kind: ArtifactKind,
+  options?: ReportOptions | FlashcardOptions | QuizOptions | SlideOptions | MindMapOptions,
+): Promise<ArtifactKind> {
+  switch (kind) {
+    case 'mindmap':
+      await generateMindMap(notebookId, options as MindMapOptions);
+      break;
+    case 'report':
+      await generateReport(notebookId, options as ReportOptions);
+      break;
+    case 'flashcards':
+      await generateFlashcards(notebookId, options as FlashcardOptions);
+      break;
+    case 'quiz':
+      await generateQuiz(notebookId, options as QuizOptions);
+      break;
+    case 'slides':
+      await generateSlideDeck(notebookId, options as SlideOptions);
+      break;
+  }
+  return kind;
+}
+
 /** Deletes a single source from a notebook. */
 export async function deleteSource(sourceId: string): Promise<void> {
   const payload = JSON.stringify([[[sourceId]]]);
@@ -444,21 +786,25 @@ export async function createAudioOverview(
   const length = options?.length ?? 2;
   const focus = options?.focus ?? '';
 
-  // Build the RPC payload with customization parameters
-  const payload = JSON.stringify([
-    notebookId,
-    null,
-    format,
-    focus || null,
-    null,
-    language,
-    length,
-  ]);
-  await executeAuthenticatedRpc(
+  const { triple, double } = await fetchSourceIdsForArtifact(notebookId);
+
+  // Audio config sits at inner[6]; length precedes format in the config
+  // array (opposite of the legacy flat shape we replaced).
+  const inner: unknown[] = new Array(7).fill(null);
+  inner[2] = 1;
+  inner[3] = triple;
+  inner[6] = [null, [focus, length, null, double, language, null, format]];
+
+  const payload = JSON.stringify([[2], notebookId, inner]);
+  const rpcResult = await executeAuthenticatedRpc(
     CREATE_ARTIFACT_RPC_ID,
     payload,
     `/notebook/${notebookId}`,
   );
+  if (!findArtifactIdInTree(rpcResult)) {
+    console.warn('[createAudioOverview] empty result:', rpcResult);
+    throw new Error('Audio overview generation failed — NotebookLM returned an empty result.');
+  }
 }
 
 /**
@@ -715,7 +1061,12 @@ function mapToSourceDetailRecords(rpcResult: unknown[]): SourceDetailRecord[] {
       // Keep default 'unknown'
     }
 
-    sources.push({ id, title, type });
+    // Best-effort URL extraction so the merge orchestrator can re-add the
+    // source to a different notebook. URL/YouTube sources embed an http URL
+    // in the response payload; pasted-text / PDF / Drive sources do not.
+    const url = findHttpUrl(src);
+
+    sources.push({ id, title, type, ...(url ? { url } : {}) });
   }
 
   return sources;

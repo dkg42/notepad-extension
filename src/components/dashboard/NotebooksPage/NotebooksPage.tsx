@@ -5,12 +5,14 @@
  * @public NotebooksPage
  */
 import React, { useRef, useState, useMemo } from 'react';
-import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal } from 'lucide-react';
+import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal, Plus, GitMerge } from 'lucide-react';
 import { useNotebooksPage, UNFILED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
 import FolderTree from '@/components/dashboard/FolderTree/FolderTree';
 import MoveFolderDialog from '@/components/dashboard/MoveFolderDialog/MoveFolderDialog';
+import NewNotebookModal from '@/components/dashboard/NewNotebookModal/NewNotebookModal';
+import MergeNotebookModal from '@/components/dashboard/MergeNotebookModal/MergeNotebookModal';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { Folder as FolderType, NotebookMeta, NotebookAnnotation } from '@/types';
@@ -550,6 +552,9 @@ export default function NotebooksPage() {
     handleMoveFolder,
     handleAssignFolder,
     handleBulkAssignFolder,
+    handleCreateNotebook,
+    handleMergeNotebooks,
+    handleBulkDelete,
   } = useNotebooksPage();
 
   // ── Local UI state ──────────────────────────────────────────────────────────
@@ -561,6 +566,8 @@ export default function NotebooksPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigningNotebookId, setAssigningNotebookId] = useState<string | null>(null);
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
+  const [showNewNotebookModal, setShowNewNotebookModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Sidebar folder management
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -942,6 +949,25 @@ export default function NotebooksPage() {
                 </span>
                 <h1 className="notebooks-content__title">{pageTitle}</h1>
                 <span className="notebooks-content__total">{totalInView} total</span>
+                <div className="notebooks-content__title-actions">
+                  <button
+                    className="notebooks-content__action-btn notebooks-content__action-btn--primary"
+                    onClick={() => setShowNewNotebookModal(true)}
+                    title="Create a new notebook"
+                  >
+                    <Plus size={12} strokeWidth={2} />
+                    New notebook
+                  </button>
+                  <button
+                    className="notebooks-content__action-btn"
+                    onClick={() => setShowMergeModal(true)}
+                    disabled={selectedIds.size < 2}
+                    title={selectedIds.size < 2 ? 'Select 2 or more notebooks to merge' : 'Merge selected notebooks'}
+                  >
+                    <GitMerge size={12} strokeWidth={2} />
+                    Merge selected
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1000,10 +1026,7 @@ export default function NotebooksPage() {
                 </button>
                 <button
                   className="notebooks-bulk-bar__btn notebooks-bulk-bar__btn--danger"
-                  onClick={() => {
-                    void Promise.all([...selectedIds].map((id) => handleDelete(id)));
-                    clearSelection();
-                  }}
+                  onClick={() => void handleBulkDelete([...selectedIds])}
                 >
                   Delete
                 </button>
@@ -1084,6 +1107,23 @@ export default function NotebooksPage() {
           folders={folders}
           onMove={(newParentId) => handleMoveFolder(movingFolderId, newParentId)}
           onClose={() => setMovingFolderId(null)}
+        />
+      )}
+
+      {/* ── New notebook modal ─────────────────────────────────────────────── */}
+      {showNewNotebookModal && (
+        <NewNotebookModal
+          onCreate={handleCreateNotebook}
+          onClose={() => setShowNewNotebookModal(false)}
+        />
+      )}
+
+      {/* ── Merge notebooks modal ──────────────────────────────────────────── */}
+      {showMergeModal && (
+        <MergeNotebookModal
+          selectedNotebooks={notebooks.filter((n) => selectedIds.has(n.id))}
+          onMerge={handleMergeNotebooks}
+          onClose={() => setShowMergeModal(false)}
         />
       )}
 

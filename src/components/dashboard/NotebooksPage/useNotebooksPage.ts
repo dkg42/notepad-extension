@@ -347,6 +347,100 @@ export function useNotebooksPage() {
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
+  // ── Create / merge / bulk ──────────────────────────────────────────────────
+
+  const handleCreateNotebook = useCallback(
+    async (args: {
+      title: string;
+      initialSource?:
+        | { kind: 'url'; url: string }
+        | { kind: 'text'; title: string; content: string };
+    }): Promise<NotebookMeta> => {
+      const createResult = await chrome.runtime.sendMessage({
+        type: 'CREATE_NOTEBOOK',
+        title: args.title,
+      }) as { ok: boolean; notebook?: NotebookMeta; error?: string };
+      if (!createResult?.ok || !createResult.notebook) {
+        throw new Error(createResult?.error ?? 'Failed to create notebook');
+      }
+      const notebook = createResult.notebook;
+
+      if (args.initialSource) {
+        const payload = args.initialSource.kind === 'url'
+          ? { url: args.initialSource.url }
+          : { title: args.initialSource.title, content: args.initialSource.content };
+        const addResult = await chrome.runtime.sendMessage({
+          type: 'ADD_NOTEBOOK_SOURCE',
+          notebookId: notebook.id,
+          kind: args.initialSource.kind,
+          payload,
+        }) as { ok: boolean; error?: string };
+        if (!addResult?.ok) {
+          throw new Error(addResult?.error ?? 'Notebook created but adding the initial source failed');
+        }
+      }
+
+      setNotebooks((prev) => {
+        const map = new Map(prev.map((n) => [n.id, n]));
+        map.set(notebook.id, notebook);
+        return [...map.values()].sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
+      });
+      return notebook;
+    },
+    [],
+  );
+
+  const handleMergeNotebooks = useCallback(
+    async (args: {
+      sourceNotebookIds: string[];
+      title: string;
+      deleteOriginals: boolean;
+    }): Promise<{ copied: number; skipped: number; newNotebook: NotebookMeta }> => {
+      const result = await chrome.runtime.sendMessage({
+        type: 'MERGE_NOTEBOOKS',
+        ...args,
+      }) as { ok: boolean; copied?: number; skipped?: number; newNotebook?: NotebookMeta; error?: string };
+      if (!result?.ok || !result.newNotebook) {
+        throw new Error(result?.error ?? 'Merge failed');
+      }
+      setSelectedIds(new Set());
+      return {
+        copied: result.copied ?? 0,
+        skipped: result.skipped ?? 0,
+        newNotebook: result.newNotebook,
+      };
+    },
+    [],
+  );
+
+  /**
+   * Deletes multiple notebooks in one background round-trip. Returns the count
+   * that failed so the caller can surface a single combined error toast instead
+   * of N individual ones.
+   */
+  const handleBulkDelete = useCallback(
+    async (ids: string[]): Promise<{ failed: number }> => {
+      if (ids.length === 0) return { failed: 0 };
+      const result = await chrome.runtime.sendMessage({
+        type: 'BULK_DELETE_NOTEBOOKS',
+        notebookIds: ids,
+      }) as { ok: boolean; results?: { id: string; ok: boolean }[]; error?: string };
+      if (!result?.ok) {
+        setDeleteError(result?.error ?? 'Bulk delete failed');
+        return { failed: ids.length };
+      }
+      const successful = (result.results ?? []).filter((r) => r.ok).map((r) => r.id);
+      const successSet = new Set(successful);
+      setNotebooks((prev) => prev.filter((n) => !successSet.has(n.id)));
+      setAnnotations((prev) => prev.filter((a) => !successSet.has(a.notebookId)));
+      setSelectedIds(new Set());
+      const failed = ids.length - successful.length;
+      if (failed > 0) setDeleteError(`${failed} of ${ids.length} notebooks could not be deleted.`);
+      return { failed };
+    },
+    [],
+  );
+
   const handleExportSources = useCallback(
     async (notebookId: string, notebookTitle: string, strategyType: string) => {
       setFetchingSourcesId(notebookId);
@@ -415,5 +509,8 @@ export function useNotebooksPage() {
     handleFolderReorder,
     handleAssignFolder,
     handleBulkAssignFolder,
+    handleCreateNotebook,
+    handleMergeNotebooks,
+    handleBulkDelete,
   };
 }

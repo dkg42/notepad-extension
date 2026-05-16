@@ -1,11 +1,22 @@
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
 
 .notebook-detail {
-  padding: 24px 28px 80px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.notebook-detail__inner {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 24px 28px 80px;
   max-width: 960px;
+  margin: 0 auto;
+}
+
+.notebook-detail__inner > * {
+  flex-shrink: 0;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────────── */
@@ -308,7 +319,6 @@
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
 }
 
 .notebook-detail__section-header {

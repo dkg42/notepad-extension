@@ -73,6 +73,8 @@ export interface SourceRecord {
 export interface SourceDetailRecord extends SourceRecord {
   /** Source ID from the API (src[0] in the response array). */
   id: string;
+  /** Original URL when the source was added from a URL/YouTube link. Absent for pasted-text, PDF, and Drive sources. */
+  url?: string;
 }
 
 /** An artifact (audio overview, etc.) from NotebookLM. */

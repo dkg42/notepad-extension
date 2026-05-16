@@ -11,6 +11,8 @@ import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
 import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
+import GenerateArtifactMenu from '@/components/dashboard/GenerateArtifactMenu/GenerateArtifactMenu';
+import PasteTextSourceModal from '@/components/dashboard/PasteTextSourceModal/PasteTextSourceModal';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { getFolderPath } from '@/utils/folder-utils';
 import './NotebookDetailPage.css';
@@ -128,6 +130,14 @@ export default function NotebookDetailPage() {
     handleDeleteNotebook,
     handleExportSources,
     handleRefreshAll,
+    generatingKind,
+    generateError,
+    setGenerateError,
+    handleGenerateArtifact,
+    isAddingPastedText,
+    addPastedTextError,
+    setAddPastedTextError,
+    handleAddPastedText,
   } = useNotebookDetailPage(notebookId!, onBack);
 
   // ── Local UI state ──────────────────────────────────────────────────────────
@@ -136,6 +146,7 @@ export default function NotebookDetailPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingSourceDelete, setConfirmingSourceDelete] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPasteTextModal, setShowPasteTextModal] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
@@ -150,9 +161,11 @@ export default function NotebookDetailPage() {
   if (isLoadingMeta) {
     return (
       <div className="notebook-detail">
-        <div className="notebook-detail__loading">
-          <span className="notebook-detail__spinner" />
-          Loading notebook…
+        <div className="notebook-detail__inner">
+          <div className="notebook-detail__loading">
+            <span className="notebook-detail__spinner" />
+            Loading notebook…
+          </div>
         </div>
       </div>
     );
@@ -161,18 +174,21 @@ export default function NotebookDetailPage() {
   if (!notebook) {
     return (
       <div className="notebook-detail">
-        <div className="notebook-detail__header">
-          <button className="notebook-detail__back-btn" onClick={onBack}>
-            ← Back to Notebooks
-          </button>
+        <div className="notebook-detail__inner">
+          <div className="notebook-detail__header">
+            <button className="notebook-detail__back-btn" onClick={onBack}>
+              ← Back to Notebooks
+            </button>
+          </div>
+          <div className="notebook-detail__loading">Notebook not found.</div>
         </div>
-        <div className="notebook-detail__loading">Notebook not found.</div>
       </div>
     );
   }
 
   return (
     <div className="notebook-detail">
+      <div className="notebook-detail__inner">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="notebook-detail__header">
@@ -359,12 +375,25 @@ export default function NotebookDetailPage() {
                 'Generate audio'
               )}
             </button>
+            <GenerateArtifactMenu
+              onGenerate={(kind) => void handleGenerateArtifact(kind)}
+              generatingKind={generatingKind}
+            />
           </div>
         </div>
 
         {audioGenerationError && (
           <div className="notebook-detail__section-error">
             {audioGenerationError}
+          </div>
+        )}
+        {generateError && (
+          <div className="notebook-detail__section-error">
+            {generateError}
+            <button
+              className="notebook-detail__section-error-dismiss"
+              onClick={() => setGenerateError(null)}
+            >×</button>
           </div>
         )}
         {artifactsError && (
@@ -440,6 +469,12 @@ export default function NotebookDetailPage() {
             >
               + Import Sources
             </button>
+            <button
+              className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
+              onClick={() => setShowPasteTextModal(true)}
+            >
+              + Paste text
+            </button>
             <div className="notebook-detail__export-wrapper">
               <button
                 className="notebook-detail__action-btn notebook-detail__action-btn--secondary"
@@ -483,6 +518,17 @@ export default function NotebookDetailPage() {
             notebookId={notebookId!}
             onClose={() => setShowImportModal(false)}
             onSourcesChanged={() => void handleRefreshAll()}
+          />
+        )}
+        {showPasteTextModal && (
+          <PasteTextSourceModal
+            isSubmitting={isAddingPastedText}
+            error={addPastedTextError}
+            onSubmit={(title, content) => handleAddPastedText(title, content)}
+            onClose={() => {
+              setShowPasteTextModal(false);
+              setAddPastedTextError(null);
+            }}
           />
         )}
         {isLoadingSources ? (
@@ -706,6 +752,7 @@ export default function NotebookDetailPage() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }

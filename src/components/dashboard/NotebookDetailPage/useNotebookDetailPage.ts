@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArtifactRecord, Folder, NoteDetailRecord, NotebookAnnotation, NotebookMeta, SourceDetailRecord } from '@/types';
-import type { AudioOverviewOptions } from '@/services/notebooklm-api';
+import type { AudioOverviewOptions, ArtifactKind } from '@/services/notebooklm-api';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { notebookFolderService } from '@/services/notebook-folder-service';
@@ -64,6 +64,14 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
 
   // ── Export ─────────────────────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
+
+  // ── Generate (mindmap/report/flashcards/quiz/slides) ───────────────────────
+  const [generatingKind, setGeneratingKind] = useState<ArtifactKind | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  // ── Paste-text source ──────────────────────────────────────────────────────
+  const [isAddingPastedText, setIsAddingPastedText] = useState(false);
+  const [addPastedTextError, setAddPastedTextError] = useState<string | null>(null);
 
   // ── Initial load ───────────────────────────────────────────────────────────
 
@@ -290,6 +298,78 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     }
   }, [notebook, sources]);
 
+  const handleAddPastedText = useCallback(
+    async (title: string, content: string): Promise<boolean> => {
+      setIsAddingPastedText(true);
+      setAddPastedTextError(null);
+      try {
+        const result = await chrome.runtime.sendMessage({
+          type: 'ADD_NOTEBOOK_SOURCE',
+          notebookId,
+          kind: 'text',
+          payload: { title, content },
+        }) as MessageResult;
+        if (!result?.ok) {
+          setAddPastedTextError(result?.error ?? 'Failed to add pasted source');
+          return false;
+        }
+        const refresh = await chrome.runtime.sendMessage({
+          type: 'FETCH_NOTEBOOK_FULL_DATA',
+          notebookId,
+        }) as MessageResult & { sources?: SourceDetailRecord[] };
+        if (refresh?.ok && refresh.sources) setSources(refresh.sources);
+        return true;
+      } catch {
+        setAddPastedTextError('Failed to reach the extension background.');
+        return false;
+      } finally {
+        setIsAddingPastedText(false);
+      }
+    },
+    [notebookId],
+  );
+
+  /**
+   * Triggers a non-audio artifact generator (mind map, report, flashcards, quiz, slides).
+   * Generators are async on NotebookLM's side; after firing we refetch the artifacts list
+   * after a short delay so the in-progress item appears for the user to track.
+   */
+  const handleGenerateArtifact = useCallback(
+    async (kind: ArtifactKind, options?: Record<string, unknown>) => {
+      setGeneratingKind(kind);
+      setGenerateError(null);
+      try {
+        const result = await chrome.runtime.sendMessage({
+          type: 'GENERATE_NOTEBOOK_ARTIFACT',
+          notebookId,
+          kind,
+          options,
+        }) as MessageResult;
+        if (!result?.ok) {
+          setGenerateError(result?.error ?? `Failed to generate ${kind}`);
+          return;
+        }
+        setTimeout(async () => {
+          try {
+            const refresh = await chrome.runtime.sendMessage({
+              type: 'FETCH_NOTEBOOK_FULL_DATA',
+              notebookId,
+            }) as MessageResult & { artifacts?: ArtifactRecord[] };
+            if (refresh?.ok && refresh.artifacts) setArtifacts(refresh.artifacts);
+          } catch {
+            // Silent — user can manually refresh
+          } finally {
+            setGeneratingKind(null);
+          }
+        }, 3000);
+      } catch {
+        setGenerateError('Failed to reach the extension background.');
+        setGeneratingKind(null);
+      }
+    },
+    [notebookId],
+  );
+
   /** Refreshes all notebook data (sources, notes, artifacts) via the single GET_NOTEBOOK RPC. */
   const handleRefreshAll = useCallback(async () => {
     setIsLoadingSources(true);
@@ -364,5 +444,13 @@ export function useNotebookDetailPage(notebookId: string, onBack: () => void) {
     handleDeleteNotebook,
     handleExportSources,
     handleRefreshAll,
+    generatingKind,
+    generateError,
+    setGenerateError,
+    handleGenerateArtifact,
+    isAddingPastedText,
+    addPastedTextError,
+    setAddPastedTextError,
+    handleAddPastedText,
   };
 }
