@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Star,
 } from 'lucide-react';
-import { useDashboardHome } from './useDashboardHome';
+import { useDashboardHome, type HeatmapCell } from './useDashboardHome';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { authService } from '@/services/auth-service';
@@ -26,28 +26,31 @@ import './DashboardHome.css';
 
 // ── Activity heatmap ───────────────────────────────────────────────────────
 
-function ActivityHeatmap({ totalCaptures }: { totalCaptures: number }) {
+function ActivityHeatmap({
+  cells,
+  totalCaptures,
+}: {
+  cells: HeatmapCell[];
+  totalCaptures: number;
+}) {
   const WEEKS = 12;
   const DAYS = 7;
-  const cells: number[] = [];
-  let seed = 7;
-  for (let i = 0; i < WEEKS * DAYS; i++) {
-    seed = (seed * 9301 + 49297) % 233280;
-    cells.push(Math.floor((seed / 233280) * 5));
-  }
 
   return (
     <div className="heatmap">
       <div className="heatmap__grid">
         {Array.from({ length: WEEKS }).map((_, w) => (
           <div key={w} className="heatmap__week">
-            {Array.from({ length: DAYS }).map((_, d) => (
-              <div
-                key={d}
-                className={`heatmap__cell heatmap__cell--${cells[w * DAYS + d]}`}
-                title={`${cells[w * DAYS + d]} captures`}
-              />
-            ))}
+            {Array.from({ length: DAYS }).map((_, d) => {
+              const cell = cells[w * DAYS + d] ?? { level: 0, count: 0, label: '' };
+              return (
+                <div
+                  key={d}
+                  className={`heatmap__cell heatmap__cell--${cell.level}`}
+                  title={`${cell.count} capture${cell.count === 1 ? '' : 's'}${cell.label ? ` · ${cell.label}` : ''}`}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
@@ -118,8 +121,16 @@ function UsageBar({ name, used, max }: UsageBarProps) {
 
 export default function DashboardHome() {
   const { snippets, folders, favoritesCount } = useSnippets();
-  const { setCurrentView: onNavigate, notebooksCount, chatHistoryCount, setShowCommandPalette } = useNavigation();
-  const { totalTags, recentSnippets, folderMap, formattedDate } = useDashboardHome(snippets, folders);
+  const {
+    setCurrentView: onNavigate,
+    notebooksCount,
+    chatHistoryCount,
+    setShowCommandPalette,
+    conversations,
+    notebooks,
+  } = useNavigation();
+  const { totalTags, recentSnippets, folderMap, captureActivity, formattedDate } =
+    useDashboardHome(snippets, folders, conversations, notebooks);
 
   const [user, setUser] = useState<StoredAuthProfile | null>(null);
   useEffect(() => {
@@ -342,7 +353,7 @@ export default function DashboardHome() {
             Capture activity · last 12 weeks
           </div>
         </div>
-        <ActivityHeatmap totalCaptures={totalCaptures} />
+        <ActivityHeatmap cells={captureActivity.cells} totalCaptures={totalCaptures} />
       </div>
     </div>
   );

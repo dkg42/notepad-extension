@@ -6,7 +6,8 @@
  * @public NavigationProvider, useNavigation
  */
 import React, { createContext, useContext } from 'react';
-import type { ChatPlatform, EpisodeTrack } from '@/types';
+import type { ChatPlatform, EpisodeTrack, NotebookMeta } from '@/types';
+import type { ConversationMeta } from '@/types/chat-history';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
 
@@ -36,6 +37,10 @@ export interface NavigationContextValue {
   chatHistoryCount: number;
   podcastsCount: number;
   pipelinesCount: number;
+
+  // Timestamped capture sources (for activity aggregation)
+  conversations: ConversationMeta[];
+  notebooks: NotebookMeta[];
 
   // Notebook navigation
   selectedNotebookId: string | null;
