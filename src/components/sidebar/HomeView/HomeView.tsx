@@ -53,7 +53,7 @@ const FEATURES: Feature[] = [
   },
   {
     id: 'snippets',
-    name: 'Snippets',
+    name: 'Clipboard',
     icon: Clipboard,
     desc: 'Clipboard manager — last 50 copies',
     plan: 'free',
@@ -61,7 +61,7 @@ const FEATURES: Feature[] = [
   },
   {
     id: 'history',
-    name: 'Chat History',
+    name: 'Chat Hub',
     icon: MessageSquare,
     desc: 'Save and revisit conversations across AI tools',
     plan: 'free',
@@ -79,7 +79,7 @@ const FEATURES: Feature[] = [
   },
   {
     id: 'tabs',
-    name: 'Tab Manager',
+    name: 'Tab Hub',
     icon: Layers,
     desc: 'Group, label, declutter open tabs',
     plan: 'free',

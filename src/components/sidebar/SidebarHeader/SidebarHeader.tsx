@@ -18,10 +18,10 @@ import './SidebarHeader.css';
 const VIEW_LABELS: Record<string, string> = {
   home: 'Notehublm',
   prompts: 'Prompt Hub',
-  snippets: 'Snippets',
-  history: 'Chat History',
+  snippets: 'Clipboard',
+  history: 'Chat Hub',
   screenshot: 'Screenshot',
-  tabs: 'Tab Manager',
+  tabs: 'Tab Hub',
   notebook: 'Add to NotebookLM',
 };
 

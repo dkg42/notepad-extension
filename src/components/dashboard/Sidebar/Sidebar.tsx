@@ -52,9 +52,9 @@ interface NavGroup {
   subItems: NavItem[];
 }
 
-const PRIMARY_NAV: NavItem[] = [
-  { view: 'home', icon: Home, label: 'Home' },
-  { view: 'prompts', icon: FileText, label: 'Prompt Hub' },
+const HOME_NAV: NavItem = { view: 'home', icon: Home, label: 'Home' };
+const PROMPTS_NAV: NavItem = { view: 'prompts', icon: FileText, label: 'Prompt Hub' };
+const TAIL_NAV: NavItem[] = [
   { view: 'favorites', icon: Star, label: 'Favorites' },
   { view: 'tags', icon: Tag, label: 'Tags' },
   { view: 'screenshots', icon: Camera, label: 'Screenshots' },
@@ -73,7 +73,7 @@ const NOTEBOOKS_GROUP: NavGroup = {
 const CHAT_HISTORY_GROUP: NavGroup = {
   view: 'chat-history',
   icon: MessageSquare,
-  label: 'Chat history',
+  label: 'Chat Hub',
   subItems: [
     { view: 'chat-history', icon: MessagesSquare, label: 'All Chats' },
   ],
@@ -290,7 +290,7 @@ export default function Sidebar() {
 
       {/* Primary navigation */}
       <nav className="sidebar__nav">
-        {PRIMARY_NAV.map(renderNavItem)}
+        {renderNavItem(HOME_NAV)}
 
         <CollapsibleGroup
           group={NOTEBOOKS_GROUP}
@@ -302,15 +302,6 @@ export default function Sidebar() {
           onNavigate={onNavigate}
         />
         <CollapsibleGroup
-          group={CHAT_HISTORY_GROUP}
-          isExpanded={chatHistoryExpanded}
-          isGroupActive={CHAT_HISTORY_VIEWS.includes(currentView)}
-          currentView={currentView}
-          badge={chatHistoryCount}
-          onToggle={handleChatHistoryToggle}
-          onNavigate={onNavigate}
-        />
-        <CollapsibleGroup
           group={PODCASTS_GROUP}
           isExpanded={podcastsExpanded}
           isGroupActive={PODCASTS_VIEWS.includes(currentView)}
@@ -319,6 +310,20 @@ export default function Sidebar() {
           onToggle={handlePodcastsToggle}
           onNavigate={onNavigate}
         />
+
+        {renderNavItem(PROMPTS_NAV)}
+
+        <CollapsibleGroup
+          group={CHAT_HISTORY_GROUP}
+          isExpanded={chatHistoryExpanded}
+          isGroupActive={CHAT_HISTORY_VIEWS.includes(currentView)}
+          currentView={currentView}
+          badge={chatHistoryCount}
+          onToggle={handleChatHistoryToggle}
+          onNavigate={onNavigate}
+        />
+
+        {TAIL_NAV.map(renderNavItem)}
 
         <div className="sidebar__divider" />
 
