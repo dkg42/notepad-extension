@@ -14,7 +14,6 @@ import {
   Database,
   Package,
   MessageSquare,
-  MessagesSquare,
   Headphones,
   Play,
   Music,
@@ -68,14 +67,7 @@ const NOTEBOOKS_GROUP: NavGroup = {
   ],
 };
 
-const CHAT_HISTORY_GROUP: NavGroup = {
-  view: 'chat-history',
-  icon: MessageSquare,
-  label: 'Chat Hub',
-  subItems: [
-    { view: 'chat-history', icon: MessagesSquare, label: 'All Chats' },
-  ],
-};
+const CHAT_HUB_NAV: NavItem = { view: 'chat-history', icon: MessageSquare, label: 'Chat Hub' };
 
 const PODCASTS_GROUP: NavGroup = {
   view: 'podcasts',
@@ -94,7 +86,6 @@ const SECONDARY_NAV: NavItem[] = [
 ];
 
 const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
-const CHAT_HISTORY_VIEWS: DashboardView[] = ['chat-history', 'chat-history-detail'];
 const PODCASTS_VIEWS: DashboardView[] = ['podcasts', 'podcast-detail', 'all-audio'];
 
 interface CollapsibleGroupProps {
@@ -180,7 +171,6 @@ export default function Sidebar() {
     currentView,
     setCurrentView: onNavigate,
     notebooksCount,
-    chatHistoryCount,
     podcastsCount,
     pipelinesCount,
     setShowCommandPalette,
@@ -192,9 +182,6 @@ export default function Sidebar() {
 
   const [notebooksExpanded, setNotebooksExpanded] = useState(
     NOTEBOOK_VIEWS.includes(currentView),
-  );
-  const [chatHistoryExpanded, setChatHistoryExpanded] = useState(
-    CHAT_HISTORY_VIEWS.includes(currentView),
   );
   const [podcastsExpanded, setPodcastsExpanded] = useState(
     PODCASTS_VIEWS.includes(currentView),
@@ -236,17 +223,6 @@ export default function Sidebar() {
       onNavigate('notebooks');
     } else {
       setNotebooksExpanded(false);
-    }
-  };
-
-  const handleChatHistoryToggle = () => {
-    if (!chatHistoryExpanded) {
-      setChatHistoryExpanded(true);
-      onNavigate('chat-history');
-    } else if (currentView !== 'chat-history') {
-      onNavigate('chat-history');
-    } else {
-      setChatHistoryExpanded(false);
     }
   };
 
@@ -308,16 +284,7 @@ export default function Sidebar() {
         />
 
         {renderNavItem(PROMPTS_NAV)}
-
-        <CollapsibleGroup
-          group={CHAT_HISTORY_GROUP}
-          isExpanded={chatHistoryExpanded}
-          isGroupActive={CHAT_HISTORY_VIEWS.includes(currentView)}
-          currentView={currentView}
-          badge={chatHistoryCount}
-          onToggle={handleChatHistoryToggle}
-          onNavigate={onNavigate}
-        />
+        {renderNavItem(CHAT_HUB_NAV)}
 
         {TAIL_NAV.map(renderNavItem)}
 
