@@ -176,7 +176,7 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<ClaimsVeri
   if (typeof payload.iat !== 'number' || payload.iat > nowSec + 300) {
     return { ok: false, reason: 'invalid_claims' };
   }
-  if (payload.iss !== `https://securetoken.googleapis.com/${FIREBASE_PROJECT_ID}`) {
+  if (payload.iss !== `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`) {
     return { ok: false, reason: 'invalid_claims' };
   }
   if (payload.aud !== FIREBASE_PROJECT_ID) {
