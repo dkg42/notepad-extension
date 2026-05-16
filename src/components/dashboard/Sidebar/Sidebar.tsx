@@ -4,7 +4,7 @@
  * @dependencies @/types, @/types/dashboard, @/services/auth-service, @/contexts/NavigationContext, @/contexts/SnippetsContext
  * @public Sidebar
  */
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -31,9 +31,7 @@ import {
   Sun,
   type LucideIcon,
 } from 'lucide-react';
-import type { StoredAuthProfile } from '@/types';
 import type { DashboardView } from '@/types/dashboard';
-import { authService } from '@/services/auth-service';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
@@ -179,12 +177,6 @@ function CollapsibleGroup({
   );
 }
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
 export default function Sidebar() {
   const {
     currentView,
@@ -199,13 +191,6 @@ export default function Sidebar() {
   const { theme, toggleTheme } = useTheme();
   const { snippets, favoritesCount } = useSnippets();
   const promptCount = snippets.length;
-
-  const [user, setUser] = useState<StoredAuthProfile | null>(null);
-
-  useEffect(() => {
-    authService.getCurrentUser().then(setUser);
-    return authService.onAuthStateChange(setUser);
-  }, []);
 
   const [notebooksExpanded, setNotebooksExpanded] = useState(
     NOTEBOOK_VIEWS.includes(currentView),
@@ -342,43 +327,6 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar__footer">
-        {user && (() => {
-          const { displayName = null, email = null, photoURL = null } = user;
-          return (
-            <button
-              className={`sidebar__user-card${currentView === 'account' ? ' sidebar__user-card--active' : ''}`}
-              onClick={() => onNavigate('account')}
-              title={email ?? ''}
-            >
-              <div className="sidebar__user-avatar">
-                {photoURL ? (
-                  <img
-                    src={photoURL}
-                    alt={displayName ?? 'User avatar'}
-                    className="sidebar__user-avatar-img"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span className="sidebar__user-avatar-initials">
-                    {getInitials(displayName ?? email ?? '?')}
-                  </span>
-                )}
-              </div>
-              <div className="sidebar__user-info">
-                <span className="sidebar__user-name">
-                  {displayName ?? email ?? 'Signed in'}
-                </span>
-                {email && displayName && (
-                  <span className="sidebar__user-email">{email}</span>
-                )}
-              </div>
-              <span className="sidebar__user-settings-icon">
-                <Settings size={13} strokeWidth={1.75} />
-              </span>
-            </button>
-          );
-        })()}
-
         <button
           className="sidebar__nav-item"
           onClick={() => {

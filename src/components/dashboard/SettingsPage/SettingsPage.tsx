@@ -1,16 +1,36 @@
 /**
  * @module SettingsPage
- * @description Renders the dashboard settings panel allowing users to configure table preferences and perform data import/export or clear operations.
- * @dependencies useSettingsPage, DomainRouterSettings, @/contexts/NavigationContext
+ * @description Renders the dashboard settings panel: profile/auth, table preferences, data import/export, and other configuration.
+ * @dependencies useSettingsPage, DomainRouterSettings, @/contexts/NavigationContext, @/services/auth-service
  * @public SettingsPage
  */
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import type { StoredAuthProfile } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
+import { authService } from '@/services/auth-service';
 import { useSettingsPage } from './useSettingsPage';
 import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './SettingsPage.css';
+
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function useCurrentUser() {
+  const [user, setUser] = useState<StoredAuthProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    authService.getCurrentUser().then((u) => { setUser(u); setLoading(false); });
+    const unsub = authService.onAuthStateChange((u) => { setUser(u); setLoading(false); });
+    return unsub;
+  }, []);
+  return { user, loading };
+}
 
 const ROWS_OPTIONS = [10, 25, 50, 100];
 const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
@@ -22,7 +42,29 @@ const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
 
 export default function SettingsPage() {
   const { settings, handleSettingsChange: onSettingsChange } = useNavigation();
+  const { user, loading: userLoading } = useCurrentUser();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try { await authService.signOut(); } finally { setSigningOut(false); }
+  };
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    setAuthError(null);
+    try {
+      const res = await authService.signIn();
+      if (!res.ok) setAuthError(res.error ?? 'Sign-in failed.');
+    } catch {
+      setAuthError('Sign-in failed.');
+    } finally {
+      setSigningIn(false);
+    }
+  };
   const {
     importError,
     importSuccess,
@@ -42,6 +84,50 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-page__sections">
+        {/* Profile */}
+        <section className="settings-section">
+          <h2 className="settings-section__title">Profile</h2>
+          {userLoading ? (
+            <div className="settings-row">
+              <span className="settings-row__name" style={{ color: 'var(--color-text-secondary)' }}>Loading…</span>
+            </div>
+          ) : user ? (
+            <>
+              <div className="settings-row settings-page__profile-row">
+                <div className="settings-page__avatar">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.displayName ?? ''} className="settings-page__avatar-img" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="settings-page__avatar-initials">{getInitials(user.displayName)}</span>
+                  )}
+                </div>
+                <div className="settings-row__label">
+                  {user.displayName && <span className="settings-row__name">{user.displayName}</span>}
+                  {user.email && <span className="settings-row__description">{user.email}</span>}
+                </div>
+                <button
+                  className="settings-page__btn settings-page__btn--danger"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                >
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="settings-row">
+              <div className="settings-row__label">
+                <span className="settings-row__name">Not signed in</span>
+                <span className="settings-row__description">Sign in to sync your data across devices.</span>
+              </div>
+              <button className="settings-page__btn" onClick={handleSignIn} disabled={signingIn}>
+                {signingIn ? 'Signing in…' : 'Sign in with Google'}
+              </button>
+              {authError && <p className="settings-page__error" style={{ padding: 0 }}>{authError}</p>}
+            </div>
+          )}
+        </section>
+
         {/* Table Defaults */}
         <section className="settings-section">
           <h2 className="settings-section__title">Table Defaults</h2>
