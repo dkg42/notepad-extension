@@ -19,12 +19,11 @@ import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
+import { storageService } from '@/services/storage-service';
 import { useApp } from './useApp';
 import './App.css';
 
 type View = 'home' | 'prompts' | 'snippets' | 'history' | 'tabs' | 'screenshot' | 'notebook';
-
-const DARK_KEY = 'nh_dark_mode';
 
 export default function App() {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -63,19 +62,37 @@ export default function App() {
 
 function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const [view, setView] = useState<View>('home');
-  const [dark, setDark] = useState(() => localStorage.getItem(DARK_KEY) === 'true');
+  const [dark, setDark] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const subscriptionValue = useSubscriptionState();
   const appData = useApp();
   const clipboardData = useClipboardTab();
 
-  const toggleDark = () => {
-    setDark((d) => {
-      const next = !d;
-      localStorage.setItem(DARK_KEY, String(next));
-      return next;
+  useEffect(() => {
+    storageService.getSettings().then((settings) => {
+      setDark(settings.theme === 'dark');
     });
+
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName === 'local' && changes['dashboardSettings']?.newValue) {
+        setDark(
+          (changes['dashboardSettings'].newValue as { theme?: string }).theme === 'dark',
+        );
+      }
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    void storageService.saveSettings({ theme: next ? 'dark' : 'light' });
   };
 
   const handleSignOut = () => {

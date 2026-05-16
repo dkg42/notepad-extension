@@ -1,12 +1,11 @@
 /**
  * @module SettingsPage
- * @description Renders the dashboard settings panel allowing users to configure table preferences, toggle dark mode, and perform data import/export or clear operations.
- * @dependencies useSettingsPage, useTheme, DomainRouterSettings, @/contexts/NavigationContext
+ * @description Renders the dashboard settings panel allowing users to configure table preferences and perform data import/export or clear operations.
+ * @dependencies useSettingsPage, DomainRouterSettings, @/contexts/NavigationContext
  * @public SettingsPage
  */
 import React, { useRef } from 'react';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
-import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
 import { useSettingsPage } from './useSettingsPage';
 import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import { useNavigation } from '@/contexts/NavigationContext';
@@ -23,7 +22,6 @@ const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
 
 export default function SettingsPage() {
   const { settings, handleSettingsChange: onSettingsChange } = useNavigation();
-  const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     importError,
@@ -44,29 +42,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-page__sections">
-        {/* Appearance */}
-        <section className="settings-section">
-          <h2 className="settings-section__title">Appearance</h2>
-          <div className="settings-row">
-            <div className="settings-row__label">
-              <span className="settings-row__name">Theme</span>
-              <span className="settings-row__description">
-                Switch between light and dark mode.
-              </span>
-            </div>
-            <button
-              className="settings-page__theme-btn"
-              onClick={() => {
-                toggleTheme();
-                const next = theme === 'light' ? 'dark' : 'light';
-                void onSettingsChange({ theme: next });
-              }}
-            >
-              {theme === 'light' ? '☀ Light' : '☽ Dark'}
-            </button>
-          </div>
-        </section>
-
         {/* Table Defaults */}
         <section className="settings-section">
           <h2 className="settings-section__title">Table Defaults</h2>

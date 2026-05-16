@@ -27,6 +27,8 @@ import {
   Zap,
   Search,
   Camera,
+  Moon,
+  Sun,
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
@@ -34,6 +36,7 @@ import type { DashboardView } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useSnippets } from '@/contexts/SnippetsContext';
+import { useTheme } from '@/components/dashboard/ThemeProvider/useTheme';
 import './Sidebar.css';
 
 type IconComponent = LucideIcon;
@@ -191,7 +194,9 @@ export default function Sidebar() {
     podcastsCount,
     pipelinesCount,
     setShowCommandPalette,
+    handleSettingsChange,
   } = useNavigation();
+  const { theme, toggleTheme } = useTheme();
   const { snippets, favoritesCount } = useSnippets();
   const promptCount = snippets.length;
 
@@ -373,6 +378,24 @@ export default function Sidebar() {
             </button>
           );
         })()}
+
+        <button
+          className="sidebar__nav-item"
+          onClick={() => {
+            toggleTheme();
+            void handleSettingsChange({ theme: theme === 'light' ? 'dark' : 'light' });
+          }}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <span className="sidebar__nav-icon">
+            {theme === 'dark'
+              ? <Sun size={14} strokeWidth={1.75} />
+              : <Moon size={14} strokeWidth={1.75} />}
+          </span>
+          <span className="sidebar__nav-label">
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </span>
+        </button>
 
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
