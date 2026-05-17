@@ -231,7 +231,9 @@ export function useDashboardApp() {
 
   const handleCreateFolder = async (name: string, parentId?: string) => {
     const folder = await storageService.createFolder(name, parentId);
-    setFolders((prev) => [...prev, folder]);
+    setFolders((prev) =>
+      prev.some((f) => f.id === folder.id) ? prev : [...prev, folder],
+    );
   };
 
   const handleRenameFolder = async (id: string, name: string) => {
