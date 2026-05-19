@@ -6,6 +6,7 @@
  */
 import type { Folder, NotebookAnnotation } from '@/types';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
+import { notebookSyncService } from './notebook-sync-service';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
@@ -47,7 +48,8 @@ export const notebookFolderService = {
     syncToDrive(async (t) => {
       const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
-      driveSyncService.saveAnnotations(annotations, updated, t);
+      const notebooks = await notebookSyncService.getRefs();
+      driveSyncService.saveAnnotations(annotations, updated, notebooks, t);
     });
     return folder;
   },
@@ -64,7 +66,8 @@ export const notebookFolderService = {
     syncToDrive(async (t) => {
       const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
-      driveSyncService.saveAnnotations(annotations, updated, t);
+      const notebooks = await notebookSyncService.getRefs();
+      driveSyncService.saveAnnotations(annotations, updated, notebooks, t);
     });
   },
 
@@ -88,7 +91,10 @@ export const notebookFolderService = {
       [NOTEBOOK_FOLDERS_KEY]: updatedFolders,
       [ANNOTATIONS_KEY]: updatedAnnotations,
     });
-    syncToDrive((t) => driveSyncService.saveAnnotations(updatedAnnotations, updatedFolders, t));
+    syncToDrive(async (t) => {
+      const notebooks = await notebookSyncService.getRefs();
+      driveSyncService.saveAnnotations(updatedAnnotations, updatedFolders, notebooks, t);
+    });
   },
 
   async moveFolder(id: string, newParentId: string | undefined): Promise<void> {
@@ -104,7 +110,8 @@ export const notebookFolderService = {
     syncToDrive(async (t) => {
       const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
-      driveSyncService.saveAnnotations(annotations, updated, t);
+      const notebooks = await notebookSyncService.getRefs();
+      driveSyncService.saveAnnotations(annotations, updated, notebooks, t);
     });
   },
 
@@ -118,7 +125,8 @@ export const notebookFolderService = {
     syncToDrive(async (t) => {
       const annotationsResult = await chrome.storage.local.get(ANNOTATIONS_KEY);
       const annotations = (annotationsResult[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
-      driveSyncService.saveAnnotations(annotations, updated, t);
+      const notebooks = await notebookSyncService.getRefs();
+      driveSyncService.saveAnnotations(annotations, updated, notebooks, t);
     });
   },
 };

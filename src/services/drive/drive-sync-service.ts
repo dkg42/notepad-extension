@@ -7,7 +7,7 @@
  * the session cache is updated synchronously then a debounced Drive write is enqueued
  * via drive-write-queue, ensuring the UI is never blocked by Drive API latency.
  * @dependencies ./drive-cache-service, ./drive-manifest-service, ./drive-io-service, ./drive-write-queue, ./types/drive-schemas
- * @public getSnippetsMeta, saveSnippetsMeta, getSnippetText, saveSnippet, deleteSnippet, saveAllSnippets, getFolders, saveFolders, getTags, saveTags, getSettings, saveSettings, getExportHistory, appendExportRecord, getAnnotations, saveAnnotations, getPipelines, savePipelines, getPipelineRuns, appendPipelineRun, getPodcastEpisodes, savePodcastEpisodes, getDomainRouterRules, saveDomainRouterRules, getChatConversationsMeta, saveChatConversationsMeta, getChatConversationContent, saveChatConversationContent, writeAllFromLocal, driveSyncService
+ * @public getSnippetsMeta, saveSnippetsMeta, getSnippetText, saveSnippet, deleteSnippet, saveAllSnippets, getFolders, saveFolders, getTags, saveTags, getSettings, saveSettings, getExportHistory, appendExportRecord, saveExportHistory, saveHistoryData, getAnnotations, saveAnnotations, getPipelines, savePipelines, getPipelineRuns, appendPipelineRun, savePipelineRuns, getPodcastEpisodes, savePodcastEpisodes, getDomainRouterRules, saveDomainRouterRules, getChatConversationsMeta, saveChatConversationsMeta, getChatConversationContent, saveChatConversationContent, getCustomAudioIndex, saveCustomAudioIndex, getTabGroups, saveTabGroups, writeAllFromLocal, driveSyncService
  */
 
 /**
@@ -36,11 +36,16 @@ import type {
   DriveSnippetsMetaFile,
   DriveCoreDataFile,
   DriveHistoryDataFile,
+  DriveNotebookRef,
   DriveNotebookAnnotationsFile,
   DrivePipelinesFile,
   DriveChatConversationsMetaFile,
   DriveConversationMetaLine,
   DriveSafePodcastEpisode,
+  DriveCustomAudioEntry,
+  DriveCustomAudioIndexFile,
+  DriveTabGroup,
+  DriveTabGroupsFile,
 } from './types/drive-schemas';
 import {
   DRIVE_SCHEMA_VERSION,
@@ -69,7 +74,8 @@ import type { Snippet, Folder, TagMeta, NotebookAnnotation, PodcastEpisode } fro
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 import type { Pipeline, PipelineRun } from '@/types/pipeline';
 import type { DomainRouterRule } from '@/types/import';
-import type { ConversationMeta, ConversationFull, ChatSyncMeta } from '@/types/chat-history';
+import type { ConversationMeta, ConversationFull } from '@/types/chat-history';
+import type { TabGroup } from '@/types/tab-groups';
 
 const MAX_EXPORT_HISTORY = 200;
 const MAX_PIPELINE_RUNS = 200;
@@ -298,6 +304,26 @@ async function updateHistoryData(
   writeHistoryData(updated, token);
 }
 
+/**
+ * Writes export-history, pipeline-runs, and podcast-episodes in a single
+ * consolidated history-data.json write. Use this when pushing local-newer state
+ * to Drive — calling the three single-slice setters in sequence would each do an
+ * independent read-modify-write and lose the others' patches.
+ */
+export function saveHistoryData(
+  data: { exportHistory: ExportRecord[]; pipelineRuns: PipelineRun[]; podcastEpisodes: PodcastEpisode[] },
+  token: string,
+): void {
+  void updateHistoryData(
+    {
+      exportHistory: data.exportHistory.slice(0, MAX_EXPORT_HISTORY),
+      pipelineRuns: data.pipelineRuns.slice(0, MAX_PIPELINE_RUNS),
+      podcastEpisodes: data.podcastEpisodes.map(toDriveSafeEpisode),
+    },
+    token,
+  );
+}
+
 // ── Export history ─────────────────────────────────────────────────────────────
 
 export async function getExportHistory(token: string): Promise<ExportRecord[]> {
@@ -311,19 +337,41 @@ export async function appendExportRecord(record: ExportRecord, token: string): P
   void updateHistoryData({ exportHistory }, token);
 }
 
+/**
+ * Replaces the entire export-history list in a single consolidated write.
+ * Used when pushing local-newer state to Drive — avoids the O(n²) per-record
+ * append loop.
+ */
+export function saveExportHistory(records: ExportRecord[], token: string): void {
+  void updateHistoryData({ exportHistory: records.slice(0, MAX_EXPORT_HISTORY) }, token);
+}
+
 // ── Notebook annotations ───────────────────────────────────────────────────────
 
-export async function getAnnotations(token: string): Promise<{ annotations: NotebookAnnotation[]; folders: Folder[] }> {
+export async function getAnnotations(
+  token: string,
+): Promise<{ annotations: NotebookAnnotation[]; folders: Folder[]; notebooks: DriveNotebookRef[] }> {
   const cached = await cacheGet<DriveNotebookAnnotationsFile>(CacheKeys.annotations);
-  if (cached) return { annotations: cached.annotations, folders: cached.folders ?? [] };
+  if (cached) {
+    return {
+      annotations: cached.annotations,
+      folders: cached.folders ?? [],
+      notebooks: cached.notebooks ?? [],
+    };
+  }
 
   const file = await readJsonFromDrive<DriveNotebookAnnotationsFile>('notebook-annotations.json', CacheKeys.annotations, token);
-  return { annotations: file?.annotations ?? [], folders: file?.folders ?? [] };
+  return {
+    annotations: file?.annotations ?? [],
+    folders: file?.folders ?? [],
+    notebooks: file?.notebooks ?? [],
+  };
 }
 
 export function saveAnnotations(
   annotations: NotebookAnnotation[],
   folders: Folder[],
+  notebooks: DriveNotebookRef[],
   token: string,
 ): void {
   const file: DriveNotebookAnnotationsFile = {
@@ -331,6 +379,7 @@ export function saveAnnotations(
     updatedAt: Date.now(),
     annotations,
     folders,
+    notebooks,
   };
   writeJson('notebook-annotations.json', CacheKeys.annotations, file, token);
 }
@@ -363,6 +412,14 @@ export async function appendPipelineRun(run: PipelineRun, token: string): Promis
   void updateHistoryData({ pipelineRuns }, token);
 }
 
+/**
+ * Replaces the entire pipeline-run list in a single consolidated write.
+ * Companion to saveExportHistory for the local-newer push path.
+ */
+export function savePipelineRuns(runs: PipelineRun[], token: string): void {
+  void updateHistoryData({ pipelineRuns: runs.slice(0, MAX_PIPELINE_RUNS) }, token);
+}
+
 // ── Podcast episodes ───────────────────────────────────────────────────────────
 
 export async function getPodcastEpisodes(token: string): Promise<DriveSafePodcastEpisode[]> {
@@ -388,24 +445,22 @@ export function saveDomainRouterRules(rules: DomainRouterRule[], token: string):
 
 // ── Chat history ───────────────────────────────────────────────────────────────
 
-export async function getChatConversationsMeta(token: string): Promise<{ conversations: ConversationMeta[]; syncMeta: ChatSyncMeta[] }> {
+export async function getChatConversationsMeta(token: string): Promise<{ conversations: ConversationMeta[] }> {
   const cached = await cacheGet<DriveChatConversationsMetaFile>(CacheKeys.chatMeta);
-  if (cached) return { conversations: cached.conversations, syncMeta: cached.syncMeta };
+  if (cached) return { conversations: cached.conversations };
 
   const file = await readJsonFromDrive<DriveChatConversationsMetaFile>('chat-conversations-meta.json', CacheKeys.chatMeta, token);
-  return { conversations: file?.conversations ?? [], syncMeta: file?.syncMeta ?? [] };
+  return { conversations: file?.conversations ?? [] };
 }
 
 export function saveChatConversationsMeta(
   conversations: ConversationMeta[],
-  syncMeta: ChatSyncMeta[],
   token: string,
 ): void {
   const file: DriveChatConversationsMetaFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     conversations,
-    syncMeta,
   };
   writeJson('chat-conversations-meta.json', CacheKeys.chatMeta, file, token);
 }
@@ -470,6 +525,67 @@ function parseConversationNdjson(ndjson: string): ConversationFull | null {
   }
 }
 
+// ── Custom audio index ─────────────────────────────────────────────────────────
+
+export async function getCustomAudioIndex(token: string): Promise<DriveCustomAudioEntry[]> {
+  const cached = await cacheGet<DriveCustomAudioIndexFile>(CacheKeys.customAudioIndex);
+  if (cached) return cached.entries ?? [];
+
+  const file = await readJsonFromDrive<DriveCustomAudioIndexFile>(
+    'custom-audio-index.json',
+    CacheKeys.customAudioIndex,
+    token,
+  );
+  return file?.entries ?? [];
+}
+
+export function saveCustomAudioIndex(entries: DriveCustomAudioEntry[], token: string): void {
+  const file: DriveCustomAudioIndexFile = {
+    schemaVersion: DRIVE_SCHEMA_VERSION,
+    updatedAt: Date.now(),
+    entries,
+  };
+  writeJson('custom-audio-index.json', CacheKeys.customAudioIndex, file, token);
+}
+
+// ── Tab groups ─────────────────────────────────────────────────────────────────
+
+/** Strips device-local/churn fields so the synced record is portable. */
+function toDriveTabGroup(g: TabGroup): DriveTabGroup {
+  return {
+    id: g.id,
+    name: g.name,
+    color: g.color,
+    pinned: g.pinned,
+    context: g.context,
+    aiContext: g.aiContext,
+    createdAt: g.createdAt,
+    tabUrls: g.tabUrls,
+    stashedTabs: g.stashedTabs,
+  };
+}
+
+export async function getTabGroups(token: string): Promise<DriveTabGroup[]> {
+  const cached = await cacheGet<DriveTabGroupsFile>(CacheKeys.tabGroups);
+  if (cached) return cached.groups ?? [];
+
+  const file = await readJsonFromDrive<DriveTabGroupsFile>(
+    'tab-groups.json',
+    CacheKeys.tabGroups,
+    token,
+  );
+  return file?.groups ?? [];
+}
+
+export function saveTabGroups(groups: TabGroup[], token: string): void {
+  const file: DriveTabGroupsFile = {
+    schemaVersion: DRIVE_SCHEMA_VERSION,
+    updatedAt: Date.now(),
+    groups: groups.map(toDriveTabGroup),
+  };
+  writeJson('tab-groups.json', CacheKeys.tabGroups, file, token);
+}
+
 // ── Convenience bulk methods ───────────────────────────────────────────────────
 
 /**
@@ -484,12 +600,13 @@ export async function writeAllFromLocal(data: {
   exportHistory: ExportRecord[];
   annotations: NotebookAnnotation[];
   notebookFolders: Folder[];
+  notebooks: DriveNotebookRef[];
   pipelines: Pipeline[];
   pipelineRuns: PipelineRun[];
   podcastEpisodes: PodcastEpisode[];
   domainRouterRules: DomainRouterRule[];
   conversations: ConversationMeta[];
-  chatSyncMeta: ChatSyncMeta[];
+  tabGroups: TabGroup[];
 }, token: string): Promise<void> {
   await saveAllSnippets(data.snippets, token);
 
@@ -513,9 +630,10 @@ export async function writeAllFromLocal(data: {
   };
   writeHistoryData(historyFile, token);
 
-  saveAnnotations(data.annotations, data.notebookFolders, token);
+  saveAnnotations(data.annotations, data.notebookFolders, data.notebooks, token);
   savePipelines(data.pipelines, token);
-  saveChatConversationsMeta(data.conversations, data.chatSyncMeta, token);
+  saveChatConversationsMeta(data.conversations, token);
+  saveTabGroups(data.tabGroups, token);
 }
 
 export const driveSyncService = {
@@ -533,12 +651,15 @@ export const driveSyncService = {
   saveSettings,
   getExportHistory,
   appendExportRecord,
+  saveExportHistory,
+  saveHistoryData,
   getAnnotations,
   saveAnnotations,
   getPipelines,
   savePipelines,
   getPipelineRuns,
   appendPipelineRun,
+  savePipelineRuns,
   getPodcastEpisodes,
   savePodcastEpisodes,
   getDomainRouterRules,
@@ -547,5 +668,9 @@ export const driveSyncService = {
   saveChatConversationsMeta,
   getChatConversationContent,
   saveChatConversationContent,
+  getCustomAudioIndex,
+  saveCustomAudioIndex,
+  getTabGroups,
+  saveTabGroups,
   writeAllFromLocal,
 };

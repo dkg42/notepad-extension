@@ -7,7 +7,7 @@
  * detection that may pause for a user merge/overwrite decision (Path B first-login),
  * and subsequent device sync using last-write-wins per file (Path B returning). The
  * `driveInitialized` flag in `chrome.storage.local` distinguishes the latter two paths.
- * @dependencies ./drive-manifest-service, ./drive-sync-service, ./drive-cache-service, ./drive-write-queue, ./drive-io-service, @/services/storage-service, @/services/notebook-annotation-service, @/services/pipeline-service, @/services/chat-history-storage, @/services/domain-router-service
+ * @dependencies ./drive-manifest-service, ./drive-sync-service, ./drive-cache-service, ./drive-write-queue, ./drive-io-service, @/services/storage-service, @/services/notebook-annotation-service, @/services/pipeline-service, @/services/chat-history-storage, @/services/domain-router-service, @/services/tab-groups-storage
  * @public initialize, migrateLocalDataToDrive, teardown, InitResult, ConflictSummary, driveInitService
  */
 
@@ -57,10 +57,13 @@ import type { DriveFilename, DriveSnippetMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { notebookFolderService } from '@/services/notebook-folder-service';
+import { notebookSyncService } from '@/services/notebook-sync-service';
 import { pipelineService } from '@/services/pipeline-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { domainRouterService } from '@/services/domain-router-service';
-import type { Folder, TagMeta } from '@/types';
+import { tabGroupsStorage } from '@/services/tab-groups-storage';
+import type { Folder, TagMeta, NotebookMeta } from '@/types';
+import type { DriveNotebookRef, DriveTabGroup } from './types/drive-schemas';
 
 // ── Result types ───────────────────────────────────────────────────────────────
 
@@ -305,12 +308,13 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     exportHistory,
     annotations,
     notebookFolders,
+    notebooks,
     pipelines,
     pipelineRuns,
     podcastEpisodes,
     domainRouterRules,
     conversations,
-    chatSyncMeta,
+    tabGroups,
   ] = await Promise.all([
     storageService.getAll(),
     storageService.getFolders(),
@@ -319,12 +323,13 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     storageService.getExportHistory(),
     notebookAnnotationService.getAllAnnotations(),
     notebookFolderService.getFolders(),
+    notebookSyncService.getRefs(),
     pipelineService.getAll(),
     pipelineService.getRuns(),
     storageService.getPodcastEpisodes(),
     domainRouterService.getRules(),
     chatHistoryStorage.getConversations(),
-    chatHistoryStorage.getSyncMeta(),
+    tabGroupsStorage.getGroups(),
   ]);
 
   await writeAllFromLocal({
@@ -335,12 +340,13 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
     exportHistory,
     annotations,
     notebookFolders,
+    notebooks,
     pipelines,
     pipelineRuns,
     podcastEpisodes,
     domainRouterRules,
     conversations,
-    chatSyncMeta,
+    tabGroups,
   }, token);
 
   await markDeviceInitialized();
@@ -390,12 +396,21 @@ async function applyMergedData(
       const driveMetas = (driveFile.snippets as DriveSnippetMeta[]) ?? [];
       const localSnippets = await storageService.getAll();
 
-      // Apply Drive metadata (tags, folderId, isFavorite) to overlapping local snippets
+      // Apply Drive metadata (title, tags, folderId, isFavorite, usageCount) to
+      // overlapping local snippets — all of these are extension-specific and
+      // must round-trip (title matters for Prompt Hub).
       const driveById = new Map(driveMetas.map((m) => [m.id, m]));
       const updatedLocalSnippets = localSnippets.map((s) => {
         const driveMeta = driveById.get(s.id);
         if (!driveMeta) return s;
-        return { ...s, tags: driveMeta.tags, folderId: driveMeta.folderId, isFavorite: driveMeta.isFavorite };
+        return {
+          ...s,
+          title: driveMeta.title,
+          tags: driveMeta.tags,
+          folderId: driveMeta.folderId,
+          isFavorite: driveMeta.isFavorite,
+          usageCount: driveMeta.usageCount,
+        };
       });
       await chrome.storage.local.set({ snippets: updatedLocalSnippets });
 
@@ -503,8 +518,8 @@ async function applyDriveData(
       // come from local storage and are preserved. Snippets that exist in Drive but
       // not locally are skipped here (no text available without fetching .txt files).
       const driveMetas = (driveFile.snippets as Array<{
-        id: string; source: string; savedAt: number;
-        folderId?: string; tags?: string[]; isFavorite?: boolean;
+        id: string; title?: string; source: string; savedAt: number;
+        folderId?: string; tags?: string[]; isFavorite?: boolean; usageCount?: number;
       }>) ?? [];
       if (driveMetas.length === 0) break;
 
@@ -515,7 +530,14 @@ async function applyDriveData(
       const updated = localSnippets.map((s) => {
         const driveMeta = driveById.get(s.id);
         if (!driveMeta) return s;
-        return { ...s, tags: driveMeta.tags, folderId: driveMeta.folderId, isFavorite: driveMeta.isFavorite };
+        return {
+          ...s,
+          title: driveMeta.title,
+          tags: driveMeta.tags,
+          folderId: driveMeta.folderId,
+          isFavorite: driveMeta.isFavorite,
+          usageCount: driveMeta.usageCount,
+        };
       });
       await chrome.storage.local.set({ snippets: updated });
       break;
@@ -541,6 +563,30 @@ async function applyDriveData(
       const annotations = (driveFile.annotations as unknown[]) ?? [];
       const notebookFolders = (driveFile.folders as unknown[]) ?? [];
       await chrome.storage.local.set({ notebookAnnotations: annotations, notebookFolders });
+
+      // v1 files have no `notebooks` field — default to [] (tolerant read).
+      // Seed placeholder NotebookMeta for refs not already present locally so
+      // annotated/foldered notebooks render with a name before the NotebookLM
+      // API sync runs. Never clobber a richer existing entry — upsertMany only
+      // receives ids that are currently absent; a later API sync fills the rest.
+      const refs = (driveFile.notebooks as DriveNotebookRef[] | undefined) ?? [];
+      if (refs.length > 0) {
+        const existing = await notebookSyncService.getAll();
+        const existingIds = new Set(existing.map((n) => n.id));
+        const placeholders: NotebookMeta[] = refs
+          .filter((r) => !existingIds.has(r.id))
+          .map((r) => ({
+            id: r.id,
+            title: r.name,
+            url: `https://notebooklm.google.com/notebook/${r.id}`,
+            createdAt: 0,
+            lastSyncedAt: 0,
+            isOwner: false,
+          }));
+        if (placeholders.length > 0) {
+          await notebookSyncService.upsertMany(placeholders);
+        }
+      }
       break;
     }
     case 'pipelines.json': {
@@ -549,9 +595,24 @@ async function applyDriveData(
       break;
     }
     case 'chat-conversations-meta.json': {
+      // `syncMeta` was removed in schema v2 — ignored if present in a v1 file.
       const chatConversations = (driveFile.conversations as unknown[]) ?? [];
-      const chatSyncMeta = (driveFile.syncMeta as unknown[]) ?? [];
-      await chrome.storage.local.set({ chatConversations, chatSyncMeta });
+      await chrome.storage.local.set({ chatConversations });
+      break;
+    }
+    case 'tab-groups.json': {
+      // Land synced groups with empty tabIds. The Tab Manager mount-resync
+      // rebuilds tabIds from tabUrls against live tabs and stashes URLs that
+      // aren't open — so groups arrive as restorable stashed entries with no
+      // extra restore logic here.
+      const driveGroups = (driveFile.groups as DriveTabGroup[]) ?? [];
+      const envelopeUpdatedAt = (driveFile.updatedAt as number | undefined) ?? 0;
+      const tabGroups = driveGroups.map((g) => ({
+        ...g,
+        tabIds: [],
+        updatedAt: envelopeUpdatedAt || g.createdAt,
+      }));
+      await chrome.storage.local.set({ tabGroups });
       break;
     }
     default:
@@ -579,19 +640,23 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
       break;
     }
     case 'history-data.json': {
-      const exportHistory = await storageService.getExportHistory();
-      const podcastEpisodes = await storageService.getPodcastEpisodes();
-      driveSyncService.savePodcastEpisodes(podcastEpisodes, token);
-      // Export history and pipeline runs are append-only — push the latest
-      for (const record of exportHistory) {
-        void driveSyncService.appendExportRecord(record, token);
-      }
+      const [exportHistory, pipelineRuns, podcastEpisodes] = await Promise.all([
+        storageService.getExportHistory(),
+        pipelineService.getRuns(),
+        storageService.getPodcastEpisodes(),
+      ]);
+      // Single consolidated write — the old per-record appendExportRecord loop
+      // was O(n²) and racy (each call did its own read-modify-write).
+      driveSyncService.saveHistoryData({ exportHistory, pipelineRuns, podcastEpisodes }, token);
       break;
     }
     case 'notebook-annotations.json': {
-      const annotations = await notebookAnnotationService.getAllAnnotations();
-      const notebookFolders = await notebookFolderService.getFolders();
-      driveSyncService.saveAnnotations(annotations, notebookFolders, token);
+      const [annotations, notebookFolders, notebooks] = await Promise.all([
+        notebookAnnotationService.getAllAnnotations(),
+        notebookFolderService.getFolders(),
+        notebookSyncService.getRefs(),
+      ]);
+      driveSyncService.saveAnnotations(annotations, notebookFolders, notebooks, token);
       break;
     }
     case 'pipelines.json': {
@@ -601,8 +666,12 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
     }
     case 'chat-conversations-meta.json': {
       const conversations = await chatHistoryStorage.getConversations();
-      const syncMeta = await chatHistoryStorage.getSyncMeta();
-      driveSyncService.saveChatConversationsMeta(conversations, syncMeta, token);
+      driveSyncService.saveChatConversationsMeta(conversations, token);
+      break;
+    }
+    case 'tab-groups.json': {
+      const groups = await tabGroupsStorage.getGroups();
+      driveSyncService.saveTabGroups(groups, token);
       break;
     }
     default:

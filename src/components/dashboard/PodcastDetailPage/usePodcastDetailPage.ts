@@ -1,13 +1,14 @@
 /**
  * @module usePodcastDetailPage
  * @description Hook for the podcast episode detail page that manages the track list (add artifact, upload custom audio, remove, drag-reorder), fetches available audio artifacts from the background, and persists every change to storage.
- * @dependencies @/types, @/services/storage-service, @/services/podcast-audio-service
+ * @dependencies @/types, @/services/storage-service, @/services/podcast-audio-service, @/services/drive/podcast-audio-drive-service
  * @public usePodcastDetailPage
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AggregatedArtifact, EpisodeTrack, PodcastEpisode } from '@/types';
 import { storageService } from '@/services/storage-service';
 import { podcastAudioService } from '@/services/podcast-audio-service';
+import { podcastAudioDriveService } from '@/services/drive/podcast-audio-drive-service';
 
 interface FetchAllArtifactsResult {
   ok: boolean;
@@ -98,6 +99,13 @@ export function usePodcastDetailPage(episodeId: string) {
     if (!episode) return;
     const id = crypto.randomUUID();
     await podcastAudioService.put(id, file.name, file, file.type);
+    void podcastAudioDriveService.uploadCustomAudio({
+      id,
+      filename: file.name,
+      mimeType: file.type,
+      blob: file,
+      addedAt: Date.now(),
+    });
     const track: EpisodeTrack = {
       trackId: crypto.randomUUID(),
       title: file.name.replace(/\.[^/.]+$/, ''),
@@ -112,6 +120,7 @@ export function usePodcastDetailPage(episodeId: string) {
     const track = episode.tracks.find((t) => t.trackId === trackId);
     if (track?.source.kind === 'custom') {
       await podcastAudioService.remove(track.source.customAudioId);
+      void podcastAudioDriveService.deleteCustomAudio(track.source.customAudioId);
     }
     await persistTracks(episode.tracks.filter((t) => t.trackId !== trackId));
   }, [episode, persistTracks]);

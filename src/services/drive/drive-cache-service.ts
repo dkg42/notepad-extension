@@ -27,6 +27,8 @@
  *   drive_cache_annotations           → DriveNotebookAnnotationsFile
  *   drive_cache_pipelines             → DrivePipelinesFile
  *   drive_cache_chat_meta             → DriveChatConversationsMetaFile
+ *   drive_cache_custom_audio_index    → DriveCustomAudioIndexFile
+ *   drive_cache_tab_groups            → DriveTabGroupsFile
  *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
  *   drive_cache_version_{fileId}      → number (Drive version for a file)
  *
@@ -64,6 +66,8 @@ export const CacheKeys = {
   annotations: `${KEY_PREFIX}annotations`,
   pipelines: `${KEY_PREFIX}pipelines`,
   chatMeta: `${KEY_PREFIX}chat_meta`,
+  customAudioIndex: `${KEY_PREFIX}custom_audio_index`,
+  tabGroups: `${KEY_PREFIX}tab_groups`,
 
   snippetText: (snippetId: string) => `${SNIPPET_TEXT_PREFIX}${snippetId}`,
   chatContent: (platform: string, id: string) => `${CHAT_CONTENT_PREFIX}${platform}_${id}`,

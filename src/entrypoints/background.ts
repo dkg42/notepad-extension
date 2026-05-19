@@ -31,6 +31,7 @@ import {
 } from '@/services/token-lifecycle-service';
 import { driveInitService } from '@/services/drive/drive-init-service';
 import { driveWriteQueue } from '@/services/drive/drive-write-queue';
+import { tabGroupsSyncService } from '@/services/tab-groups-sync-service';
 import { clipboardSessionService } from '@/services/clipboard-session-service';
 
 import { isMessage, ensureSignedIn } from '@/background/shared';
@@ -55,6 +56,8 @@ const AUDIO_CLEANUP_ALARM = 'audio-cache-cleanup';
 const AUDIO_CLEANUP_INTERVAL_MINUTES = 60;
 const PIPELINE_CHECK_ALARM = 'pipeline-check';
 const PIPELINE_CHECK_INTERVAL_MINUTES = 15;
+const TAB_GROUPS_SYNC_ALARM = 'tab-groups-sync';
+const TAB_GROUPS_SYNC_INTERVAL_MINUTES = 5;
 
 // ── Offscreen document helpers (following official Chrome extension auth guide) ──
 
@@ -332,6 +335,7 @@ function handleAuthSessionMessage(
           sourceCountCacheService.clear(),
           allSourcesCacheService.clear(),
           allArtifactsCacheService.clear(),
+          tabGroupsSyncService.clearSyncSignature(),
         ]);
       })
       .then(() => sendResponse({ ok: true }))
@@ -360,6 +364,7 @@ export default defineBackground(() => {
     chrome.alarms.create(ALARM_NAME, { periodInMinutes: SYNC_INTERVAL_MINUTES });
     chrome.alarms.create(AUDIO_CLEANUP_ALARM, { periodInMinutes: AUDIO_CLEANUP_INTERVAL_MINUTES });
     chrome.alarms.create(PIPELINE_CHECK_ALARM, { periodInMinutes: PIPELINE_CHECK_INTERVAL_MINUTES });
+    chrome.alarms.create(TAB_GROUPS_SYNC_ALARM, { periodInMinutes: TAB_GROUPS_SYNC_INTERVAL_MINUTES });
     // Re-arm token refresh alarm in case the extension was updated while signed in.
     void scheduleRefreshAlarm();
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -396,6 +401,8 @@ export default defineBackground(() => {
       void audioCacheService.cleanup();
     } else if (alarm.name === PIPELINE_CHECK_ALARM) {
       void runPipelineCheck();
+    } else if (alarm.name === TAB_GROUPS_SYNC_ALARM) {
+      void tabGroupsSyncService.syncTabGroupsIfChanged();
     } else if (alarm.name === TOKEN_REFRESH_ALARM) {
       void handleRefreshAlarm();
     }
@@ -433,6 +440,10 @@ export default defineBackground(() => {
   // Flush any pending Drive writes before the service worker is terminated.
   // Chrome gives ~5 seconds on this event, so this is best-effort.
   chrome.runtime.onSuspend.addListener(() => {
-    void driveWriteQueue.flushAll();
+    // Snapshot tab groups (if changed) so the latest state is enqueued, then
+    // drain all pending Drive writes before the worker is killed.
+    void tabGroupsSyncService
+      .syncTabGroupsIfChanged()
+      .finally(() => void driveWriteQueue.flushAll());
   });
 });

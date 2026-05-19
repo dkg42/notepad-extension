@@ -33,11 +33,3 @@ export interface ConversationFull {
   messages: ConversationMessage[];
   fetchedAt: number;
 }
-
-/** @deprecated Sync status type kept for Drive serialization compatibility only. */
-export interface ChatSyncMeta {
-  platform: ChatPlatform;
-  lastSyncedAt: number;
-  error?: string;
-  conversationCount: number;
-}

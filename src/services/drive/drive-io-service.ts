@@ -6,7 +6,7 @@
  * `ok: false` case. Files are stored in the Drive AppData space (app-private,
  * invisible to the user) unless `USE_VISIBLE_DEBUG_FOLDER` is enabled for local QA.
  * @dependencies ./types/drive-schemas (DriveFileRef)
- * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles
+ * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles, getPodcastAudioFolderId, createBinaryFile, readBinaryFile
  */
 
 /**
@@ -78,6 +78,61 @@ async function getDebugFolderId(token: string): Promise<string> {
   const folder = await createResp.json() as { id: string };
   debugFolderIdCache = folder.id;
   return debugFolderIdCache;
+}
+
+// ── User-visible podcast-audio folder ─────────────────────────────────────────
+//
+// Unlike AppData (app-private, invisible), custom podcast-audio uploads go into a
+// regular Drive folder the app creates so the user can see/manage them directly
+// in their Drive UI. This is intentional and always on — it is NOT gated on the
+// debug flag above. Requires the already-requested `drive.file` scope (the app
+// can manage files/folders it creates).
+
+const PODCAST_AUDIO_FOLDER_NAME = 'NoteHubLM Podcast Audio';
+
+/** Cached folder id for the lifetime of the service worker. */
+let podcastAudioFolderIdCache: string | null = null;
+
+/**
+ * Finds or creates the user-visible podcast-audio folder in the user's Drive
+ * root. Cached in `podcastAudioFolderIdCache`. Returns null on failure (callers
+ * treat audio sync as best-effort).
+ */
+export async function getPodcastAudioFolderId(token: string): Promise<string | null> {
+  if (podcastAudioFolderIdCache) return podcastAudioFolderIdCache;
+
+  const escapedName = PODCAST_AUDIO_FOLDER_NAME.replace(/'/g, "\\'");
+  const query = encodeURIComponent(
+    `name = '${escapedName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+  );
+  const listUrl = `${DRIVE_API}/files?spaces=drive&q=${query}&fields=${encodeURIComponent('files(id,name)')}`;
+
+  try {
+    const listResp = await fetch(listUrl, { headers: authHeader(token) });
+    if (listResp.ok) {
+      const json = (await listResp.json()) as { files: Array<{ id: string }> };
+      if (json.files && json.files.length > 0) {
+        podcastAudioFolderIdCache = json.files[0].id;
+        return podcastAudioFolderIdCache;
+      }
+    }
+
+    const createResp = await fetch(`${DRIVE_API}/files`, {
+      method: 'POST',
+      headers: { ...authHeader(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: PODCAST_AUDIO_FOLDER_NAME,
+        mimeType: 'application/vnd.google-apps.folder',
+      }),
+    });
+    if (!createResp.ok) return null;
+
+    const folder = (await createResp.json()) as { id: string };
+    podcastAudioFolderIdCache = folder.id;
+    return podcastAudioFolderIdCache;
+  } catch {
+    return null;
+  }
 }
 
 // ── Result type ────────────────────────────────────────────────────────────────
@@ -161,6 +216,59 @@ export async function createFile(
 }
 
 /**
+ * Creates a new binary file (e.g. audio) under an explicit parent folder.
+ * Uses multipart/related with a Blob body so raw bytes are sent intact (the
+ * string multipart builder used by createFile cannot carry binary safely).
+ */
+export async function createBinaryFile(
+  filename: string,
+  mimeType: string,
+  body: Blob,
+  parentId: string,
+  token: string,
+): Promise<DriveIOResult<DriveFileRef>> {
+  const boundary = `boundary_${crypto.randomUUID().replace(/-/g, '')}`;
+  const metadata = { name: filename, parents: [parentId] };
+  const preamble =
+    `--${boundary}\r\n` +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    `${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: ${mimeType}\r\n\r\n`;
+  const epilogue = `\r\n--${boundary}--`;
+  const multipart = new Blob([preamble, body, epilogue]);
+
+  try {
+    const resp = await fetch(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id,name,size,version`, {
+      method: 'POST',
+      headers: {
+        ...authHeader(token),
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+      },
+      body: multipart,
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      return { ok: false, status: resp.status, error: `Drive createBinaryFile failed (${resp.status}): ${text}` };
+    }
+
+    const json = (await resp.json()) as { id: string; name: string; size: string; version?: string };
+    return {
+      ok: true,
+      data: {
+        id: json.id,
+        name: json.name,
+        version: parseInt(json.version ?? '0', 10),
+        size: parseInt(json.size ?? '0', 10),
+      },
+    };
+  } catch (err) {
+    return { ok: false, status: 0, error: `Drive createBinaryFile network error: ${String(err)}` };
+  }
+}
+
+/**
  * Updates the content of an existing Drive file by its file ID.
  * Uses simple media upload (content only — metadata is unchanged).
  * Returns updated file metadata including the new version number.
@@ -226,6 +334,32 @@ export async function readFile(
     return { ok: true, data: content };
   } catch (err) {
     return { ok: false, status: 0, error: `Drive readFile network error: ${String(err)}` };
+  }
+}
+
+/**
+ * Reads a Drive file's raw bytes as a Blob (e.g. for downloading custom audio
+ * back into IndexedDB on a device that doesn't have the blob yet).
+ */
+export async function readBinaryFile(
+  fileId: string,
+  token: string,
+): Promise<DriveIOResult<Blob>> {
+  try {
+    const resp = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`,
+      { headers: authHeader(token) },
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      return { ok: false, status: resp.status, error: `Drive readBinaryFile failed (${resp.status}): ${text}` };
+    }
+
+    const blob = await resp.blob();
+    return { ok: true, data: blob };
+  } catch (err) {
+    return { ok: false, status: 0, error: `Drive readBinaryFile network error: ${String(err)}` };
   }
 }
 

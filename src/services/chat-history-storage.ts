@@ -8,7 +8,7 @@
  * @dependencies token-lifecycle-service, drive/drive-sync-service
  * @public chatHistoryStorage
  */
-import type { ChatPlatform, ChatSyncMeta, ConversationFull, ConversationMeta } from '@/types';
+import type { ChatPlatform, ConversationFull, ConversationMeta } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
@@ -55,7 +55,7 @@ export const chatHistoryStorage = {
     const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: merged });
     syncToDrive((t) => {
-      driveSyncService.saveChatConversationsMeta(merged, [], t);
+      driveSyncService.saveChatConversationsMeta(merged, t);
     });
   },
 
@@ -81,13 +81,8 @@ export const chatHistoryStorage = {
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: updated });
     syncToDrive((t) => {
       void driveSyncService.saveChatConversationContent(full, t);
-      driveSyncService.saveChatConversationsMeta(updated, [], t);
+      driveSyncService.saveChatConversationsMeta(updated, t);
     });
-  },
-
-  /** @deprecated Returns empty array — sync meta is no longer tracked. Kept for Drive serialization compatibility. */
-  async getSyncMeta(): Promise<ChatSyncMeta[]> {
-    return [];
   },
 
   /** Removes a single conversation's metadata and content from storage. */
@@ -98,7 +93,7 @@ export const chatHistoryStorage = {
     await chrome.storage.local.set({ [CONVERSATIONS_KEY]: filtered });
     await chrome.storage.local.remove(contentKey(platform, id));
     syncToDrive((t) => {
-      driveSyncService.saveChatConversationsMeta(filtered, [], t);
+      driveSyncService.saveChatConversationsMeta(filtered, t);
     });
   },
 

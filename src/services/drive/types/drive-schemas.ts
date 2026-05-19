@@ -1,8 +1,8 @@
 /**
  * @module drive-schemas
  * @description Defines the TypeScript wire-format contracts (interfaces and enums) for every JSON and plain-text file persisted in Google Drive AppData. All Drive services must conform to these types when serializing or deserializing data; incrementing DRIVE_SCHEMA_VERSION and adding a migration path in drive-init-service.ts is required for any breaking field change. Audio Blob payloads are intentionally excluded from sync — only Drive-safe representations are defined here.
- * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history
- * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveCoreDataFile, DriveHistoryDataFile, DriveNotebookAnnotationsFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
+ * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history, @/types/tab-groups
+ * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveCoreDataFile, DriveHistoryDataFile, DriveNotebookRef, DriveNotebookAnnotationsFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, DriveCustomAudioIndexFile, DriveCustomAudioEntry, DriveTabGroup, DriveTabGroupsFile, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
  */
 
 /**
@@ -20,10 +20,16 @@
  *   snippet-text-{id}.txt              ← one plain-text file per snippet body
  *   core-data.json                     ← folders + tags + settings + domain-router-rules
  *   history-data.json                  ← export-history + pipeline-runs + podcast-episodes
- *   notebook-annotations.json          ← NotebookAnnotation[] + NotebookCollection[]
+ *   notebook-annotations.json          ← NotebookAnnotation[] + Folder[] + minimal {id,name} refs
  *   pipelines.json
  *   chat-conversations-meta.json       ← ConversationMeta[] only
  *   chat-content-{platform}-{id}.txt   ← NDJSON per conversation
+ *   custom-audio-index.json            ← customAudioId → Drive file-id map for podcast uploads
+ *   tab-groups.json                    ← durable tab-group defs (no live tabIds)
+ *
+ * Note: the actual custom-audio media files are NOT in AppData — they live in a
+ * user-visible app-created Drive folder so the user can manage them directly.
+ * This index only maps the in-app customAudioId to that file's Drive id.
  */
 
 import type {
@@ -37,7 +43,8 @@ import type {
 import type { DashboardSettings, ExportRecord } from '@/types/dashboard';
 import type { Pipeline, PipelineRun } from '@/types/pipeline';
 import type { DomainRouterRule } from '@/types/import';
-import type { ConversationMeta, ConversationMessage, ChatSyncMeta } from '@/types/chat-history';
+import type { ConversationMeta, ConversationMessage } from '@/types/chat-history';
+import type { GroupColor, StashedTab } from '@/types/tab-groups';
 
 // ── Schema version ─────────────────────────────────────────────────────────────
 
@@ -45,7 +52,7 @@ import type { ConversationMeta, ConversationMessage, ChatSyncMeta } from '@/type
  * Increment when a breaking field change is made to any Drive file format.
  * drive-init-service.ts must handle migration from (version - 1) to this version.
  */
-export const DRIVE_SCHEMA_VERSION = 1;
+export const DRIVE_SCHEMA_VERSION = 2;
 
 // ── Known filenames (strongly typed to prevent typos) ─────────────────────────
 
@@ -56,7 +63,9 @@ export type DriveFilename =
   | 'history-data.json'
   | 'notebook-annotations.json'
   | 'pipelines.json'
-  | 'chat-conversations-meta.json';
+  | 'chat-conversations-meta.json'
+  | 'custom-audio-index.json'
+  | 'tab-groups.json';
 
 /** Returns the Drive filename for a per-snippet text file. */
 export function snippetTextFilename(snippetId: string): string {
@@ -131,11 +140,15 @@ interface DriveFileEnvelope {
  */
 export interface DriveSnippetMeta {
   id: string;
+  /** User-authored title (Prompt Hub). Extension-specific — must round-trip. */
+  title?: string;
   source: string;
   savedAt: number;
   folderId?: string;
   tags?: string[];
   isFavorite?: boolean;
+  /** Times the prompt/snippet has been used. Extension-specific — must round-trip. */
+  usageCount?: number;
   /**
    * Drive file ID for this snippet's `.txt` file.
    * Null means the text file has not been uploaded yet (e.g., created offline).
@@ -170,10 +183,26 @@ export interface DriveHistoryDataFile extends DriveFileEnvelope {
 
 // ── notebook-annotations.json ─────────────────────────────────────────────────
 
+/**
+ * Minimal notebook reference. The full NotebookMeta (title, url, createdAt,
+ * isOwner, lastSyncedAt) is NOT synced — it is re-fetched from NotebookLM. Only
+ * the stable NotebookLM id (survives upstream rename) plus a last-known display
+ * name are synced, so annotated/foldered notebooks render with a name on a new
+ * device before the NotebookLM API sync repopulates full metadata.
+ */
+export interface DriveNotebookRef {
+  /** Stable NotebookLM notebook id — the cross-device link. */
+  id: string;
+  /** Last-known notebook name; refreshed from NotebookLM when available. */
+  name: string;
+}
+
 export interface DriveNotebookAnnotationsFile extends DriveFileEnvelope {
   annotations: NotebookAnnotation[];
   /** Notebook folders (nested tree). Replaces legacy flat `collections` field. */
   folders: Folder[];
+  /** Minimal {id,name} refs for pre-sync display. Absent in v1 files (default []). */
+  notebooks: DriveNotebookRef[];
 }
 
 // ── pipelines.json ────────────────────────────────────────────────────────────
@@ -208,7 +237,6 @@ export interface DriveSafePodcastEpisode extends Omit<PodcastEpisode, 'tracks'> 
 
 export interface DriveChatConversationsMetaFile extends DriveFileEnvelope {
   conversations: ConversationMeta[];
-  syncMeta: ChatSyncMeta[];
 }
 
 /**
@@ -223,6 +251,49 @@ export interface DriveChatConversationsMetaFile extends DriveFileEnvelope {
 export interface DriveConversationMetaLine {
   _meta: ConversationMeta;
   fetchedAt: number;
+}
+
+// ── custom-audio-index.json ───────────────────────────────────────────────────
+
+/**
+ * Maps an in-app customAudioId to the Drive file that holds its audio blob.
+ * The blob itself lives in a user-visible app-created Drive folder (not AppData)
+ * so the user can see/manage uploads directly in their Drive.
+ */
+export interface DriveCustomAudioEntry {
+  customAudioId: string;
+  /** Drive file id of the uploaded audio in the visible media folder. */
+  driveFileId: string;
+  filename: string;
+  mimeType: string;
+}
+
+export interface DriveCustomAudioIndexFile extends DriveFileEnvelope {
+  entries: DriveCustomAudioEntry[];
+}
+
+// ── tab-groups.json ───────────────────────────────────────────────────────────
+
+/**
+ * Durable, device-agnostic tab-group definition. Excludes `tabIds` (live Chrome
+ * tab ids, meaningless on another device — re-derived from `tabUrls` on load)
+ * and the in-model `updatedAt` (poisoned by automatic live reconciliation; the
+ * file envelope's `updatedAt` is the last-write-wins timestamp instead).
+ */
+export interface DriveTabGroup {
+  id: string;
+  name: string;
+  color: GroupColor;
+  pinned: boolean;
+  context: string;
+  aiContext: boolean;
+  createdAt: number;
+  tabUrls: string[];
+  stashedTabs: StashedTab[];
+}
+
+export interface DriveTabGroupsFile extends DriveFileEnvelope {
+  groups: DriveTabGroup[];
 }
 
 // ── Helper: strip podcast blobs before sync ───────────────────────────────────

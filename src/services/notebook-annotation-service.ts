@@ -6,6 +6,7 @@
  */
 import type { NotebookAnnotation } from '@/types';
 import { notebookFolderService } from './notebook-folder-service';
+import { notebookSyncService } from './notebook-sync-service';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
 
@@ -37,8 +38,11 @@ export const notebookAnnotationService = {
     }
     await chrome.storage.local.set({ [ANNOTATIONS_KEY]: all });
     syncToDrive(async (t) => {
-      const folders = await notebookFolderService.getFolders();
-      driveSyncService.saveAnnotations(all, folders, t);
+      const [folders, notebooks] = await Promise.all([
+        notebookFolderService.getFolders(),
+        notebookSyncService.getRefs(),
+      ]);
+      driveSyncService.saveAnnotations(all, folders, notebooks, t);
     });
   },
 
@@ -47,8 +51,11 @@ export const notebookAnnotationService = {
     const filtered = all.filter((a) => a.notebookId !== notebookId);
     await chrome.storage.local.set({ [ANNOTATIONS_KEY]: filtered });
     syncToDrive(async (t) => {
-      const folders = await notebookFolderService.getFolders();
-      driveSyncService.saveAnnotations(filtered, folders, t);
+      const [folders, notebooks] = await Promise.all([
+        notebookFolderService.getFolders(),
+        notebookSyncService.getRefs(),
+      ]);
+      driveSyncService.saveAnnotations(filtered, folders, notebooks, t);
     });
   },
 
