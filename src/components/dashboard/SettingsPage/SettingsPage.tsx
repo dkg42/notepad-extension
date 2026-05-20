@@ -4,14 +4,12 @@
  * @dependencies useSettingsPage, DomainRouterSettings, @/contexts/NavigationContext, @/services/auth-service
  * @public SettingsPage
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
-import { useSettingsPage } from './useSettingsPage';
 import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import { useNavigation } from '@/contexts/NavigationContext';
-import { useUsageLimit } from '@/hooks/useUsageLimit';
 import './SettingsPage.css';
 
 function getInitials(name: string | null): string {
@@ -46,7 +44,6 @@ export default function SettingsPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -65,17 +62,6 @@ export default function SettingsPage() {
       setSigningIn(false);
     }
   };
-  const {
-    importError,
-    importSuccess,
-    showClearConfirm,
-    setShowClearConfirm,
-    handleExport,
-    handleImport,
-    handleClearAll,
-  } = useSettingsPage(settings, onSettingsChange);
-  const { canUse: canImportExport, count: importExportCount, use: useImportExport } = useUsageLimit('import_export');
-
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -179,93 +165,6 @@ export default function SettingsPage() {
               <option value="asc">Ascending</option>
               <option value="desc">Descending</option>
             </select>
-          </div>
-        </section>
-
-        {/* Data */}
-        <section className="settings-section">
-          <h2 className="settings-section__title">Data</h2>
-
-          <div className="settings-row">
-            <div className="settings-row__label">
-              <span className="settings-row__name">Export all data</span>
-              <span className="settings-row__description">
-                Download a JSON backup of all prompts, folders, tags and settings.
-                {importExportCount !== null && ` (${importExportCount}/5 used today${!canImportExport ? ' — upgrade to Pro for unlimited' : ''})`}
-              </span>
-            </div>
-            <button
-              className="settings-page__btn"
-              onClick={() => { void useImportExport(); handleExport(); }}
-              disabled={!canImportExport}
-              title={!canImportExport ? 'Daily limit reached. Upgrade to Pro for unlimited.' : undefined}
-            >
-              Export JSON
-            </button>
-          </div>
-
-          <div className="settings-row">
-            <div className="settings-row__label">
-              <span className="settings-row__name">Import data</span>
-              <span className="settings-row__description">
-                Restore from a previously exported JSON file.
-              </span>
-            </div>
-            <button
-              className="settings-page__btn"
-              onClick={() => { void useImportExport(); fileInputRef.current?.click(); }}
-              disabled={!canImportExport}
-              title={!canImportExport ? 'Daily limit reached. Upgrade to Pro for unlimited.' : undefined}
-            >
-              Import JSON
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImport(file);
-                e.target.value = '';
-              }}
-            />
-          </div>
-
-          {importError && <p className="settings-page__error">{importError}</p>}
-          {importSuccess && <p className="settings-page__success">{importSuccess}</p>}
-
-          <div className="settings-row">
-            <div className="settings-row__label">
-              <span className="settings-row__name">Clear all prompts</span>
-              <span className="settings-row__description">
-                Permanently delete all saved prompts. Folders and settings are kept.
-              </span>
-            </div>
-            {showClearConfirm ? (
-              <div className="settings-page__confirm">
-                <span className="settings-page__confirm-text">Are you sure?</span>
-                <button
-                  className="settings-page__btn settings-page__btn--danger"
-                  onClick={handleClearAll}
-                >
-                  Yes, delete all
-                </button>
-                <button
-                  className="settings-page__btn"
-                  onClick={() => setShowClearConfirm(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                className="settings-page__btn settings-page__btn--danger"
-                onClick={() => setShowClearConfirm(true)}
-              >
-                Clear all
-              </button>
-            )}
           </div>
         </section>
 

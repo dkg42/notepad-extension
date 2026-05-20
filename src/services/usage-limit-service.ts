@@ -12,8 +12,7 @@ export type UsageFeature =
   | 'chat_history'
   | 'notebooklm_add'
   | 'pipeline_run'
-  | 'screenshot_editor'
-  | 'import_export';
+  | 'screenshot_editor';
 
 export const DAILY_LIMITS: Record<UsageFeature, number> = {
   prompt_hub: 5,
@@ -21,7 +20,6 @@ export const DAILY_LIMITS: Record<UsageFeature, number> = {
   notebooklm_add: 3,
   pipeline_run: 5,
   screenshot_editor: 2,
-  import_export: 5,
 };
 
 const STORAGE_KEY = 'dailyUsage';
