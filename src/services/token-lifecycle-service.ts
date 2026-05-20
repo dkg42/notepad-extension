@@ -33,6 +33,41 @@ export const TOKEN_REFRESH_ALARM = 'token-refresh';
 /** Refresh this many milliseconds before token expiry to avoid racing with expiry. */
 const LEAD_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
+// ── Transient-failure retry/backoff ────────────────────────────────────────────
+//
+// The refresh alarm is one-shot. Before this, a transient failure (network blip,
+// 5xx, SW torn down mid-fetch) during the proactive refresh left NO alarm armed,
+// so the token was never refreshed again and the user was effectively signed out
+// on next interaction. Now a transient failure re-arms the alarm with capped
+// exponential backoff. The attempt count lives in chrome.storage.session so it
+// survives service-worker kills but resets on browser close.
+
+const RETRY_BASE_MS = 60 * 1000; // 1 minute
+const RETRY_MAX_MS = 15 * 60 * 1000; // 15 minutes
+const RETRY_COUNT_KEY = 'tokenRefreshRetryCount';
+
+const sessionStore = chrome.storage.session as typeof chrome.storage.local;
+
+async function getRetryCount(): Promise<number> {
+  const result = await sessionStore.get(RETRY_COUNT_KEY);
+  return (result[RETRY_COUNT_KEY] as number) ?? 0;
+}
+
+async function clearRetryCount(): Promise<void> {
+  await sessionStore.remove(RETRY_COUNT_KEY);
+}
+
+/** Re-arms TOKEN_REFRESH_ALARM after a transient failure with capped exponential backoff. */
+async function scheduleRetryAlarm(): Promise<void> {
+  const attempt = await getRetryCount();
+  const delayMs = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS);
+  await sessionStore.set({ [RETRY_COUNT_KEY]: attempt + 1 });
+  console.warn(
+    `[TOKEN] Transient refresh failure — retry #${attempt + 1} in ${Math.round(delayMs / 1000)}s`,
+  );
+  chrome.alarms.create(TOKEN_REFRESH_ALARM, { delayInMinutes: delayMs / 60_000 });
+}
+
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
 export type GetTokenResult =
@@ -130,13 +165,13 @@ export async function handleRefreshAlarm(): Promise<void> {
     if (!refreshResult) {
       // No refresh token — user is signed out; alarm is stale.
       console.log('[TOKEN] Refresh alarm fired but no refresh token found — cancelling alarm');
-      await cancelRefreshAlarm();
+      await Promise.all([cancelRefreshAlarm(), clearRetryCount()]);
       return;
     }
 
     if (refreshResult.ok) {
       console.log('[TOKEN] Proactive token refresh succeeded, re-arming alarm');
-      await scheduleRefreshAlarm();
+      await scheduleRefreshAlarm(); // runRefresh() already cleared the retry count
       return;
     }
 
@@ -146,8 +181,11 @@ export async function handleRefreshAlarm(): Promise<void> {
       return;
     }
 
-    // network_error or server_error — do NOT cancel; the next alarm firing will retry.
-    console.warn('[TOKEN] Proactive refresh failed (will retry):', refreshResult.error);
+    // network_error or server_error: recoverable. Re-arm the (one-shot) alarm
+    // with capped exponential backoff so the refresh actually retries instead
+    // of silently stopping forever.
+    console.warn('[TOKEN] Proactive refresh failed (will retry with backoff):', refreshResult.error);
+    await scheduleRetryAlarm();
   } catch (err) {
     console.error('[TOKEN] Unexpected error in handleRefreshAlarm:', err);
   }
@@ -179,6 +217,8 @@ async function runRefresh(): Promise<TokenRefreshResult | null> {
   const result = await refreshInProgress;
 
   if (result.ok) {
+    // Any successful refresh (proactive or just-in-time) clears the backoff.
+    await clearRetryCount();
     await authStorageService.saveSessionToken(
       result.accessToken,
       result.expiresAt,
@@ -205,6 +245,7 @@ async function handleInvalidGrant(): Promise<void> {
   await Promise.all([
     authStorageService.clearAll(),
     cancelRefreshAlarm(),
+    clearRetryCount(),
   ]);
   // Best-effort notify open popup/dashboard — ignore if no receiver is open.
   chrome.runtime.sendMessage({ type: 'REAUTH_REQUIRED' }).catch(() => {});

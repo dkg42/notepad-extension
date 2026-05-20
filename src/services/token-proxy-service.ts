@@ -32,10 +32,27 @@ interface RefreshCFResponse {
  * Cloud Function. The server uses the stored refresh token + client_secret.
  */
 export async function refreshAccessToken(): Promise<TokenRefreshResult> {
-  const idToken = await getFirebaseIdToken();
-  if (!idToken) {
-    return { ok: false, reason: 'invalid_grant', error: 'No Firebase ID token — user is signed out' };
+  const idTokenResult = await getFirebaseIdToken();
+  if (!idTokenResult.ok) {
+    // Only a genuinely dead refresh token (or being signed out) warrants the
+    // destructive invalid_grant path. A transient ID-token failure must stay
+    // recoverable so an idle-time network blip never forces a sign-out.
+    if (idTokenResult.reason === 'transient') {
+      return {
+        ok: false,
+        reason: 'network_error',
+        error: 'Transient failure obtaining Firebase ID token',
+      };
+    }
+    return {
+      ok: false,
+      reason: 'invalid_grant',
+      error: idTokenResult.reason === 'signed_out'
+        ? 'No Firebase refresh token — user is signed out'
+        : 'Firebase refresh token is invalid',
+    };
   }
+  const idToken = idTokenResult.idToken;
 
   let response: Response;
   try {
@@ -55,7 +72,15 @@ export async function refreshAccessToken(): Promise<TokenRefreshResult> {
     };
   }
 
-  const body = await response.json() as RefreshCFResponse & { error?: string; message?: string };
+  // Parse defensively: a 5xx from an upstream proxy may return non-JSON
+  // (e.g. an HTML 502). A parse failure must not throw — that would bypass
+  // the retry path and surface as an "unexpected error".
+  let body: RefreshCFResponse & { error?: string; message?: string };
+  try {
+    body = await response.json() as RefreshCFResponse & { error?: string; message?: string };
+  } catch {
+    body = {} as RefreshCFResponse & { error?: string; message?: string };
+  }
 
   if (!response.ok) {
     const reason = body.error === 'invalid_grant' ? 'invalid_grant' : 'server_error';
@@ -77,14 +102,14 @@ export async function refreshAccessToken(): Promise<TokenRefreshResult> {
  * Best-effort: returns true even on server errors to not block sign-out.
  */
 export async function revokeToken(): Promise<boolean> {
-  const idToken = await getFirebaseIdToken();
-  if (!idToken) return true; // Already signed out — nothing to revoke
+  const idTokenResult = await getFirebaseIdToken();
+  if (!idTokenResult.ok) return true; // No usable ID token — nothing to revoke
 
   try {
     const response = await fetch(REVOKE_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${idToken}`,
+        'Authorization': `Bearer ${idTokenResult.idToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({}),
