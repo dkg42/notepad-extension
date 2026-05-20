@@ -2,7 +2,7 @@
  * @module drive-schemas
  * @description Defines the TypeScript wire-format contracts (interfaces and enums) for every JSON and plain-text file persisted in Google Drive AppData. All Drive services must conform to these types when serializing or deserializing data; incrementing DRIVE_SCHEMA_VERSION and adding a migration path in drive-init-service.ts is required for any breaking field change. Audio Blob payloads are intentionally excluded from sync — only Drive-safe representations are defined here.
  * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history, @/types/tab-groups
- * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DriveSnippetMeta, DriveSnippetsMetaFile, DriveCoreDataFile, DriveHistoryDataFile, DriveNotebookRef, DriveNotebookAnnotationsFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, DriveCustomAudioIndexFile, DriveCustomAudioEntry, DriveTabGroup, DriveTabGroupsFile, snippetTextFilename, chatContentFilename, toDriveSafeEpisode
+ * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DrivePromptMeta, DrivePromptsMetaFile, DriveAppSettingsFile, DriveActivityDataFile, DriveNotebookRef, DriveNotebookDataFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, DrivePodcastAudioIndexFile, DrivePodcastAudioEntry, DriveTabGroup, DriveTabGroupsFile, promptTextFilename, chatContentFilename, toDriveSafeEpisode
  */
 
 /**
@@ -16,15 +16,15 @@
  * Drive AppData file layout (flat — AppData has no real subdirectory support):
  *
  *   manifest.json                      ← file-ID registry + versions + schema versions
- *   snippets-meta.json                 ← snippet metadata (text bodies excluded)
- *   snippet-text-{id}.txt              ← one plain-text file per snippet body
- *   core-data.json                     ← folders + tags + settings + domain-router-rules
- *   history-data.json                  ← export-history + pipeline-runs + podcast-episodes
- *   notebook-annotations.json          ← NotebookAnnotation[] + Folder[] + minimal {id,name} refs
+ *   prompts-meta.json                  ← prompt metadata for Prompt Hub (text bodies excluded)
+ *   prompt-text-{id}.txt               ← one plain-text file per prompt body
+ *   app-settings.json                  ← folders + tags + settings + domain-router-rules
+ *   activity-data.json                 ← export-history + pipeline-runs + podcast-episodes
+ *   notebook-data.json                 ← NotebookAnnotation[] + Folder[] + minimal {id,name} refs
  *   pipelines.json
  *   chat-conversations-meta.json       ← ConversationMeta[] only
  *   chat-content-{platform}-{id}.txt   ← NDJSON per conversation
- *   custom-audio-index.json            ← customAudioId → Drive file-id map for podcast uploads
+ *   podcast-audio-index.json           ← customAudioId → Drive file-id map for podcast uploads
  *   tab-groups.json                    ← durable tab-group defs (no live tabIds)
  *
  * Note: the actual custom-audio media files are NOT in AppData — they live in a
@@ -58,18 +58,18 @@ export const DRIVE_SCHEMA_VERSION = 2;
 
 export type DriveFilename =
   | 'manifest.json'
-  | 'snippets-meta.json'
-  | 'core-data.json'
-  | 'history-data.json'
-  | 'notebook-annotations.json'
+  | 'prompts-meta.json'
+  | 'app-settings.json'
+  | 'activity-data.json'
+  | 'notebook-data.json'
   | 'pipelines.json'
   | 'chat-conversations-meta.json'
-  | 'custom-audio-index.json'
+  | 'podcast-audio-index.json'
   | 'tab-groups.json';
 
-/** Returns the Drive filename for a per-snippet text file. */
-export function snippetTextFilename(snippetId: string): string {
-  return `snippet-text-${snippetId}.txt`;
+/** Returns the Drive filename for a per-prompt text file. */
+export function promptTextFilename(promptId: string): string {
+  return `prompt-text-${promptId}.txt`;
 }
 
 /** Returns the Drive filename for a per-conversation content file. */
@@ -132,13 +132,13 @@ interface DriveFileEnvelope {
   updatedAt: number;
 }
 
-// ── snippets-meta.json ─────────────────────────────────────────────────────────
+// ── prompts-meta.json ─────────────────────────────────────────────────────────
 
 /**
- * Snippet metadata stored in the index file.
- * The text body is excluded — it lives in a separate `snippet-text-{id}.txt` file.
+ * Prompt Hub entry metadata stored in the index file.
+ * The text body is excluded — it lives in a separate `prompt-text-{id}.txt` file.
  */
-export interface DriveSnippetMeta {
+export interface DrivePromptMeta {
   id: string;
   /** User-authored title (Prompt Hub). Extension-specific — must round-trip. */
   title?: string;
@@ -147,33 +147,33 @@ export interface DriveSnippetMeta {
   folderId?: string;
   tags?: string[];
   isFavorite?: boolean;
-  /** Times the prompt/snippet has been used. Extension-specific — must round-trip. */
+  /** Times the prompt has been used. Extension-specific — must round-trip. */
   usageCount?: number;
   /**
-   * Drive file ID for this snippet's `.txt` file.
+   * Drive file ID for this prompt's `.txt` file.
    * Null means the text file has not been uploaded yet (e.g., created offline).
    */
   textFileId: string | null;
 }
 
-export interface DriveSnippetsMetaFile extends DriveFileEnvelope {
-  snippets: DriveSnippetMeta[];
+export interface DrivePromptsMetaFile extends DriveFileEnvelope {
+  prompts: DrivePromptMeta[];
 }
 
-// ── core-data.json ────────────────────────────────────────────────────────────
+// ── app-settings.json ─────────────────────────────────────────────────────────
 
 /** Consolidates folders, tags, settings, and domain-router-rules into one file. */
-export interface DriveCoreDataFile extends DriveFileEnvelope {
+export interface DriveAppSettingsFile extends DriveFileEnvelope {
   folders: Folder[];
   tags: TagMeta[];
   settings: DashboardSettings | null;
   domainRouterRules: DomainRouterRule[];
 }
 
-// ── history-data.json ─────────────────────────────────────────────────────────
+// ── activity-data.json ────────────────────────────────────────────────────────
 
 /** Consolidates export-history, pipeline-runs, and podcast-episodes into one file. */
-export interface DriveHistoryDataFile extends DriveFileEnvelope {
+export interface DriveActivityDataFile extends DriveFileEnvelope {
   /** Capped at 200 entries, newest first. */
   exportHistory: ExportRecord[];
   /** Capped at 200 entries, newest first. */
@@ -181,7 +181,7 @@ export interface DriveHistoryDataFile extends DriveFileEnvelope {
   podcastEpisodes: DriveSafePodcastEpisode[];
 }
 
-// ── notebook-annotations.json ─────────────────────────────────────────────────
+// ── notebook-data.json ────────────────────────────────────────────────────────
 
 /**
  * Minimal notebook reference. The full NotebookMeta (title, url, createdAt,
@@ -197,7 +197,7 @@ export interface DriveNotebookRef {
   name: string;
 }
 
-export interface DriveNotebookAnnotationsFile extends DriveFileEnvelope {
+export interface DriveNotebookDataFile extends DriveFileEnvelope {
   annotations: NotebookAnnotation[];
   /** Notebook folders (nested tree). Replaces legacy flat `collections` field. */
   folders: Folder[];
@@ -253,14 +253,14 @@ export interface DriveConversationMetaLine {
   fetchedAt: number;
 }
 
-// ── custom-audio-index.json ───────────────────────────────────────────────────
+// ── podcast-audio-index.json ──────────────────────────────────────────────────
 
 /**
- * Maps an in-app customAudioId to the Drive file that holds its audio blob.
+ * Maps an in-app customAudioId to the Drive file that holds its podcast audio blob.
  * The blob itself lives in a user-visible app-created Drive folder (not AppData)
  * so the user can see/manage uploads directly in their Drive.
  */
-export interface DriveCustomAudioEntry {
+export interface DrivePodcastAudioEntry {
   customAudioId: string;
   /** Drive file id of the uploaded audio in the visible media folder. */
   driveFileId: string;
@@ -268,8 +268,8 @@ export interface DriveCustomAudioEntry {
   mimeType: string;
 }
 
-export interface DriveCustomAudioIndexFile extends DriveFileEnvelope {
-  entries: DriveCustomAudioEntry[];
+export interface DrivePodcastAudioIndexFile extends DriveFileEnvelope {
+  entries: DrivePodcastAudioEntry[];
 }
 
 // ── tab-groups.json ───────────────────────────────────────────────────────────

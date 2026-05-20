@@ -3,7 +3,7 @@
  * @description Session-storage cache layer that sits in front of all Drive reads.
  * Uses `chrome.storage.session` (MV3, volatile, 10 MB quota) to avoid redundant Drive
  * API calls within a single browser session. Applies LRU eviction exclusively to
- * `snippet-text-*` entries — the only unbounded-growth cache type — when estimated
+ * `prompt-text-*` entries — the only unbounded-growth cache type — when estimated
  * session storage exceeds 8 MB, evicting 25% of the oldest entries at a time.
  * @dependencies (none — no internal src/ imports)
  * @public CacheKeys, get, set, invalidate, invalidateAll, getVersion, setVersion, driveCacheService
@@ -20,20 +20,20 @@
  *
  * Cache key catalogue:
  *   drive_cache_manifest              → DriveManifest
- *   drive_cache_snippets_meta         → DriveSnippetsMetaFile
- *   drive_cache_snippet_text_{id}     → string (raw snippet text)
- *   drive_cache_core_data             → DriveCoreDataFile (folders+tags+settings+domainRouterRules)
- *   drive_cache_history_data          → DriveHistoryDataFile (exportHistory+pipelineRuns+podcastEpisodes)
- *   drive_cache_annotations           → DriveNotebookAnnotationsFile
+ *   drive_cache_prompts_meta          → DrivePromptsMetaFile
+ *   drive_cache_prompt_text_{id}      → string (raw prompt text)
+ *   drive_cache_app_settings          → DriveAppSettingsFile (folders+tags+settings+domainRouterRules)
+ *   drive_cache_activity_data         → DriveActivityDataFile (exportHistory+pipelineRuns+podcastEpisodes)
+ *   drive_cache_notebook_data         → DriveNotebookDataFile
  *   drive_cache_pipelines             → DrivePipelinesFile
  *   drive_cache_chat_meta             → DriveChatConversationsMetaFile
- *   drive_cache_custom_audio_index    → DriveCustomAudioIndexFile
+ *   drive_cache_podcast_audio_index   → DrivePodcastAudioIndexFile
  *   drive_cache_tab_groups            → DriveTabGroupsFile
  *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
  *   drive_cache_version_{fileId}      → number (Drive version for a file)
  *
  * LRU eviction:
- *   Only `drive_cache_snippet_text_*` entries are subject to LRU eviction.
+ *   Only `drive_cache_prompt_text_*` entries are subject to LRU eviction.
  *   All other keys are bounded by domain-level trim limits (200 runs, etc.).
  *   Eviction is triggered when the estimated session storage size exceeds 8 MB
  *   (leaving 2 MB headroom before the 10 MB limit).
@@ -42,7 +42,7 @@
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const KEY_PREFIX = 'drive_cache_';
-const SNIPPET_TEXT_PREFIX = `${KEY_PREFIX}snippet_text_`;
+const PROMPT_TEXT_PREFIX = `${KEY_PREFIX}prompt_text_`;
 const CHAT_CONTENT_PREFIX = `${KEY_PREFIX}chat_`;
 const VERSION_PREFIX = `${KEY_PREFIX}version_`;
 
@@ -50,26 +50,26 @@ const VERSION_PREFIX = `${KEY_PREFIX}version_`;
 const EVICTION_THRESHOLD_BYTES = 8 * 1024 * 1024; // 8 MB
 
 /**
- * In-memory LRU tracker for snippet text cache keys.
+ * In-memory LRU tracker for prompt text cache keys.
  * Maps cacheKey → last-access Unix ms.
- * Only tracks snippet text entries (the only unbounded-growth cache type).
+ * Only tracks prompt text entries (the only unbounded-growth cache type).
  */
-const snippetTextAccessTime = new Map<string, number>();
+const promptTextAccessTime = new Map<string, number>();
 
 // ── Well-known cache keys ──────────────────────────────────────────────────────
 
 export const CacheKeys = {
   manifest: `${KEY_PREFIX}manifest`,
-  snippetsMeta: `${KEY_PREFIX}snippets_meta`,
-  coreData: `${KEY_PREFIX}core_data`,
-  historyData: `${KEY_PREFIX}history_data`,
-  annotations: `${KEY_PREFIX}annotations`,
+  promptsMeta: `${KEY_PREFIX}prompts_meta`,
+  appSettings: `${KEY_PREFIX}app_settings`,
+  activityData: `${KEY_PREFIX}activity_data`,
+  notebookData: `${KEY_PREFIX}notebook_data`,
   pipelines: `${KEY_PREFIX}pipelines`,
   chatMeta: `${KEY_PREFIX}chat_meta`,
-  customAudioIndex: `${KEY_PREFIX}custom_audio_index`,
+  podcastAudioIndex: `${KEY_PREFIX}podcast_audio_index`,
   tabGroups: `${KEY_PREFIX}tab_groups`,
 
-  snippetText: (snippetId: string) => `${SNIPPET_TEXT_PREFIX}${snippetId}`,
+  promptText: (promptId: string) => `${PROMPT_TEXT_PREFIX}${promptId}`,
   chatContent: (platform: string, id: string) => `${CHAT_CONTENT_PREFIX}${platform}_${id}`,
   version: (fileId: string) => `${VERSION_PREFIX}${fileId}`,
 } as const;
@@ -86,9 +86,9 @@ export async function get<T>(key: string): Promise<T | null> {
     const value = result[key];
     if (value === undefined || value === null) return null;
 
-    // Track access time for snippet text LRU
-    if (key.startsWith(SNIPPET_TEXT_PREFIX)) {
-      snippetTextAccessTime.set(key, Date.now());
+    // Track access time for prompt text LRU
+    if (key.startsWith(PROMPT_TEXT_PREFIX)) {
+      promptTextAccessTime.set(key, Date.now());
     }
 
     return value as T;
@@ -99,14 +99,14 @@ export async function get<T>(key: string): Promise<T | null> {
 
 /**
  * Writes a value to session storage.
- * Triggers LRU eviction if snippet text cache is approaching the size limit.
+ * Triggers LRU eviction if prompt text cache is approaching the size limit.
  */
 export async function set<T>(key: string, value: T): Promise<void> {
   try {
     await chrome.storage.session.set({ [key]: value });
 
-    if (key.startsWith(SNIPPET_TEXT_PREFIX)) {
-      snippetTextAccessTime.set(key, Date.now());
+    if (key.startsWith(PROMPT_TEXT_PREFIX)) {
+      promptTextAccessTime.set(key, Date.now());
       // Fire-and-forget eviction check after write
       void evictSnippetTextsIfNeeded();
     }
@@ -121,7 +121,7 @@ export async function set<T>(key: string, value: T): Promise<void> {
 export async function invalidate(key: string): Promise<void> {
   try {
     await chrome.storage.session.remove(key);
-    snippetTextAccessTime.delete(key);
+    promptTextAccessTime.delete(key);
   } catch {
     // Non-fatal
   }
@@ -138,7 +138,7 @@ export async function invalidateAll(): Promise<void> {
     if (driveKeys.length > 0) {
       await chrome.storage.session.remove(driveKeys);
     }
-    snippetTextAccessTime.clear();
+    promptTextAccessTime.clear();
   } catch {
     // Non-fatal
   }
@@ -159,11 +159,11 @@ export async function setVersion(fileId: string, version: number): Promise<void>
 // ── LRU eviction ──────────────────────────────────────────────────────────────
 
 /**
- * Evicts the least-recently-used snippet text entries from session storage
+ * Evicts the least-recently-used prompt text entries from session storage
  * when the total estimated size exceeds EVICTION_THRESHOLD_BYTES.
  *
- * Only snippet text entries are evicted because they are the only cache type
- * that can grow unboundedly (one entry per snippet, potentially thousands).
+ * Only prompt text entries are evicted because they are the only cache type
+ * that can grow unboundedly (one entry per prompt, potentially thousands).
  */
 async function evictSnippetTextsIfNeeded(): Promise<void> {
   try {
@@ -172,19 +172,19 @@ async function evictSnippetTextsIfNeeded(): Promise<void> {
 
     if (estimatedBytes < EVICTION_THRESHOLD_BYTES) return;
 
-    // Sort snippet text keys by last-access time (oldest first)
-    const snippetKeys = Object.keys(all).filter((k) => k.startsWith(SNIPPET_TEXT_PREFIX));
-    snippetKeys.sort((a, b) => {
-      const ta = snippetTextAccessTime.get(a) ?? 0;
-      const tb = snippetTextAccessTime.get(b) ?? 0;
+    // Sort prompt text keys by last-access time (oldest first)
+    const promptKeys = Object.keys(all).filter((k) => k.startsWith(PROMPT_TEXT_PREFIX));
+    promptKeys.sort((a, b) => {
+      const ta = promptTextAccessTime.get(a) ?? 0;
+      const tb = promptTextAccessTime.get(b) ?? 0;
       return ta - tb; // oldest first
     });
 
-    // Evict ~25% of snippet text entries
-    const toEvict = snippetKeys.slice(0, Math.max(1, Math.floor(snippetKeys.length * 0.25)));
+    // Evict ~25% of prompt text entries
+    const toEvict = promptKeys.slice(0, Math.max(1, Math.floor(promptKeys.length * 0.25)));
     if (toEvict.length > 0) {
       await chrome.storage.session.remove(toEvict);
-      toEvict.forEach((k) => snippetTextAccessTime.delete(k));
+      toEvict.forEach((k) => promptTextAccessTime.delete(k));
     }
   } catch {
     // Non-fatal — eviction is best-effort

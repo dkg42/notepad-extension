@@ -52,8 +52,8 @@ import { invalidateAll as invalidateCache, get as cacheGet, CacheKeys } from './
 import { authStorageService } from '@/services/auth-storage-service';
 import { cancelAll as cancelQueue, setInitializing, enqueue } from './drive-write-queue';
 import { readFile } from './drive-io-service';
-import { snippetTextFilename } from './types/drive-schemas';
-import type { DriveFilename, DriveSnippetMeta } from './types/drive-schemas';
+import { promptTextFilename } from './types/drive-schemas';
+import type { DriveFilename, DrivePromptMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { notebookFolderService } from '@/services/notebook-folder-service';
@@ -109,10 +109,10 @@ async function isProUser(): Promise<boolean> {
  */
 async function applyCachedDriveDataToLocal(): Promise<void> {
   const filesToApply: Array<{ cacheKey: string; filename: DriveFilename }> = [
-    { cacheKey: CacheKeys.coreData,     filename: 'core-data.json' },
-    { cacheKey: CacheKeys.historyData,  filename: 'history-data.json' },
-    { cacheKey: CacheKeys.snippetsMeta, filename: 'snippets-meta.json' },
-    { cacheKey: CacheKeys.annotations,  filename: 'notebook-annotations.json' },
+    { cacheKey: CacheKeys.appSettings,     filename: 'app-settings.json' },
+    { cacheKey: CacheKeys.activityData,  filename: 'activity-data.json' },
+    { cacheKey: CacheKeys.promptsMeta, filename: 'prompts-meta.json' },
+    { cacheKey: CacheKeys.notebookData,  filename: 'notebook-data.json' },
     { cacheKey: CacheKeys.pipelines,    filename: 'pipelines.json' },
     { cacheKey: CacheKeys.chatMeta,     filename: 'chat-conversations-meta.json' },
   ];
@@ -266,17 +266,17 @@ export async function initialize(
       }
 
       // Local data exists — surface conflict summary to the user without modifying storage
-      const driveSnippetsFile = allDriveFiles.get('snippets-meta.json')?.driveFile;
-      const driveCoreFile = allDriveFiles.get('core-data.json')?.driveFile;
+      const drivePromptsFile = allDriveFiles.get('prompts-meta.json')?.driveFile;
+      const driveCoreFile = allDriveFiles.get('app-settings.json')?.driveFile;
 
       const conflictSummary: ConflictSummary = {
         localSnippetCount: localSnippets.length,
-        driveSnippetCount: ((driveSnippetsFile?.snippets as unknown[] | undefined) ?? []).length,
+        driveSnippetCount: ((drivePromptsFile?.prompts as unknown[] | undefined) ?? []).length,
         localFolderCount: localFolders.length,
         driveFolderCount: ((driveCoreFile?.folders as unknown[] | undefined) ?? []).length,
         localTagCount: localTags.length,
         driveTagCount: ((driveCoreFile?.tags as unknown[] | undefined) ?? []).length,
-        driveLastSync: allDriveFiles.get('snippets-meta.json')?.driveUpdatedAt ?? 0,
+        driveLastSync: allDriveFiles.get('prompts-meta.json')?.driveUpdatedAt ?? 0,
       };
 
       console.log('[DRIVE-INIT] First-time init — local data detected, awaiting user conflict decision');
@@ -392,8 +392,8 @@ async function applyMergedData(
   token: string,
 ): Promise<void> {
   switch (filename) {
-    case 'snippets-meta.json': {
-      const driveMetas = (driveFile.snippets as DriveSnippetMeta[]) ?? [];
+    case 'prompts-meta.json': {
+      const driveMetas = (driveFile.prompts as DrivePromptMeta[]) ?? [];
       const localSnippets = await storageService.getAll();
 
       // Apply Drive metadata (title, tags, folderId, isFavorite, usageCount) to
@@ -414,24 +414,24 @@ async function applyMergedData(
       });
       await chrome.storage.local.set({ snippets: updatedLocalSnippets });
 
-      // Build merged snippets-meta for Drive: Drive entries + local-only entries
+      // Build merged prompts-meta for Drive: Drive entries + local-only entries
       const driveIds = new Set(driveMetas.map((m) => m.id));
       const localOnlySnippets = updatedLocalSnippets.filter((s) => !driveIds.has(s.id));
-      const localOnlyMetas: DriveSnippetMeta[] = localOnlySnippets.map(({ text: _text, ...meta }) => ({
+      const localOnlyMetas: DrivePromptMeta[] = localOnlySnippets.map(({ text: _text, ...meta }) => ({
         ...meta,
         textFileId: null,
-      } as DriveSnippetMeta));
+      } as DrivePromptMeta));
       const mergedMetas = [...driveMetas, ...localOnlyMetas];
       driveSyncService.saveSnippetsMeta(mergedMetas, token);
 
       // Upload text files for local-only snippets
       for (const snippet of localOnlySnippets) {
-        enqueue(snippetTextFilename(snippet.id), snippet.text, token);
+        enqueue(promptTextFilename(snippet.id), snippet.text, token);
       }
       break;
     }
 
-    case 'core-data.json': {
+    case 'app-settings.json': {
       // Merge folders and tags; settings and domain-router-rules: Drive wins.
       const driveFolders = (driveFile.folders as Folder[]) ?? [];
       const localFolders = await storageService.getFolders();
@@ -454,7 +454,7 @@ async function applyMergedData(
     }
 
     default:
-      // Drive wins for history-data, annotations, pipelines, chat, etc.
+      // Drive wins for activity-data, notebook-data, pipelines, chat, etc.
       await applyDriveData(filename, driveFile, rawContent, token);
       break;
   }
@@ -512,13 +512,13 @@ async function applyDriveData(
   token: string,
 ): Promise<void> {
   switch (filename) {
-    case 'snippets-meta.json': {
+    case 'prompts-meta.json': {
       // Drive has newer snippet metadata (tags, folderId, isFavorite).
       // If local storage is non-empty: merge Drive metadata into local Snippet[] (text bodies
       // come from local and are preserved).
       // If local storage is empty (new device): fetch text bodies from Drive and reconstruct
       // full Snippet objects so prompts are visible immediately.
-      const driveMetas = (driveFile.snippets as Array<{
+      const driveMetas = (driveFile.prompts as Array<{
         id: string; title?: string; source: string; savedAt: number;
         folderId?: string; tags?: string[]; isFavorite?: boolean; usageCount?: number;
       }>) ?? [];
@@ -560,7 +560,7 @@ async function applyDriveData(
       await chrome.storage.local.set({ snippets: updated });
       break;
     }
-    case 'core-data.json': {
+    case 'app-settings.json': {
       const folders = (driveFile.folders as unknown[]) ?? [];
       const tagsMeta = (driveFile.tags as unknown[]) ?? [];
       const domainRouterRules = (driveFile.domainRouterRules as unknown[]) ?? [];
@@ -570,14 +570,14 @@ async function applyDriveData(
       }
       break;
     }
-    case 'history-data.json': {
+    case 'activity-data.json': {
       const exportHistory = (driveFile.exportHistory as unknown[]) ?? [];
       const pipelineRuns = (driveFile.pipelineRuns as unknown[]) ?? [];
       const podcastEpisodes = (driveFile.podcastEpisodes as unknown[]) ?? [];
       await chrome.storage.local.set({ exportHistory, pipelineRuns, podcastEpisodes });
       break;
     }
-    case 'notebook-annotations.json': {
+    case 'notebook-data.json': {
       const annotations = (driveFile.annotations as unknown[]) ?? [];
       const notebookFolders = (driveFile.folders as unknown[]) ?? [];
       await chrome.storage.local.set({ notebookAnnotations: annotations, notebookFolders });
@@ -644,7 +644,7 @@ async function applyDriveData(
  */
 async function pushLocalToDrive(filename: DriveFilename, token: string): Promise<void> {
   switch (filename) {
-    case 'core-data.json': {
+    case 'app-settings.json': {
       const [folders, tags, settings, rules] = await Promise.all([
         storageService.getFolders(),
         storageService.getTagsMeta(),
@@ -657,7 +657,7 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
       driveSyncService.saveDomainRouterRules(rules, token);
       break;
     }
-    case 'history-data.json': {
+    case 'activity-data.json': {
       const [exportHistory, pipelineRuns, podcastEpisodes] = await Promise.all([
         storageService.getExportHistory(),
         pipelineService.getRuns(),
@@ -668,7 +668,7 @@ async function pushLocalToDrive(filename: DriveFilename, token: string): Promise
       driveSyncService.saveHistoryData({ exportHistory, pipelineRuns, podcastEpisodes }, token);
       break;
     }
-    case 'notebook-annotations.json': {
+    case 'notebook-data.json': {
       const [annotations, notebookFolders, notebooks] = await Promise.all([
         notebookAnnotationService.getAllAnnotations(),
         notebookFolderService.getFolders(),

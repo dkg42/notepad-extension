@@ -32,24 +32,24 @@
  */
 
 import type {
-  DriveSnippetMeta,
-  DriveSnippetsMetaFile,
-  DriveCoreDataFile,
-  DriveHistoryDataFile,
+  DrivePromptMeta,
+  DrivePromptsMetaFile,
+  DriveAppSettingsFile,
+  DriveActivityDataFile,
   DriveNotebookRef,
-  DriveNotebookAnnotationsFile,
+  DriveNotebookDataFile,
   DrivePipelinesFile,
   DriveChatConversationsMetaFile,
   DriveConversationMetaLine,
   DriveSafePodcastEpisode,
-  DriveCustomAudioEntry,
-  DriveCustomAudioIndexFile,
+  DrivePodcastAudioEntry,
+  DrivePodcastAudioIndexFile,
   DriveTabGroup,
   DriveTabGroupsFile,
 } from './types/drive-schemas';
 import {
   DRIVE_SCHEMA_VERSION,
-  snippetTextFilename,
+  promptTextFilename,
   chatContentFilename,
   toDriveSafeEpisode,
 } from './types/drive-schemas';
@@ -128,21 +128,21 @@ function writeJson<T>(filename: string, cacheKey: string, data: T, token: string
 
 // ── Snippets ───────────────────────────────────────────────────────────────────
 
-export async function getSnippetsMeta(token: string): Promise<DriveSnippetMeta[]> {
-  const cached = await cacheGet<DriveSnippetsMetaFile>(CacheKeys.snippetsMeta);
-  if (cached) return cached.snippets;
+export async function getSnippetsMeta(token: string): Promise<DrivePromptMeta[]> {
+  const cached = await cacheGet<DrivePromptsMetaFile>(CacheKeys.promptsMeta);
+  if (cached) return cached.prompts;
 
-  const file = await readJsonFromDrive<DriveSnippetsMetaFile>('snippets-meta.json', CacheKeys.snippetsMeta, token);
-  return file?.snippets ?? [];
+  const file = await readJsonFromDrive<DrivePromptsMetaFile>('prompts-meta.json', CacheKeys.promptsMeta, token);
+  return file?.prompts ?? [];
 }
 
-export function saveSnippetsMeta(metas: DriveSnippetMeta[], token: string): void {
-  const file: DriveSnippetsMetaFile = {
+export function saveSnippetsMeta(metas: DrivePromptMeta[], token: string): void {
+  const file: DrivePromptsMetaFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
-    snippets: metas,
+    prompts: metas,
   };
-  writeJson('snippets-meta.json', CacheKeys.snippetsMeta, file, token);
+  writeJson('prompts-meta.json', CacheKeys.promptsMeta, file, token);
 }
 
 /**
@@ -150,13 +150,13 @@ export function saveSnippetsMeta(metas: DriveSnippetMeta[], token: string): void
  * Returns null on cache miss + Drive miss.
  */
 export async function getSnippetText(snippetId: string, token: string): Promise<string | null> {
-  const cacheKey = CacheKeys.snippetText(snippetId);
+  const cacheKey = CacheKeys.promptText(snippetId);
   const cached = await cacheGet<string>(cacheKey);
   if (cached !== null) return cached;
 
   if (!_driveEnabled) return null;
 
-  const filename = snippetTextFilename(snippetId);
+  const filename = promptTextFilename(snippetId);
   const entry = getEntry(filename);
   if (!entry?.driveFileId) return null;
 
@@ -174,15 +174,15 @@ export async function getSnippetText(snippetId: string, token: string): Promise<
 export async function saveSnippet(snippet: Snippet, token: string): Promise<void> {
   if (!_driveEnabled) return;
   // Update snippet text file
-  const textFilename = snippetTextFilename(snippet.id);
-  const textCacheKey = CacheKeys.snippetText(snippet.id);
+  const textFilename = promptTextFilename(snippet.id);
+  const textCacheKey = CacheKeys.promptText(snippet.id);
   await cacheSet(textCacheKey, snippet.text);
   enqueue(textFilename, snippet.text, token);
 
   // Update metadata index
   const existing = await getSnippetsMeta(token);
   const { text: _text, ...meta } = snippet;
-  const newMeta: DriveSnippetMeta = { ...meta, textFileId: null }; // fileId resolved by write queue
+  const newMeta: DrivePromptMeta = { ...meta, textFileId: null }; // fileId resolved by write queue
   const updated = existing.some((s) => s.id === snippet.id)
     ? existing.map((s) => (s.id === snippet.id ? newMeta : s))
     : [newMeta, ...existing];
@@ -190,7 +190,7 @@ export async function saveSnippet(snippet: Snippet, token: string): Promise<void
 }
 
 export async function deleteSnippet(snippetId: string, token: string): Promise<void> {
-  await cacheInvalidate(CacheKeys.snippetText(snippetId));
+  await cacheInvalidate(CacheKeys.promptText(snippetId));
 
   const existing = await getSnippetsMeta(token);
   saveSnippetsMeta(existing.filter((s) => s.id !== snippetId), token);
@@ -198,7 +198,7 @@ export async function deleteSnippet(snippetId: string, token: string): Promise<v
 
 export async function saveAllSnippets(snippets: Snippet[], token: string): Promise<void> {
   if (!_driveEnabled) return;
-  const metas: DriveSnippetMeta[] = snippets.map(({ text: _text, ...meta }) => ({
+  const metas: DrivePromptMeta[] = snippets.map(({ text: _text, ...meta }) => ({
     ...meta,
     textFileId: null,
   }));
@@ -206,32 +206,32 @@ export async function saveAllSnippets(snippets: Snippet[], token: string): Promi
 
   // Enqueue text files for all snippets
   for (const snippet of snippets) {
-    const textFilename = snippetTextFilename(snippet.id);
-    await cacheSet(CacheKeys.snippetText(snippet.id), snippet.text);
+    const textFilename = promptTextFilename(snippet.id);
+    await cacheSet(CacheKeys.promptText(snippet.id), snippet.text);
     enqueue(textFilename, snippet.text, token);
   }
 }
 
-// ── core-data.json helpers (folders + tags + settings + domain-router-rules) ──
+// ── app-settings.json helpers (folders + tags + settings + domain-router-rules)
 
-async function readCoreData(token: string): Promise<DriveCoreDataFile | null> {
-  const cached = await cacheGet<DriveCoreDataFile>(CacheKeys.coreData);
+async function readAppSettings(token: string): Promise<DriveAppSettingsFile | null> {
+  const cached = await cacheGet<DriveAppSettingsFile>(CacheKeys.appSettings);
   if (cached) return cached;
-  return readJsonFromDrive<DriveCoreDataFile>('core-data.json', CacheKeys.coreData, token);
+  return readJsonFromDrive<DriveAppSettingsFile>('app-settings.json', CacheKeys.appSettings, token);
 }
 
-function writeCoreData(file: DriveCoreDataFile, token: string): void {
+function writeAppSettings(file: DriveAppSettingsFile, token: string): void {
   if (!_driveEnabled) return;
-  void cacheSet(CacheKeys.coreData, file);
-  enqueue('core-data.json', JSON.stringify(file), token);
+  void cacheSet(CacheKeys.appSettings, file);
+  enqueue('app-settings.json', JSON.stringify(file), token);
 }
 
-async function updateCoreData(
-  patch: Partial<Pick<DriveCoreDataFile, 'folders' | 'tags' | 'settings' | 'domainRouterRules'>>,
+async function updateAppSettings(
+  patch: Partial<Pick<DriveAppSettingsFile, 'folders' | 'tags' | 'settings' | 'domainRouterRules'>>,
   token: string,
 ): Promise<void> {
-  const current = await readCoreData(token);
-  const updated: DriveCoreDataFile = {
+  const current = await readAppSettings(token);
+  const updated: DriveAppSettingsFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     folders: patch.folders ?? current?.folders ?? [],
@@ -239,74 +239,74 @@ async function updateCoreData(
     settings: patch.settings !== undefined ? patch.settings : (current?.settings ?? null),
     domainRouterRules: patch.domainRouterRules ?? current?.domainRouterRules ?? [],
   };
-  writeCoreData(updated, token);
+  writeAppSettings(updated, token);
 }
 
 // ── Folders ───────────────────────────────────────────────────────────────────
 
 export async function getFolders(token: string): Promise<Folder[]> {
-  const file = await readCoreData(token);
+  const file = await readAppSettings(token);
   return file?.folders ?? [];
 }
 
 export function saveFolders(folders: Folder[], token: string): void {
-  void updateCoreData({ folders }, token);
+  void updateAppSettings({ folders }, token);
 }
 
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
 export async function getTags(token: string): Promise<TagMeta[]> {
-  const file = await readCoreData(token);
+  const file = await readAppSettings(token);
   return file?.tags ?? [];
 }
 
 export function saveTags(tags: TagMeta[], token: string): void {
-  void updateCoreData({ tags }, token);
+  void updateAppSettings({ tags }, token);
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 export async function getSettings(token: string): Promise<DashboardSettings | null> {
-  const file = await readCoreData(token);
+  const file = await readAppSettings(token);
   return file?.settings ?? null;
 }
 
 export function saveSettings(settings: DashboardSettings, token: string): void {
-  void updateCoreData({ settings }, token);
+  void updateAppSettings({ settings }, token);
 }
 
-// ── history-data.json helpers (export-history + pipeline-runs + podcast-episodes)
+// ── activity-data.json helpers (export-history + pipeline-runs + podcast-episodes)
 
-async function readHistoryData(token: string): Promise<DriveHistoryDataFile | null> {
-  const cached = await cacheGet<DriveHistoryDataFile>(CacheKeys.historyData);
+async function readActivityData(token: string): Promise<DriveActivityDataFile | null> {
+  const cached = await cacheGet<DriveActivityDataFile>(CacheKeys.activityData);
   if (cached) return cached;
-  return readJsonFromDrive<DriveHistoryDataFile>('history-data.json', CacheKeys.historyData, token);
+  return readJsonFromDrive<DriveActivityDataFile>('activity-data.json', CacheKeys.activityData, token);
 }
 
-function writeHistoryData(file: DriveHistoryDataFile, token: string): void {
+function writeActivityData(file: DriveActivityDataFile, token: string): void {
   if (!_driveEnabled) return;
-  void cacheSet(CacheKeys.historyData, file);
-  enqueue('history-data.json', JSON.stringify(file), token);
+  void cacheSet(CacheKeys.activityData, file);
+  enqueue('activity-data.json', JSON.stringify(file), token);
 }
 
-async function updateHistoryData(
-  patch: Partial<Pick<DriveHistoryDataFile, 'exportHistory' | 'pipelineRuns' | 'podcastEpisodes'>>,
+async function updateActivityData(
+  patch: Partial<Pick<DriveActivityDataFile, 'exportHistory' | 'pipelineRuns' | 'podcastEpisodes'>>,
   token: string,
 ): Promise<void> {
-  const current = await readHistoryData(token);
-  const updated: DriveHistoryDataFile = {
+  const current = await readActivityData(token);
+  const updated: DriveActivityDataFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     exportHistory: patch.exportHistory ?? current?.exportHistory ?? [],
     pipelineRuns: patch.pipelineRuns ?? current?.pipelineRuns ?? [],
     podcastEpisodes: patch.podcastEpisodes ?? current?.podcastEpisodes ?? [],
   };
-  writeHistoryData(updated, token);
+  writeActivityData(updated, token);
 }
 
 /**
  * Writes export-history, pipeline-runs, and podcast-episodes in a single
- * consolidated history-data.json write. Use this when pushing local-newer state
+ * consolidated activity-data.json write. Use this when pushing local-newer state
  * to Drive — calling the three single-slice setters in sequence would each do an
  * independent read-modify-write and lose the others' patches.
  */
@@ -314,7 +314,7 @@ export function saveHistoryData(
   data: { exportHistory: ExportRecord[]; pipelineRuns: PipelineRun[]; podcastEpisodes: PodcastEpisode[] },
   token: string,
 ): void {
-  void updateHistoryData(
+  void updateActivityData(
     {
       exportHistory: data.exportHistory.slice(0, MAX_EXPORT_HISTORY),
       pipelineRuns: data.pipelineRuns.slice(0, MAX_PIPELINE_RUNS),
@@ -327,14 +327,14 @@ export function saveHistoryData(
 // ── Export history ─────────────────────────────────────────────────────────────
 
 export async function getExportHistory(token: string): Promise<ExportRecord[]> {
-  const file = await readHistoryData(token);
+  const file = await readActivityData(token);
   return file?.exportHistory ?? [];
 }
 
 export async function appendExportRecord(record: ExportRecord, token: string): Promise<void> {
   const existing = await getExportHistory(token);
   const exportHistory = [record, ...existing].slice(0, MAX_EXPORT_HISTORY);
-  void updateHistoryData({ exportHistory }, token);
+  void updateActivityData({ exportHistory }, token);
 }
 
 /**
@@ -343,7 +343,7 @@ export async function appendExportRecord(record: ExportRecord, token: string): P
  * append loop.
  */
 export function saveExportHistory(records: ExportRecord[], token: string): void {
-  void updateHistoryData({ exportHistory: records.slice(0, MAX_EXPORT_HISTORY) }, token);
+  void updateActivityData({ exportHistory: records.slice(0, MAX_EXPORT_HISTORY) }, token);
 }
 
 // ── Notebook annotations ───────────────────────────────────────────────────────
@@ -351,7 +351,7 @@ export function saveExportHistory(records: ExportRecord[], token: string): void 
 export async function getAnnotations(
   token: string,
 ): Promise<{ annotations: NotebookAnnotation[]; folders: Folder[]; notebooks: DriveNotebookRef[] }> {
-  const cached = await cacheGet<DriveNotebookAnnotationsFile>(CacheKeys.annotations);
+  const cached = await cacheGet<DriveNotebookDataFile>(CacheKeys.notebookData);
   if (cached) {
     return {
       annotations: cached.annotations,
@@ -360,7 +360,7 @@ export async function getAnnotations(
     };
   }
 
-  const file = await readJsonFromDrive<DriveNotebookAnnotationsFile>('notebook-annotations.json', CacheKeys.annotations, token);
+  const file = await readJsonFromDrive<DriveNotebookDataFile>('notebook-data.json', CacheKeys.notebookData, token);
   return {
     annotations: file?.annotations ?? [],
     folders: file?.folders ?? [],
@@ -374,14 +374,14 @@ export function saveAnnotations(
   notebooks: DriveNotebookRef[],
   token: string,
 ): void {
-  const file: DriveNotebookAnnotationsFile = {
+  const file: DriveNotebookDataFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     annotations,
     folders,
     notebooks,
   };
-  writeJson('notebook-annotations.json', CacheKeys.annotations, file, token);
+  writeJson('notebook-data.json', CacheKeys.notebookData, file, token);
 }
 
 // ── Pipelines ─────────────────────────────────────────────────────────────────
@@ -402,14 +402,14 @@ export function savePipelines(pipelines: Pipeline[], token: string): void {
 // ── Pipeline runs ─────────────────────────────────────────────────────────────
 
 export async function getPipelineRuns(token: string): Promise<PipelineRun[]> {
-  const file = await readHistoryData(token);
+  const file = await readActivityData(token);
   return file?.pipelineRuns ?? [];
 }
 
 export async function appendPipelineRun(run: PipelineRun, token: string): Promise<void> {
   const existing = await getPipelineRuns(token);
   const pipelineRuns = [run, ...existing].slice(0, MAX_PIPELINE_RUNS);
-  void updateHistoryData({ pipelineRuns }, token);
+  void updateActivityData({ pipelineRuns }, token);
 }
 
 /**
@@ -417,30 +417,30 @@ export async function appendPipelineRun(run: PipelineRun, token: string): Promis
  * Companion to saveExportHistory for the local-newer push path.
  */
 export function savePipelineRuns(runs: PipelineRun[], token: string): void {
-  void updateHistoryData({ pipelineRuns: runs.slice(0, MAX_PIPELINE_RUNS) }, token);
+  void updateActivityData({ pipelineRuns: runs.slice(0, MAX_PIPELINE_RUNS) }, token);
 }
 
 // ── Podcast episodes ───────────────────────────────────────────────────────────
 
 export async function getPodcastEpisodes(token: string): Promise<DriveSafePodcastEpisode[]> {
-  const file = await readHistoryData(token);
+  const file = await readActivityData(token);
   return file?.podcastEpisodes ?? [];
 }
 
 export function savePodcastEpisodes(episodes: PodcastEpisode[], token: string): void {
   const podcastEpisodes = episodes.map(toDriveSafeEpisode);
-  void updateHistoryData({ podcastEpisodes }, token);
+  void updateActivityData({ podcastEpisodes }, token);
 }
 
 // ── Domain router rules ────────────────────────────────────────────────────────
 
 export async function getDomainRouterRules(token: string): Promise<DomainRouterRule[]> {
-  const file = await readCoreData(token);
+  const file = await readAppSettings(token);
   return file?.domainRouterRules ?? [];
 }
 
 export function saveDomainRouterRules(rules: DomainRouterRule[], token: string): void {
-  void updateCoreData({ domainRouterRules: rules }, token);
+  void updateAppSettings({ domainRouterRules: rules }, token);
 }
 
 // ── Chat history ───────────────────────────────────────────────────────────────
@@ -527,25 +527,25 @@ function parseConversationNdjson(ndjson: string): ConversationFull | null {
 
 // ── Custom audio index ─────────────────────────────────────────────────────────
 
-export async function getCustomAudioIndex(token: string): Promise<DriveCustomAudioEntry[]> {
-  const cached = await cacheGet<DriveCustomAudioIndexFile>(CacheKeys.customAudioIndex);
+export async function getCustomAudioIndex(token: string): Promise<DrivePodcastAudioEntry[]> {
+  const cached = await cacheGet<DrivePodcastAudioIndexFile>(CacheKeys.podcastAudioIndex);
   if (cached) return cached.entries ?? [];
 
-  const file = await readJsonFromDrive<DriveCustomAudioIndexFile>(
-    'custom-audio-index.json',
-    CacheKeys.customAudioIndex,
+  const file = await readJsonFromDrive<DrivePodcastAudioIndexFile>(
+    'podcast-audio-index.json',
+    CacheKeys.podcastAudioIndex,
     token,
   );
   return file?.entries ?? [];
 }
 
-export function saveCustomAudioIndex(entries: DriveCustomAudioEntry[], token: string): void {
-  const file: DriveCustomAudioIndexFile = {
+export function saveCustomAudioIndex(entries: DrivePodcastAudioEntry[], token: string): void {
+  const file: DrivePodcastAudioIndexFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     entries,
   };
-  writeJson('custom-audio-index.json', CacheKeys.customAudioIndex, file, token);
+  writeJson('podcast-audio-index.json', CacheKeys.podcastAudioIndex, file, token);
 }
 
 // ── Tab groups ─────────────────────────────────────────────────────────────────
@@ -611,7 +611,7 @@ export async function writeAllFromLocal(data: {
   await saveAllSnippets(data.snippets, token);
 
   // Write consolidated files directly to avoid partial overwrites from individual save helpers.
-  const coreFile: DriveCoreDataFile = {
+  const coreFile: DriveAppSettingsFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     folders: data.folders,
@@ -619,16 +619,16 @@ export async function writeAllFromLocal(data: {
     settings: data.settings,
     domainRouterRules: data.domainRouterRules,
   };
-  writeCoreData(coreFile, token);
+  writeAppSettings(coreFile, token);
 
-  const historyFile: DriveHistoryDataFile = {
+  const historyFile: DriveActivityDataFile = {
     schemaVersion: DRIVE_SCHEMA_VERSION,
     updatedAt: Date.now(),
     exportHistory: data.exportHistory.slice(0, MAX_EXPORT_HISTORY),
     pipelineRuns: data.pipelineRuns.slice(0, MAX_PIPELINE_RUNS),
     podcastEpisodes: data.podcastEpisodes.map(toDriveSafeEpisode),
   };
-  writeHistoryData(historyFile, token);
+  writeActivityData(historyFile, token);
 
   saveAnnotations(data.annotations, data.notebookFolders, data.notebooks, token);
   savePipelines(data.pipelines, token);

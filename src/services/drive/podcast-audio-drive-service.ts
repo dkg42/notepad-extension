@@ -3,7 +3,7 @@
  * @description Syncs user-uploaded custom podcast audio to a user-visible Drive
  * folder (not AppData) so the user can see/manage uploads directly in their
  * Drive. The blob lives in the visible folder; a customAudioId → driveFileId map
- * is kept in AppData (`custom-audio-index.json`). Upload/delete are fired as
+ * is kept in AppData (`podcast-audio-index.json`). Upload/delete are fired as
  * best-effort tail-calls from the podcast UI; on a device missing the blob,
  * `ensureLocal` downloads it back into IndexedDB on play. Wired at the podcast
  * call sites (not inside podcast-audio-service) to keep that module dependency-
