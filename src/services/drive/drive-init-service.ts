@@ -62,7 +62,7 @@ import { pipelineService } from '@/services/pipeline-service';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { domainRouterService } from '@/services/domain-router-service';
 import { tabGroupsStorage } from '@/services/tab-groups-storage';
-import type { Folder, TagMeta, NotebookMeta } from '@/types';
+import type { Folder, TagMeta, NotebookMeta, Snippet } from '@/types';
 import type { DriveNotebookRef, DriveTabGroup } from './types/drive-schemas';
 
 // ── Result types ───────────────────────────────────────────────────────────────
@@ -509,14 +509,15 @@ async function applyDriveData(
   filename: DriveFilename,
   driveFile: Record<string, unknown>,
   _rawContent: string,
-  _token: string,
+  token: string,
 ): Promise<void> {
   switch (filename) {
     case 'snippets-meta.json': {
       // Drive has newer snippet metadata (tags, folderId, isFavorite).
-      // Apply it to local storage by merging into the existing Snippet[] — text bodies
-      // come from local storage and are preserved. Snippets that exist in Drive but
-      // not locally are skipped here (no text available without fetching .txt files).
+      // If local storage is non-empty: merge Drive metadata into local Snippet[] (text bodies
+      // come from local and are preserved).
+      // If local storage is empty (new device): fetch text bodies from Drive and reconstruct
+      // full Snippet objects so prompts are visible immediately.
       const driveMetas = (driveFile.snippets as Array<{
         id: string; title?: string; source: string; savedAt: number;
         folderId?: string; tags?: string[]; isFavorite?: boolean; usageCount?: number;
@@ -524,7 +525,24 @@ async function applyDriveData(
       if (driveMetas.length === 0) break;
 
       const localSnippets = await storageService.getAll();
-      if (localSnippets.length === 0) break;
+
+      if (localSnippets.length === 0) {
+        // First login on empty device — fetch text bodies from Drive and reconstruct
+        // full Snippet objects. Text files are excluded from the batch init read
+        // (they're not JSON), so each must be fetched individually here.
+        const snippets: Snippet[] = (
+          await Promise.all(
+            driveMetas.map(async (meta) => ({
+              ...meta,
+              text: (await driveSyncService.getSnippetText(meta.id, token)) ?? '',
+            })),
+          )
+        ).filter((s) => s.text.length > 0);
+        if (snippets.length > 0) {
+          await chrome.storage.local.set({ snippets });
+        }
+        break;
+      }
 
       const driveById = new Map(driveMetas.map((m) => [m.id, m]));
       const updated = localSnippets.map((s) => {

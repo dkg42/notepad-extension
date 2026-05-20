@@ -70,6 +70,11 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const clipboardData = useClipboardTab();
 
   useEffect(() => {
+    if (!user) return;
+    chrome.runtime.sendMessage({ type: 'DRIVE_INITIALIZE' }).catch(() => {});
+  }, [user?.uid]);
+
+  useEffect(() => {
     storageService.getSettings().then((settings) => {
       setDark(settings.theme === 'dark');
     });
