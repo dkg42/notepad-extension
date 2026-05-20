@@ -5,7 +5,8 @@
  * @public PipelinesPage
  */
 import React from 'react';
-import { Zap, Play, Pencil, Trash2, CheckCircle, XCircle, AlertCircle, Plus } from 'lucide-react';
+import { Zap, Play, Pencil, Trash2, CheckCircle, XCircle, AlertCircle, Plus, Globe } from 'lucide-react';
+import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import type { Pipeline, PipelineRun, PipelineRunStatus } from '@/types';
 import { usePipelinesPage } from './usePipelinesPage';
 import PipelineBuilder from './PipelineBuilder';
@@ -244,6 +245,17 @@ export default function PipelinesPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Domain Router ─────────────────────────────────────────────────── */}
+      <section className="pipelines-section">
+        <h2 className="pipelines-section__title">
+          <Globe size={16} /> URL Routing Rules
+        </h2>
+        <p className="pipelines-section__subtitle">
+          Auto-route bulk-imported URLs to specific notebooks based on domain, glob, or regex patterns.
+        </p>
+        <DomainRouterSettings />
       </section>
 
       {/* Builder modal */}

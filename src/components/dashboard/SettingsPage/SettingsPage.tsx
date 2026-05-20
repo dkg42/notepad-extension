@@ -8,7 +8,6 @@ import React, { useEffect, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
-import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './SettingsPage.css';
 
@@ -166,12 +165,6 @@ export default function SettingsPage() {
               <option value="desc">Descending</option>
             </select>
           </div>
-        </section>
-
-        {/* Domain Router */}
-        <section className="settings-section">
-          <h2 className="settings-section__title">Source Import</h2>
-          <DomainRouterSettings />
         </section>
 
         {/* About */}
