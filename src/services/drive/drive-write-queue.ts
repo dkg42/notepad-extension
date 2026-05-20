@@ -36,7 +36,7 @@
  * Debounce defaults by file type:
  *   Structural JSON files (folders, tags, settings, pipelines): 2000 ms
  *   prompts-meta.json:                                           1000 ms
- *   prompt-text-*.txt / chat-content-*.txt:                     500 ms
+ *   chat-content-*.txt:                                         500 ms
  *   pipeline-runs.json / export-history.json:                   3000 ms
  *   manifest.json:                                              0 ms (immediate)
  */
@@ -54,7 +54,7 @@ const DEBOUNCE_DEFAULTS: Array<{ pattern: RegExp; ms: number }> = [
   { pattern: /^manifest\.json$/, ms: 0 },
   { pattern: /^(pipeline-runs|export-history)\.json$/, ms: 3000 },
   { pattern: /^prompts-meta\.json$/, ms: 1000 },
-  { pattern: /^prompt-text-|^chat-content-/, ms: 500 },
+  { pattern: /^chat-content-/, ms: 500 },
   // Default for all other JSON files (folders, tags, settings, pipelines, etc.)
   { pattern: /\.json$/, ms: 2000 },
 ];

@@ -84,7 +84,7 @@ export const folderStorage = {
     });
     syncToDrive((t) => {
       driveSyncService.saveFolders(updatedFolders, t);
-      driveSyncService.saveSnippetsMeta(updatedSnippets.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t);
+      driveSyncService.saveSnippetsMeta(updatedSnippets, t);
     });
   },
 

@@ -50,9 +50,8 @@ import { load as loadManifest, initialize as initManifest, clearInMemory } from 
 import { writeAllFromLocal, driveSyncService } from './drive-sync-service';
 import { invalidateAll as invalidateCache, get as cacheGet, CacheKeys } from './drive-cache-service';
 import { authStorageService } from '@/services/auth-storage-service';
-import { cancelAll as cancelQueue, setInitializing, enqueue } from './drive-write-queue';
+import { cancelAll as cancelQueue, setInitializing } from './drive-write-queue';
 import { readFile } from './drive-io-service';
-import { promptTextFilename } from './types/drive-schemas';
 import type { DriveFilename, DrivePromptMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
@@ -414,20 +413,12 @@ async function applyMergedData(
       });
       await chrome.storage.local.set({ snippets: updatedLocalSnippets });
 
-      // Build merged prompts-meta for Drive: Drive entries + local-only entries
+      // Build merged prompts-meta for Drive: Drive entries + local-only entries (text included)
       const driveIds = new Set(driveMetas.map((m) => m.id));
       const localOnlySnippets = updatedLocalSnippets.filter((s) => !driveIds.has(s.id));
-      const localOnlyMetas: DrivePromptMeta[] = localOnlySnippets.map(({ text: _text, ...meta }) => ({
-        ...meta,
-        textFileId: null,
-      } as DrivePromptMeta));
+      const localOnlyMetas: DrivePromptMeta[] = localOnlySnippets.map((s) => ({ ...s }));
       const mergedMetas = [...driveMetas, ...localOnlyMetas];
       driveSyncService.saveSnippetsMeta(mergedMetas, token);
-
-      // Upload text files for local-only snippets
-      for (const snippet of localOnlySnippets) {
-        enqueue(promptTextFilename(snippet.id), snippet.text, token);
-      }
       break;
     }
 
@@ -513,31 +504,15 @@ async function applyDriveData(
 ): Promise<void> {
   switch (filename) {
     case 'prompts-meta.json': {
-      // Drive has newer snippet metadata (tags, folderId, isFavorite).
-      // If local storage is non-empty: merge Drive metadata into local Snippet[] (text bodies
-      // come from local and are preserved).
-      // If local storage is empty (new device): fetch text bodies from Drive and reconstruct
-      // full Snippet objects so prompts are visible immediately.
-      const driveMetas = (driveFile.prompts as Array<{
-        id: string; title?: string; source: string; savedAt: number;
-        folderId?: string; tags?: string[]; isFavorite?: boolean; usageCount?: number;
-      }>) ?? [];
+      // Drive prompts now include the text body — no separate .txt file fetches needed.
+      const driveMetas = (driveFile.prompts as DrivePromptMeta[]) ?? [];
       if (driveMetas.length === 0) break;
 
       const localSnippets = await storageService.getAll();
 
       if (localSnippets.length === 0) {
-        // First login on empty device — fetch text bodies from Drive and reconstruct
-        // full Snippet objects. Text files are excluded from the batch init read
-        // (they're not JSON), so each must be fetched individually here.
-        const snippets: Snippet[] = (
-          await Promise.all(
-            driveMetas.map(async (meta) => ({
-              ...meta,
-              text: (await driveSyncService.getSnippetText(meta.id, token)) ?? '',
-            })),
-          )
-        ).filter((s) => s.text.length > 0);
+        // First login on empty device — reconstruct Snippet[] directly from Drive data.
+        const snippets: Snippet[] = driveMetas.filter((m) => m.text.length > 0);
         if (snippets.length > 0) {
           await chrome.storage.local.set({ snippets });
         }
@@ -550,6 +525,7 @@ async function applyDriveData(
         if (!driveMeta) return s;
         return {
           ...s,
+          text: driveMeta.text,
           title: driveMeta.title,
           tags: driveMeta.tags,
           folderId: driveMeta.folderId,

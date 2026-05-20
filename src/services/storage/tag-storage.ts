@@ -68,7 +68,7 @@ export const tagStorage = {
     });
     syncToDrive((token) => {
       driveSyncService.saveTags(updatedMeta, token);
-      driveSyncService.saveSnippetsMeta(updatedSnippets.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), token);
+      driveSyncService.saveSnippetsMeta(updatedSnippets, token);
     });
   },
 };

@@ -2,9 +2,7 @@
  * @module drive-cache-service
  * @description Session-storage cache layer that sits in front of all Drive reads.
  * Uses `chrome.storage.session` (MV3, volatile, 10 MB quota) to avoid redundant Drive
- * API calls within a single browser session. Applies LRU eviction exclusively to
- * `prompt-text-*` entries — the only unbounded-growth cache type — when estimated
- * session storage exceeds 8 MB, evicting 25% of the oldest entries at a time.
+ * API calls within a single browser session.
  * @dependencies (none — no internal src/ imports)
  * @public CacheKeys, get, set, invalidate, invalidateAll, getVersion, setVersion, driveCacheService
  */
@@ -20,8 +18,7 @@
  *
  * Cache key catalogue:
  *   drive_cache_manifest              → DriveManifest
- *   drive_cache_prompts_meta          → DrivePromptsMetaFile
- *   drive_cache_prompt_text_{id}      → string (raw prompt text)
+ *   drive_cache_prompts_meta          → DrivePromptsMetaFile (metadata + text bodies)
  *   drive_cache_app_settings          → DriveAppSettingsFile (folders+tags+settings+domainRouterRules)
  *   drive_cache_activity_data         → DriveActivityDataFile (exportHistory+pipelineRuns+podcastEpisodes)
  *   drive_cache_notebook_data         → DriveNotebookDataFile
@@ -31,30 +28,13 @@
  *   drive_cache_tab_groups            → DriveTabGroupsFile
  *   drive_cache_chat_{platform}_{id}  → string (NDJSON conversation content)
  *   drive_cache_version_{fileId}      → number (Drive version for a file)
- *
- * LRU eviction:
- *   Only `drive_cache_prompt_text_*` entries are subject to LRU eviction.
- *   All other keys are bounded by domain-level trim limits (200 runs, etc.).
- *   Eviction is triggered when the estimated session storage size exceeds 8 MB
- *   (leaving 2 MB headroom before the 10 MB limit).
  */
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const KEY_PREFIX = 'drive_cache_';
-const PROMPT_TEXT_PREFIX = `${KEY_PREFIX}prompt_text_`;
 const CHAT_CONTENT_PREFIX = `${KEY_PREFIX}chat_`;
 const VERSION_PREFIX = `${KEY_PREFIX}version_`;
-
-/** Session storage size threshold (bytes) above which LRU eviction kicks in. */
-const EVICTION_THRESHOLD_BYTES = 8 * 1024 * 1024; // 8 MB
-
-/**
- * In-memory LRU tracker for prompt text cache keys.
- * Maps cacheKey → last-access Unix ms.
- * Only tracks prompt text entries (the only unbounded-growth cache type).
- */
-const promptTextAccessTime = new Map<string, number>();
 
 // ── Well-known cache keys ──────────────────────────────────────────────────────
 
@@ -69,7 +49,6 @@ export const CacheKeys = {
   podcastAudioIndex: `${KEY_PREFIX}podcast_audio_index`,
   tabGroups: `${KEY_PREFIX}tab_groups`,
 
-  promptText: (promptId: string) => `${PROMPT_TEXT_PREFIX}${promptId}`,
   chatContent: (platform: string, id: string) => `${CHAT_CONTENT_PREFIX}${platform}_${id}`,
   version: (fileId: string) => `${VERSION_PREFIX}${fileId}`,
 } as const;
@@ -85,12 +64,6 @@ export async function get<T>(key: string): Promise<T | null> {
     const result = await chrome.storage.session.get(key);
     const value = result[key];
     if (value === undefined || value === null) return null;
-
-    // Track access time for prompt text LRU
-    if (key.startsWith(PROMPT_TEXT_PREFIX)) {
-      promptTextAccessTime.set(key, Date.now());
-    }
-
     return value as T;
   } catch {
     return null;
@@ -104,12 +77,6 @@ export async function get<T>(key: string): Promise<T | null> {
 export async function set<T>(key: string, value: T): Promise<void> {
   try {
     await chrome.storage.session.set({ [key]: value });
-
-    if (key.startsWith(PROMPT_TEXT_PREFIX)) {
-      promptTextAccessTime.set(key, Date.now());
-      // Fire-and-forget eviction check after write
-      void evictSnippetTextsIfNeeded();
-    }
   } catch {
     // Session storage write failures are non-fatal — cache is best-effort
   }
@@ -121,7 +88,6 @@ export async function set<T>(key: string, value: T): Promise<void> {
 export async function invalidate(key: string): Promise<void> {
   try {
     await chrome.storage.session.remove(key);
-    promptTextAccessTime.delete(key);
   } catch {
     // Non-fatal
   }
@@ -138,7 +104,6 @@ export async function invalidateAll(): Promise<void> {
     if (driveKeys.length > 0) {
       await chrome.storage.session.remove(driveKeys);
     }
-    promptTextAccessTime.clear();
   } catch {
     // Non-fatal
   }
@@ -154,41 +119,6 @@ export async function getVersion(fileId: string): Promise<number | null> {
 /** Stores a Drive version number for a file in session storage. */
 export async function setVersion(fileId: string, version: number): Promise<void> {
   return set(CacheKeys.version(fileId), version);
-}
-
-// ── LRU eviction ──────────────────────────────────────────────────────────────
-
-/**
- * Evicts the least-recently-used prompt text entries from session storage
- * when the total estimated size exceeds EVICTION_THRESHOLD_BYTES.
- *
- * Only prompt text entries are evicted because they are the only cache type
- * that can grow unboundedly (one entry per prompt, potentially thousands).
- */
-async function evictSnippetTextsIfNeeded(): Promise<void> {
-  try {
-    const all = await chrome.storage.session.get(null);
-    const estimatedBytes = JSON.stringify(all).length * 2; // rough UTF-16 estimate
-
-    if (estimatedBytes < EVICTION_THRESHOLD_BYTES) return;
-
-    // Sort prompt text keys by last-access time (oldest first)
-    const promptKeys = Object.keys(all).filter((k) => k.startsWith(PROMPT_TEXT_PREFIX));
-    promptKeys.sort((a, b) => {
-      const ta = promptTextAccessTime.get(a) ?? 0;
-      const tb = promptTextAccessTime.get(b) ?? 0;
-      return ta - tb; // oldest first
-    });
-
-    // Evict ~25% of prompt text entries
-    const toEvict = promptKeys.slice(0, Math.max(1, Math.floor(promptKeys.length * 0.25)));
-    if (toEvict.length > 0) {
-      await chrome.storage.session.remove(toEvict);
-      toEvict.forEach((k) => promptTextAccessTime.delete(k));
-    }
-  } catch {
-    // Non-fatal — eviction is best-effort
-  }
 }
 
 export const driveCacheService = {

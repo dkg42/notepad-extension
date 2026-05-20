@@ -7,7 +7,7 @@
  * the session cache is updated synchronously then a debounced Drive write is enqueued
  * via drive-write-queue, ensuring the UI is never blocked by Drive API latency.
  * @dependencies ./drive-cache-service, ./drive-manifest-service, ./drive-io-service, ./drive-write-queue, ./types/drive-schemas
- * @public getSnippetsMeta, saveSnippetsMeta, getSnippetText, saveSnippet, deleteSnippet, saveAllSnippets, getFolders, saveFolders, getTags, saveTags, getSettings, saveSettings, getExportHistory, appendExportRecord, saveExportHistory, saveHistoryData, getAnnotations, saveAnnotations, getPipelines, savePipelines, getPipelineRuns, appendPipelineRun, savePipelineRuns, getPodcastEpisodes, savePodcastEpisodes, getDomainRouterRules, saveDomainRouterRules, getChatConversationsMeta, saveChatConversationsMeta, getChatConversationContent, saveChatConversationContent, getCustomAudioIndex, saveCustomAudioIndex, getTabGroups, saveTabGroups, writeAllFromLocal, driveSyncService
+ * @public getSnippetsMeta, saveSnippetsMeta, saveSnippet, deleteSnippet, saveAllSnippets, getFolders, saveFolders, getTags, saveTags, getSettings, saveSettings, getExportHistory, appendExportRecord, saveExportHistory, saveHistoryData, getAnnotations, saveAnnotations, getPipelines, savePipelines, getPipelineRuns, appendPipelineRun, savePipelineRuns, getPodcastEpisodes, savePodcastEpisodes, getDomainRouterRules, saveDomainRouterRules, getChatConversationsMeta, saveChatConversationsMeta, getChatConversationContent, saveChatConversationContent, getCustomAudioIndex, saveCustomAudioIndex, getTabGroups, saveTabGroups, writeAllFromLocal, driveSyncService
  */
 
 /**
@@ -49,11 +49,10 @@ import type {
 } from './types/drive-schemas';
 import {
   DRIVE_SCHEMA_VERSION,
-  promptTextFilename,
   chatContentFilename,
   toDriveSafeEpisode,
 } from './types/drive-schemas';
-import { CacheKeys, get as cacheGet, set as cacheSet, invalidate as cacheInvalidate } from './drive-cache-service';
+import { CacheKeys, get as cacheGet, set as cacheSet } from './drive-cache-service';
 import { getEntry } from './drive-manifest-service';
 import { readFile } from './drive-io-service';
 import { enqueue } from './drive-write-queue';
@@ -145,44 +144,10 @@ export function saveSnippetsMeta(metas: DrivePromptMeta[], token: string): void 
   writeJson('prompts-meta.json', CacheKeys.promptsMeta, file, token);
 }
 
-/**
- * Reads the raw text of a single snippet from Drive.
- * Returns null on cache miss + Drive miss.
- */
-export async function getSnippetText(snippetId: string, token: string): Promise<string | null> {
-  const cacheKey = CacheKeys.promptText(snippetId);
-  const cached = await cacheGet<string>(cacheKey);
-  if (cached !== null) return cached;
-
-  if (!_driveEnabled) return null;
-
-  const filename = promptTextFilename(snippetId);
-  const entry = getEntry(filename);
-  if (!entry?.driveFileId) return null;
-
-  const result = await readFile(entry.driveFileId, token);
-  if (!result.ok) return null;
-
-  await cacheSet(cacheKey, result.data);
-  return result.data;
-}
-
-/**
- * Saves a snippet to Drive: upserts the metadata index and enqueues
- * a separate .txt file write for the text body.
- */
 export async function saveSnippet(snippet: Snippet, token: string): Promise<void> {
   if (!_driveEnabled) return;
-  // Update snippet text file
-  const textFilename = promptTextFilename(snippet.id);
-  const textCacheKey = CacheKeys.promptText(snippet.id);
-  await cacheSet(textCacheKey, snippet.text);
-  enqueue(textFilename, snippet.text, token);
-
-  // Update metadata index
   const existing = await getSnippetsMeta(token);
-  const { text: _text, ...meta } = snippet;
-  const newMeta: DrivePromptMeta = { ...meta, textFileId: null }; // fileId resolved by write queue
+  const newMeta: DrivePromptMeta = { ...snippet };
   const updated = existing.some((s) => s.id === snippet.id)
     ? existing.map((s) => (s.id === snippet.id ? newMeta : s))
     : [newMeta, ...existing];
@@ -190,26 +155,14 @@ export async function saveSnippet(snippet: Snippet, token: string): Promise<void
 }
 
 export async function deleteSnippet(snippetId: string, token: string): Promise<void> {
-  await cacheInvalidate(CacheKeys.promptText(snippetId));
-
   const existing = await getSnippetsMeta(token);
   saveSnippetsMeta(existing.filter((s) => s.id !== snippetId), token);
 }
 
 export async function saveAllSnippets(snippets: Snippet[], token: string): Promise<void> {
   if (!_driveEnabled) return;
-  const metas: DrivePromptMeta[] = snippets.map(({ text: _text, ...meta }) => ({
-    ...meta,
-    textFileId: null,
-  }));
+  const metas: DrivePromptMeta[] = snippets.map((s) => ({ ...s }));
   saveSnippetsMeta(metas, token);
-
-  // Enqueue text files for all snippets
-  for (const snippet of snippets) {
-    const textFilename = promptTextFilename(snippet.id);
-    await cacheSet(CacheKeys.promptText(snippet.id), snippet.text);
-    enqueue(textFilename, snippet.text, token);
-  }
 }
 
 // ── app-settings.json helpers (folders + tags + settings + domain-router-rules)
@@ -639,7 +592,6 @@ export async function writeAllFromLocal(data: {
 export const driveSyncService = {
   getSnippetsMeta,
   saveSnippetsMeta,
-  getSnippetText,
   saveSnippet,
   deleteSnippet,
   saveAllSnippets,

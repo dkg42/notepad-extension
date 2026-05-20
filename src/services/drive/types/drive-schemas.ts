@@ -2,7 +2,7 @@
  * @module drive-schemas
  * @description Defines the TypeScript wire-format contracts (interfaces and enums) for every JSON and plain-text file persisted in Google Drive AppData. All Drive services must conform to these types when serializing or deserializing data; incrementing DRIVE_SCHEMA_VERSION and adding a migration path in drive-init-service.ts is required for any breaking field change. Audio Blob payloads are intentionally excluded from sync — only Drive-safe representations are defined here.
  * @dependencies @/types, @/types/dashboard, @/types/pipeline, @/types/import, @/types/chat-history, @/types/tab-groups
- * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DrivePromptMeta, DrivePromptsMetaFile, DriveAppSettingsFile, DriveActivityDataFile, DriveNotebookRef, DriveNotebookDataFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, DrivePodcastAudioIndexFile, DrivePodcastAudioEntry, DriveTabGroup, DriveTabGroupsFile, promptTextFilename, chatContentFilename, toDriveSafeEpisode
+ * @public DRIVE_SCHEMA_VERSION, DriveFilename, DriveFileRef, DriveManifest, DriveManifestEntry, DrivePromptMeta, DrivePromptsMetaFile, DriveAppSettingsFile, DriveActivityDataFile, DriveNotebookRef, DriveNotebookDataFile, DrivePipelinesFile, DriveSafePodcastEpisode, DriveSafeEpisodeTrack, DriveSafeEpisodeTrackSource, DriveChatConversationsMetaFile, DriveConversationMetaLine, DrivePodcastAudioIndexFile, DrivePodcastAudioEntry, DriveTabGroup, DriveTabGroupsFile, chatContentFilename, toDriveSafeEpisode
  */
 
 /**
@@ -16,8 +16,7 @@
  * Drive AppData file layout (flat — AppData has no real subdirectory support):
  *
  *   manifest.json                      ← file-ID registry + versions + schema versions
- *   prompts-meta.json                  ← prompt metadata for Prompt Hub (text bodies excluded)
- *   prompt-text-{id}.txt               ← one plain-text file per prompt body
+ *   prompts-meta.json                  ← full prompt data for Prompt Hub (metadata + text body)
  *   app-settings.json                  ← folders + tags + settings + domain-router-rules
  *   activity-data.json                 ← export-history + pipeline-runs + podcast-episodes
  *   notebook-data.json                 ← NotebookAnnotation[] + Folder[] + minimal {id,name} refs
@@ -52,7 +51,7 @@ import type { GroupColor, StashedTab } from '@/types/tab-groups';
  * Increment when a breaking field change is made to any Drive file format.
  * drive-init-service.ts must handle migration from (version - 1) to this version.
  */
-export const DRIVE_SCHEMA_VERSION = 2;
+export const DRIVE_SCHEMA_VERSION = 3;
 
 // ── Known filenames (strongly typed to prevent typos) ─────────────────────────
 
@@ -66,11 +65,6 @@ export type DriveFilename =
   | 'chat-conversations-meta.json'
   | 'podcast-audio-index.json'
   | 'tab-groups.json';
-
-/** Returns the Drive filename for a per-prompt text file. */
-export function promptTextFilename(promptId: string): string {
-  return `prompt-text-${promptId}.txt`;
-}
 
 /** Returns the Drive filename for a per-conversation content file. */
 export function chatContentFilename(platform: string, conversationId: string): string {
@@ -132,14 +126,12 @@ interface DriveFileEnvelope {
   updatedAt: number;
 }
 
-// ── prompts-meta.json ─────────────────────────────────────────────────────────
+// ── prompts-meta.json (full prompt data: metadata + text body) ────────────────
 
-/**
- * Prompt Hub entry metadata stored in the index file.
- * The text body is excluded — it lives in a separate `prompt-text-{id}.txt` file.
- */
+/** Full prompt entry stored in `prompts-meta.json` (metadata + text body). */
 export interface DrivePromptMeta {
   id: string;
+  text: string;
   /** User-authored title (Prompt Hub). Extension-specific — must round-trip. */
   title?: string;
   source: string;
@@ -149,11 +141,6 @@ export interface DrivePromptMeta {
   isFavorite?: boolean;
   /** Times the prompt has been used. Extension-specific — must round-trip. */
   usageCount?: number;
-  /**
-   * Drive file ID for this prompt's `.txt` file.
-   * Null means the text file has not been uploaded yet (e.g., created offline).
-   */
-  textFileId: string | null;
 }
 
 export interface DrivePromptsMetaFile extends DriveFileEnvelope {

@@ -128,7 +128,7 @@ export const snippetStorage = {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, folderId } : s);
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   /**
@@ -141,7 +141,7 @@ export const snippetStorage = {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, tags } : s);
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   /**
@@ -153,7 +153,7 @@ export const snippetStorage = {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === id ? { ...s, isFavorite: !s.isFavorite } : s);
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   // ── Bulk Operations ────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ export const snippetStorage = {
     const existing = await snippetStorage.getAll();
     const updated = existing.filter((s) => !idSet.has(s.id));
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   /**
@@ -182,7 +182,7 @@ export const snippetStorage = {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => idSet.has(s.id) ? { ...s, folderId } : s);
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   /**
@@ -200,7 +200,7 @@ export const snippetStorage = {
       return { ...s, tags: merged };
     });
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
   /**
@@ -231,6 +231,6 @@ export const snippetStorage = {
       return { ...s, tags: (s.tags ?? []).filter((t) => !removeSet.has(t)) };
     });
     await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
-    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated.map(({ text: _t, ...m }) => ({ ...m, textFileId: null })), t));
+    syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 };
