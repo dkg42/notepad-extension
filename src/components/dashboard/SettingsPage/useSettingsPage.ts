@@ -22,7 +22,7 @@ export function useSettingsPage(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `llm-enhancer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `notehublm-backup-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

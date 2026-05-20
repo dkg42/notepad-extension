@@ -1,5 +1,5 @@
 {
-  "name": "llm-chat-enhancer",
+  "name": "notehublm",
   "version": "1.0.0",
   "description": "Chrome extension to enhance LLM chatbot user experience",
   "scripts": {

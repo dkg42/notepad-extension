@@ -4,7 +4,7 @@ export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: 'LLM Chat Enhancer',
+    name: 'Notehublm',
     description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
     version: '1.0.0',
     permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel', 'scripting'],

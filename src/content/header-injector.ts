@@ -12,7 +12,7 @@ import { storageService } from '@/services/storage-service';
 import type { ChatMessage, Folder } from '@/types';
 import { onElementRemoved, onUrlChange } from '@/utils/dom';
 
-const INJECTED_MARKER_ID = 'llm-enhancer-header-buttons';
+const INJECTED_MARKER_ID = 'notehublm-header-buttons';
 const INJECT_RETRY_DELAY_MS = 500;
 const NAV_SETTLE_DELAY_MS = 1000;
 

@@ -73,7 +73,7 @@ src/
 
 **Content script (`content.ts`)** — Thin orchestrator. Feature logic lives in `src/content/`. Uses vanilla TypeScript (no React) with shadow DOM so extension CSS is fully isolated from host pages.
 
-**Header injection** — Buttons are appended to the adapter's `findHeaderAnchor()` element inside a shadow-DOM container. `onUrlChange()` watches for SPA navigation and re-injects after a settle delay. The marker ID `llm-enhancer-header-buttons` prevents duplicate injection.
+**Header injection** — Buttons are appended to the adapter's `findHeaderAnchor()` element inside a shadow-DOM container. `onUrlChange()` watches for SPA navigation and re-injects after a settle delay. The marker ID `notehublm-header-buttons` prevents duplicate injection.
 
 **Storage service** — Single module owning all `chrome.storage.local` access. Popup and content script both import it; no direct storage calls elsewhere.
 

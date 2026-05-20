@@ -75,7 +75,7 @@ export class GoogleDocExportStrategy implements ExportStrategy {
 <head>
   <meta charset="UTF-8">
   <meta name=ProgId content=Word.Document>
-  <meta name=Generator content="LLM Chat Enhancer">
+  <meta name=Generator content="Notehublm">
   <title>${this.escapeHtml(title)}</title>
   <style>
     body  { font-family: Arial, sans-serif; font-size: 11pt; color: #111827; margin: 2cm; }

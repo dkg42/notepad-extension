@@ -280,7 +280,7 @@ export default function SettingsPage() {
           <h2 className="settings-section__title">About</h2>
           <div className="settings-page__about">
             <p>
-              <strong>LLM Chat Enhancer</strong> — v1.0.0
+              <strong>Notehublm</strong> — v1.0.0
             </p>
             <p>Save prompts from ChatGPT, Claude, Gemini, Perplexity and more.</p>
             <p className="settings-page__shortcuts-hint">
