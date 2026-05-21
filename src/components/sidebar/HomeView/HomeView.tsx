@@ -17,6 +17,7 @@ import {
 import type { StoredAuthProfile } from '@/types';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import type { UsageFeature } from '@/services/usage-limit-service';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import './HomeView.css';
 
 interface Feature {
@@ -102,6 +103,7 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
   // Always call the hook — safe because it's called unconditionally.
   // For features without a usageFeature, we pass 'prompt_hub' as a dummy but ignore the result.
   const { count } = useUsageLimit(f.usageFeature ?? 'prompt_hub');
+  const { isActive } = useSubscription();
   const a = ACCENT_MAP[f.accent] ?? ACCENT_MAP.primary;
   const isDisabled = f.comingSoon;
 
@@ -129,11 +131,11 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
         >
           <f.icon size={15} strokeWidth={1.7} />
         </div>
-        {f.plan === 'pro' ? (
+        {!isActive && (f.plan === 'pro' ? (
           <span className="home-view__tile-badge home-view__tile-badge--pro">Pro</span>
         ) : (
           <span className="home-view__tile-badge home-view__tile-badge--free">Free</span>
-        )}
+        ))}
       </div>
 
       <div className="home-view__tile-body">
@@ -141,15 +143,17 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
         <div className="home-view__tile-desc">{f.desc}</div>
       </div>
 
-      <div className="home-view__tile-footer">
-        <span style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '9.5px',
-          color: 'var(--fg-3)',
-        }}>
-          {footerText}
-        </span>
-      </div>
+      {!isActive && (
+        <div className="home-view__tile-footer">
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9.5px',
+            color: 'var(--fg-3)',
+          }}>
+            {footerText}
+          </span>
+        </div>
+      )}
 
       {f.comingSoon && (
         <div className="home-view__coming-soon">
@@ -166,6 +170,8 @@ interface HomeViewProps {
 }
 
 export default function HomeView({ onNavigate }: HomeViewProps) {
+  const { isActive } = useSubscription();
+
   return (
     <div className="home-view">
 
@@ -177,16 +183,18 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
         ))}
       </div>
 
-      <div className="home-view__upsell">
-        <div className="home-view__upsell-header">
-          <span className="home-view__tile-badge home-view__tile-badge--pro">Pro</span>
-          <span className="home-view__upsell-title">Unlock everything</span>
+      {!isActive && (
+        <div className="home-view__upsell">
+          <div className="home-view__upsell-header">
+            <span className="home-view__tile-badge home-view__tile-badge--pro">Pro</span>
+            <span className="home-view__upsell-title">Unlock everything</span>
+          </div>
+          <div className="home-view__upsell-desc">
+            Unlimited prompts, screenshots, NotebookLM sources, and chat history search.
+          </div>
+          <button className="home-view__upsell-btn">Upgrade — $5/mo</button>
         </div>
-        <div className="home-view__upsell-desc">
-          Unlimited prompts, screenshots, NotebookLM sources, and chat history search.
-        </div>
-        <button className="home-view__upsell-btn">Upgrade — $5/mo</button>
-      </div>
+      )}
     </div>
   );
 }
