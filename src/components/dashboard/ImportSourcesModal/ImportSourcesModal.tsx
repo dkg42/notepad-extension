@@ -1,7 +1,7 @@
 /**
  * @module ImportSourcesModal
- * @description Renders a tabbed modal dialog for importing sources into a notebook via URL, web crawler, CSV upload, RSS feed, browser tabs, or domain router configuration.
- * @dependencies useImportSources, BulkImportProgress, CsvUploadForm, RssFeedForm, WebCrawlerForm, BrowserTabsForm, DomainRouterSettings
+ * @description Renders a tabbed modal dialog for importing sources into a notebook via URL, web crawler, CSV upload, RSS feed, or browser tabs.
+ * @dependencies useImportSources, BulkImportProgress, CsvUploadForm, RssFeedForm, WebCrawlerForm, BrowserTabsForm
  * @public ImportSourcesModal
  */
 import React from 'react';
@@ -12,7 +12,6 @@ import CsvUploadForm from '@/components/dashboard/CsvUploadForm/CsvUploadForm';
 import RssFeedForm from '@/components/dashboard/RssFeedForm/RssFeedForm';
 import WebCrawlerForm from '@/components/dashboard/WebCrawlerForm/WebCrawlerForm';
 import BrowserTabsForm from '@/components/dashboard/BrowserTabsForm/BrowserTabsForm';
-import DomainRouterSettings from '@/components/dashboard/DomainRouterSettings/DomainRouterSettings';
 import './ImportSourcesModal.css';
 
 interface ImportSourcesModalProps {
@@ -27,7 +26,6 @@ const TABS: Array<{ key: ImportTab; label: string }> = [
   { key: 'csv', label: 'CSV Upload' },
   { key: 'rss', label: 'RSS Feed' },
   { key: 'tabs', label: 'Browser Tabs' },
-  { key: 'router', label: 'Domain Router' },
 ];
 
 export default function ImportSourcesModal({
@@ -164,10 +162,6 @@ export default function ImportSourcesModal({
 
           {activeTab === 'tabs' && (
             <BrowserTabsForm onImport={handleBulkImport} disabled={isImporting} />
-          )}
-
-          {activeTab === 'router' && (
-            <DomainRouterSettings compact />
           )}
         </div>
       </div>
