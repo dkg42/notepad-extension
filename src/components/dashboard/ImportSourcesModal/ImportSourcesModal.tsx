@@ -12,6 +12,7 @@ import CsvUploadForm from '@/components/dashboard/CsvUploadForm/CsvUploadForm';
 import RssFeedForm from '@/components/dashboard/RssFeedForm/RssFeedForm';
 import WebCrawlerForm from '@/components/dashboard/WebCrawlerForm/WebCrawlerForm';
 import BrowserTabsForm from '@/components/dashboard/BrowserTabsForm/BrowserTabsForm';
+import SubscriptionGuard from '@/components/ui/SubscriptionGuard/SubscriptionGuard';
 import './ImportSourcesModal.css';
 
 interface ImportSourcesModalProps {
@@ -149,19 +150,27 @@ export default function ImportSourcesModal({
           )}
 
           {activeTab === 'crawler' && (
-            <WebCrawlerForm onImport={handleBulkImport} disabled={isImporting} />
+            <SubscriptionGuard requiredPlan="any" showBlurred>
+              <WebCrawlerForm onImport={handleBulkImport} disabled={isImporting} />
+            </SubscriptionGuard>
           )}
 
           {activeTab === 'csv' && (
-            <CsvUploadForm onImport={handleBulkImport} disabled={isImporting} />
+            <SubscriptionGuard requiredPlan="any" showBlurred>
+              <CsvUploadForm onImport={handleBulkImport} disabled={isImporting} />
+            </SubscriptionGuard>
           )}
 
           {activeTab === 'rss' && (
-            <RssFeedForm onImport={handleBulkImport} disabled={isImporting} />
+            <SubscriptionGuard requiredPlan="any" showBlurred>
+              <RssFeedForm onImport={handleBulkImport} disabled={isImporting} />
+            </SubscriptionGuard>
           )}
 
           {activeTab === 'tabs' && (
-            <BrowserTabsForm onImport={handleBulkImport} disabled={isImporting} />
+            <SubscriptionGuard requiredPlan="any" showBlurred>
+              <BrowserTabsForm onImport={handleBulkImport} disabled={isImporting} />
+            </SubscriptionGuard>
           )}
         </div>
       </div>

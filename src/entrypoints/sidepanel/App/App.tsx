@@ -66,7 +66,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const subscriptionValue = useSubscriptionState();
-  const appData = useApp();
+  const appData = useApp(subscriptionValue.isPro);
   const clipboardData = useClipboardTab();
 
   useEffect(() => {

@@ -946,7 +946,7 @@ export default function PromptHubView({
     setSortOpen,
   } = usePromptHubView();
 
-  const { canUse: canAddPrompt, count: promptCount, use: usePromptLimit } = useUsageLimit('prompt_hub');
+  const { canCreate: canAddPrompt, count: promptCount } = useUsageLimit('prompt_hub');
   const [pendingEnhance, setPendingEnhance] = useState(false);
   const openSnippet = openPromptId ? snippets.find((s) => s.id === openPromptId) : null;
 
@@ -993,11 +993,12 @@ export default function PromptHubView({
     ? 'Favorites'
     : (folders.find((f) => f.id === selectedFolder)?.name ?? 'Prompts');
 
-  const handleSave = (title: string, text: string) => {
-    if (!openSnippet || !canAddPrompt) return;
-    handleDelete(openSnippet.id);
-    handleAddSnippet(title, text, openSnippet.tags ?? [], openSnippet.folderId);
-    void usePromptLimit();
+  const handleSave = async (title: string, text: string) => {
+    if (!openSnippet) return;
+    // Editing replaces the prompt — delete then re-add keeps the count flat,
+    // so it must not be blocked by the free cap.
+    await handleDelete(openSnippet.id);
+    await handleAddSnippet(title, text, openSnippet.tags ?? [], openSnippet.folderId);
     closeDetail();
   };
 
@@ -1026,7 +1027,6 @@ export default function PromptHubView({
               openSnippet.tags ?? [],
               openSnippet.folderId,
             );
-            void usePromptLimit();
             closeDetail();
           }}
           onMove={(folderId) => {
@@ -1190,13 +1190,12 @@ export default function PromptHubView({
               }
               onCreate={(title, text, tags, folderId) => {
                 handleAddSnippet(title, text, tags, folderId);
-                void usePromptLimit();
                 setComposeOpen(false);
               }}
             />
           ) : (
             <div className="prompt-hub__limit-notice">
-              Daily limit reached ({promptCount}/5 prompts today).{' '}
+              Free plan limit reached ({promptCount}/10 prompts).{' '}
               <button className="prompt-hub__limit-upgrade" onClick={() => chrome.runtime.openOptionsPage()}>
                 Upgrade to Pro
               </button>{' '}

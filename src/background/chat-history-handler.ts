@@ -117,14 +117,20 @@ export function handleChatHistoryMessage(
       }
 
       const pro = await isProUser();
-      const allowed = await usageLimitService.canUse('chat_history', pro);
-      if (!allowed) return { ok: false, reason: 'daily_limit' };
+      // Re-saving an already-stored conversation is an update, not a new save —
+      // it must not be blocked even when the free cap is reached.
+      const existing = await chatHistoryStorage.getConversations();
+      const alreadySaved = existing.some(
+        (c) => c.platform === toSave.meta.platform && c.id === toSave.meta.id,
+      );
+      if (!alreadySaved && !(await usageLimitService.canCreate('chat_history', pro))) {
+        return { ok: false, reason: 'cap_reached' };
+      }
 
       await chatHistoryStorage.upsertConversations([toSave.meta]);
       if (pro) {
         await chatHistoryStorage.saveConversationContent(toSave);
       }
-      if (!pro) await usageLimitService.increment('chat_history');
       return { ok: true };
     })()
       .then((result) => sendResponse(result))

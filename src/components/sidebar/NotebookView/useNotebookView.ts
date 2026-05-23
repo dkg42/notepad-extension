@@ -9,6 +9,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { NotebookMeta } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';
+import { dailyLimitService } from '@/services/daily-limit-service';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -20,6 +22,7 @@ function isAddableUrl(url: string | undefined): url is string {
 }
 
 export function useNotebookView() {
+  const { isPro } = useSubscription();
   const [tabUrl, setTabUrl] = useState<string | null>(null);
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [notebooks, setNotebooks] = useState<NotebookMeta[]>([]);
@@ -55,6 +58,11 @@ export function useNotebookView() {
 
   const handleSubmit = useCallback(async () => {
     if (!tabUrl || !selectedId) return;
+    if (!(await dailyLimitService.canUseToday('notebook_add', isPro))) {
+      setStatus('error');
+      setErrorMsg('Daily limit reached. Upgrade to Pro for unlimited adds.');
+      return;
+    }
     setStatus('submitting');
     try {
       const res = (await chrome.runtime.sendMessage({
@@ -64,6 +72,7 @@ export function useNotebookView() {
       })) as { ok: boolean; error?: string } | undefined;
 
       if (res?.ok) {
+        if (!isPro) await dailyLimitService.incrementToday('notebook_add');
         setStatus('success');
       } else {
         setStatus('error');
@@ -73,7 +82,7 @@ export function useNotebookView() {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : String(err));
     }
-  }, [tabUrl, selectedId]);
+  }, [tabUrl, selectedId, isPro]);
 
   const reset = useCallback(() => {
     setStatus('idle');

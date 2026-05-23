@@ -15,9 +15,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { StoredAuthProfile } from '@/types';
-import { useUsageLimit } from '@/hooks/useUsageLimit';
-import type { UsageFeature } from '@/services/usage-limit-service';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { useDailyLimit } from '@/hooks/useDailyLimit';
+import { FREE_CAPS, type CappedFeature } from '@/services/usage-limit-service';
+import { DAILY_LIMITS, type DailyFeature } from '@/services/daily-limit-service';
 import './HomeView.css';
 
 interface Feature {
@@ -28,8 +30,8 @@ interface Feature {
   plan: 'free' | 'pro';
   accent: string;
   comingSoon?: boolean;
-  dailyLimit?: number;
-  usageFeature?: UsageFeature;
+  usageFeature?: CappedFeature;
+  dailyFeature?: DailyFeature;
 }
 
 const ACCENT_MAP: Record<string, { bg: string; fg: string }> = {
@@ -49,7 +51,6 @@ const FEATURES: Feature[] = [
     desc: 'Save, tag and reuse your prompts',
     plan: 'free',
     accent: 'primary',
-    dailyLimit: 5,
     usageFeature: 'prompt_hub',
   },
   {
@@ -67,7 +68,6 @@ const FEATURES: Feature[] = [
     desc: 'Save and revisit conversations across AI tools',
     plan: 'free',
     accent: 'sky',
-    dailyLimit: 2,
     usageFeature: 'chat_history',
   },
   {
@@ -93,28 +93,29 @@ const FEATURES: Feature[] = [
     desc: 'Send current tab as a source',
     plan: 'free',
     accent: 'magenta',
-    dailyLimit: 3,
-    usageFeature: 'notebooklm_add',
+    dailyFeature: 'notebook_add',
   },
 ];
 
 
 function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) => void }) {
-  // Always call the hook — safe because it's called unconditionally.
-  // For features without a usageFeature, we pass 'prompt_hub' as a dummy but ignore the result.
-  const { count } = useUsageLimit(f.usageFeature ?? 'prompt_hub');
   const { isActive } = useSubscription();
+  // Hooks must be called unconditionally — pass safe fallbacks when the
+  // tile uses neither kind of limit and ignore the result below.
+  const { count } = useUsageLimit(f.usageFeature ?? 'prompt_hub');
+  const { count: dailyCount } = useDailyLimit(f.dailyFeature ?? 'notebook_add');
   const a = ACCENT_MAP[f.accent] ?? ACCENT_MAP.primary;
   const isDisabled = f.comingSoon;
 
   let footerText: string;
   if (f.plan === 'pro') {
     footerText = 'Pro only';
-  } else if (f.usageFeature && f.dailyLimit) {
-    // count is null for pro users (unlimited); otherwise show live "X/Y today"
-    footerText = count !== null ? `${count}/${f.dailyLimit} today` : 'Unlimited';
+  } else if (f.usageFeature && count !== null) {
+    footerText = `${count}/${FREE_CAPS[f.usageFeature]}`;
+  } else if (f.dailyFeature && dailyCount !== null) {
+    footerText = `${dailyCount}/${DAILY_LIMITS[f.dailyFeature]} today`;
   } else {
-    footerText = 'Unlimited';
+    footerText = 'Free';
   }
 
   return (

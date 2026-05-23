@@ -20,6 +20,8 @@ import {
 import { useDashboardHome, type HeatmapCell } from './useDashboardHome';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { FREE_CAPS } from '@/services/usage-limit-service';
 import { authService } from '@/services/auth-service';
 import type { StoredAuthProfile } from '@/types';
 import './DashboardHome.css';
@@ -131,6 +133,7 @@ export default function DashboardHome() {
   } = useNavigation();
   const { totalTags, recentSnippets, folderMap, captureActivity, formattedDate } =
     useDashboardHome(snippets, folders, conversations, notebooks);
+  const { isActive: isPro } = useSubscription();
 
   const [user, setUser] = useState<StoredAuthProfile | null>(null);
   useEffect(() => {
@@ -203,9 +206,8 @@ export default function DashboardHome() {
   ];
 
   const usageBars: UsageBarProps[] = [
-    { name: 'Prompts', used: snippets.length, max: 50 },
-    { name: 'Notebooks', used: notebooksCount, max: 10 },
-    { name: 'Saved chats', used: chatHistoryCount, max: 200 },
+    { name: 'Prompts', used: snippets.length, max: FREE_CAPS.prompt_hub },
+    { name: 'Saved chats', used: chatHistoryCount, max: FREE_CAPS.chat_history },
   ];
 
   const totalCaptures = snippets.length + chatHistoryCount + notebooksCount;
@@ -335,14 +337,16 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          <div className="dashboard-home__side-card">
-            <div className="dashboard-home__section-label">Plan usage</div>
-            <div className="dashboard-home__usage-list">
-              {usageBars.map((u) => (
-                <UsageBar key={u.name} {...u} />
-              ))}
+          {!isPro && (
+            <div className="dashboard-home__side-card">
+              <div className="dashboard-home__section-label">Plan usage</div>
+              <div className="dashboard-home__usage-list">
+                {usageBars.map((u) => (
+                  <UsageBar key={u.name} {...u} />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

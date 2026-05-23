@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useNotebookView } from './useNotebookView';
-import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { useDailyLimit } from '@/hooks/useDailyLimit';
 import './NotebookView.css';
 
 function timeAgo(ts: number): string {
@@ -44,7 +44,7 @@ export default function NotebookView() {
   } = useNotebookView();
 
   const isSubmitting = status === 'submitting';
-  const { canUse: canAdd, count: addCount } = useUsageLimit('notebooklm_add');
+  const { canUse: canAdd, count: addCount } = useDailyLimit('notebook_add');
 
   return (
     <div className="notebook-view">
@@ -157,6 +157,7 @@ export default function NotebookView() {
               className="notebook-view__submit-btn"
               onClick={() => void handleSubmit()}
               disabled={!tabUrl || !selectedId || isSubmitting || !canAdd}
+              title={!canAdd ? 'Daily limit reached — upgrade to Pro for unlimited adds' : undefined}
             >
               {isSubmitting ? (
                 <>

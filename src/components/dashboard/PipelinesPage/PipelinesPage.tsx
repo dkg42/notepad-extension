@@ -57,7 +57,7 @@ export default function PipelinesPage() {
     openBuilder,
     closeBuilder,
   } = usePipelinesPage();
-  const { canUse: canRun, count: runCount, remaining: runsRemaining } = useUsageLimit('pipeline_run');
+  const { canCreate: canCreatePipeline } = useUsageLimit('pipeline');
 
   if (isLoading) {
     return (
@@ -77,7 +77,12 @@ export default function PipelinesPage() {
             Automate notebook workflows — connect triggers to sequential actions.
           </p>
         </div>
-        <button className="pipelines-page__new-btn" onClick={() => openBuilder()}>
+        <button
+          className="pipelines-page__new-btn"
+          onClick={() => openBuilder()}
+          disabled={!canCreatePipeline}
+          title={canCreatePipeline ? undefined : 'Free plan allows 1 pipeline — upgrade to Pro'}
+        >
           <Plus size={16} /> New Pipeline
         </button>
       </div>
@@ -89,11 +94,6 @@ export default function PipelinesPage() {
         <h2 className="pipelines-section__title">
           <Zap size={16} /> Active Pipelines
           <span className="pipelines-section__count">{pipelines.length}</span>
-          {runCount !== null && (
-            <span className={`pipelines-section__usage-chip${!canRun ? ' pipelines-section__usage-chip--limit' : ''}`}>
-              {runCount}/5 runs today{runsRemaining === 0 ? ' — limit reached' : ''}
-            </span>
-          )}
         </h2>
 
         {pipelines.length === 0 ? (
@@ -152,8 +152,8 @@ export default function PipelinesPage() {
                     <td className="pipelines-table__row-actions">
                       <button
                         className="pipelines-table__action-btn"
-                        title={runCount !== null ? `${runCount}/5 pipeline runs used today${!canRun ? ' — daily limit reached' : ''}` : 'Run now'}
-                        disabled={runningId === p.id || !canRun}
+                        title="Run now"
+                        disabled={runningId === p.id}
                         onClick={() => void handleRunNow(p)}
                       >
                         <Play size={14} />
@@ -239,6 +239,8 @@ export default function PipelinesPage() {
               <button
                 className="pipeline-template-card__install-btn"
                 onClick={() => void handleInstallTemplate(t)}
+                disabled={!canCreatePipeline}
+                title={canCreatePipeline ? undefined : 'Free plan allows 1 pipeline — upgrade to Pro'}
               >
                 Install
               </button>

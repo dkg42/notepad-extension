@@ -83,11 +83,13 @@ export function usePipelinesPage() {
 
   const handleSave = useCallback(async (pipeline: Pipeline) => {
     const res = await chrome.runtime.sendMessage({ type: 'SAVE_PIPELINE', pipeline }) as {
-      ok: boolean; error?: string;
+      ok: boolean; reason?: string; error?: string;
     };
     if (res.ok) {
       setIsBuilderOpen(false);
       setSelectedPipeline(null);
+    } else if (res.reason === 'cap_reached') {
+      setError('Free plan allows 1 pipeline — upgrade to Pro to create more.');
     } else {
       setError(res.error ?? 'Failed to save pipeline');
     }

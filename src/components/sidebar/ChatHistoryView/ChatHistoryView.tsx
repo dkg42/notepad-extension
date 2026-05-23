@@ -78,7 +78,7 @@ export default function ChatHistoryView() {
     searchQuery,
     setSearchQuery,
   } = useChatHistoryView();
-  const { canUse: canSave, count: saveCount } = useUsageLimit('chat_history');
+  const { canCreate: canSave, count: saveCount } = useUsageLimit('chat_history');
 
   const filters: Array<'all' | ChatPlatform> = ['all', 'chatgpt', 'claude', 'gemini'];
 
@@ -112,7 +112,7 @@ export default function ChatHistoryView() {
               </span>
             ) : !canSave ? (
               <span className="chat-history-view__limit-badge">
-                Daily limit reached
+                Free limit reached
               </span>
             ) : (
               <button
@@ -121,7 +121,7 @@ export default function ChatHistoryView() {
                 disabled={isSaving}
               >
                 <Plus size={11} strokeWidth={2.4} />
-                {isSaving ? 'Saving…' : `Save${saveCount !== null ? ` (${saveCount}/2 today)` : ''}`}
+                {isSaving ? 'Saving…' : `Save${saveCount !== null ? ` (${saveCount}/5)` : ''}`}
               </button>
             )}
           </div>

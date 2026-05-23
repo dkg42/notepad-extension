@@ -108,7 +108,7 @@ export default function DashboardApp() {
     handleSettingsChange,
     driveConflict,
     handleConflictResolution,
-  } = useDashboardApp();
+  } = useDashboardApp(subscriptionValue.isPro);
 
   const palette = useCommandPalette(snippets, folders, notebooks, conversations, pipelines, podcastEpisodes, setCurrentView);
 

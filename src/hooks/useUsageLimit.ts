@@ -1,59 +1,60 @@
 /**
  * @module useUsageLimit
- * @description React hook that exposes daily usage limit state for a feature.
- *   Pro users always get canUse=true and remaining=null (unlimited).
- *   Free users see remaining count and a boolean gate.
- *   Listens for storage changes so all open views stay in sync.
+ * @description React hook exposing free-tier count-cap state for a feature.
+ *   Pro users always get canCreate=true and remaining=null (unlimited).
+ *   Free users see their current count, remaining slots and a creation gate.
+ *   Listens for changes to the feature's entity storage so all views stay in sync.
  * @dependencies usage-limit-service, SubscriptionContext
  * @public useUsageLimit
  */
 import { useState, useEffect, useCallback } from 'react';
-import { usageLimitService, DAILY_LIMITS, type UsageFeature } from '@/services/usage-limit-service';
+import {
+  usageLimitService,
+  FREE_CAPS,
+  STORAGE_KEYS,
+  type CappedFeature,
+} from '@/services/usage-limit-service';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface UsageLimitState {
-  canUse: boolean;
+  /** Whether the user may create another entity of this feature. */
+  canCreate: boolean;
+  /** Remaining free slots, or null for pro users (unlimited). */
   remaining: number | null;
-  count: number | null;  // null = pro (unlimited); free users get today's use count
-  use(): Promise<void>;
+  /** Current stored count, or null for pro users (unlimited). */
+  count: number | null;
 }
 
-export function useUsageLimit(feature: UsageFeature): UsageLimitState {
+export function useUsageLimit(feature: CappedFeature): UsageLimitState {
   const { isPro } = useSubscription();
   const [count, setCount] = useState<number | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
-  const [canUse, setCanUse] = useState(true);
+  const [canCreate, setCanCreate] = useState(true);
 
   const refresh = useCallback(async () => {
     if (isPro) {
       setCount(null);
       setRemaining(null);
-      setCanUse(true);
+      setCanCreate(true);
       return;
     }
     const c = await usageLimitService.getCount(feature);
-    const limit = DAILY_LIMITS[feature];
+    const cap = FREE_CAPS[feature];
     setCount(c);
-    setRemaining(Math.max(0, limit - c));
-    setCanUse(c < limit);
+    setRemaining(Math.max(0, cap - c));
+    setCanCreate(c < cap);
   }, [feature, isPro]);
 
   useEffect(() => {
     void refresh();
 
+    const key = STORAGE_KEYS[feature];
     const handler = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('dailyUsage' in changes) void refresh();
+      if (key in changes) void refresh();
     };
     chrome.storage.local.onChanged.addListener(handler);
     return () => chrome.storage.local.onChanged.removeListener(handler);
-  }, [refresh]);
+  }, [feature, refresh]);
 
-  const use = useCallback(async () => {
-    if (!isPro) {
-      await usageLimitService.increment(feature);
-      await refresh();
-    }
-  }, [feature, isPro, refresh]);
-
-  return { canUse, remaining, count, use };
+  return { canCreate, remaining, count };
 }

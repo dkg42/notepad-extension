@@ -369,6 +369,22 @@
   background: var(--accent, #3b82f6);
 }
 
+.notebooks-content__pro-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(59, 130, 246, 0.15));
+  color: var(--accent-fg, var(--accent, #3b82f6));
+}
+
+.notebooks-content__action-btn--primary .notebooks-content__pro-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
 
 .notebooks-content__toolbar {

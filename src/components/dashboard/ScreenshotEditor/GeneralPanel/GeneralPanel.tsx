@@ -100,8 +100,6 @@ interface Props {
   onDownload: () => void;
   onCopy: () => void;
   copied: boolean;
-  canExport?: boolean;
-  exportCount?: number | null;
 }
 
 export default function GeneralPanel({
@@ -112,8 +110,6 @@ export default function GeneralPanel({
   onDownload,
   onCopy,
   copied,
-  canExport = true,
-  exportCount,
 }: Props) {
   return (
     <div className="general-panel">
@@ -229,24 +225,15 @@ export default function GeneralPanel({
           />
         </div>
         <div className="general-panel__export-btns">
-          {!canExport && (
-            <div className="general-panel__limit-notice">
-              Daily export limit reached ({exportCount}/2 today).
-            </div>
-          )}
           <button
             className="general-panel__btn general-panel__btn--download"
             onClick={onDownload}
-            disabled={!canExport}
-            title={!canExport ? 'Upgrade to Pro for unlimited exports' : undefined}
           >
-            ↓ Download{exportCount !== null && exportCount !== undefined ? ` (${exportCount}/2 today)` : ''}
+            ↓ Download
           </button>
           <button
             className="general-panel__btn general-panel__btn--copy"
             onClick={onCopy}
-            disabled={!canExport}
-            title={!canExport ? 'Upgrade to Pro for unlimited exports' : undefined}
           >
             {copied ? '✓ Copied!' : '⎘ Copy'}
           </button>

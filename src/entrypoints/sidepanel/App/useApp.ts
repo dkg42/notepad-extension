@@ -7,10 +7,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Folder, Snippet } from '@/types';
 import { storageService } from '@/services/storage-service';
+import { usageLimitService } from '@/services/usage-limit-service';
 import { filterSnippets } from '@/utils/filter-snippets';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 
-export function useApp() {
+export function useApp(isPro: boolean) {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,6 +109,7 @@ export function useApp() {
     tags: string[],
     folderId?: string,
   ) => {
+    if (!(await usageLimitService.canCreate('prompt_hub', isPro))) return;
     await storageService.saveWithMeta({ title, text, tags, folderId });
   };
 

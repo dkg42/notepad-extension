@@ -1,76 +1,47 @@
 /**
  * @module usage-limit-service
- * @description Tracks daily per-feature usage counts for free-tier users.
- *   Counts are stored in chrome.storage.local keyed by date (YYYY-MM-DD).
- *   Old entries are pruned on each write (kept for 7 days).
- *   Pro users bypass all limits.
- * @public usageLimitService, DAILY_LIMITS, UsageFeature
+ * @description Enforces free-tier count caps. A free user may hold a fixed total
+ *   number of prompts, saved chats and pipelines — there is no daily reset, and
+ *   deleting an item frees a slot. Counts are derived from the live entity
+ *   storage, so no separate counter is kept. Pro users bypass all caps.
+ * @public usageLimitService, FREE_CAPS, CappedFeature
  */
 
-export type UsageFeature =
-  | 'prompt_hub'
-  | 'chat_history'
-  | 'notebooklm_add'
-  | 'pipeline_run'
-  | 'screenshot_editor';
+export type CappedFeature = 'prompt_hub' | 'chat_history' | 'pipeline';
 
-export const DAILY_LIMITS: Record<UsageFeature, number> = {
-  prompt_hub: 5,
-  chat_history: 2,
-  notebooklm_add: 3,
-  pipeline_run: 5,
-  screenshot_editor: 2,
+export const FREE_CAPS: Record<CappedFeature, number> = {
+  prompt_hub: 10,
+  chat_history: 5,
+  pipeline: 1,
 };
 
-const STORAGE_KEY = 'dailyUsage';
-
-interface DailyUsageStore {
-  [date: string]: Partial<Record<UsageFeature, number>>;
-}
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-async function readStore(): Promise<DailyUsageStore> {
-  const result = await chrome.storage.local.get(STORAGE_KEY);
-  return (result[STORAGE_KEY] as DailyUsageStore | undefined) ?? {};
-}
-
-async function writeStore(store: DailyUsageStore): Promise<void> {
-  // Prune entries older than 7 days
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
-  for (const date of Object.keys(store)) {
-    if (date < cutoffKey) delete store[date];
-  }
-  await chrome.storage.local.set({ [STORAGE_KEY]: store });
-}
+/** chrome.storage.local key holding the entity array for each capped feature. */
+export const STORAGE_KEYS: Record<CappedFeature, string> = {
+  prompt_hub: 'snippets',
+  chat_history: 'chatConversations',
+  pipeline: 'pipelines',
+};
 
 export const usageLimitService = {
-  async getCount(feature: UsageFeature): Promise<number> {
-    const store = await readStore();
-    return store[todayKey()]?.[feature] ?? 0;
+  /** Current number of stored entities for a capped feature. */
+  async getCount(feature: CappedFeature): Promise<number> {
+    const key = STORAGE_KEYS[feature];
+    const result = await chrome.storage.local.get(key);
+    const items = result[key] as unknown[] | undefined;
+    return Array.isArray(items) ? items.length : 0;
   },
 
-  async canUse(feature: UsageFeature, isPro: boolean): Promise<boolean> {
+  /** Whether the user may create another entity of this feature. */
+  async canCreate(feature: CappedFeature, isPro: boolean): Promise<boolean> {
     if (isPro) return true;
     const count = await this.getCount(feature);
-    return count < DAILY_LIMITS[feature];
+    return count < FREE_CAPS[feature];
   },
 
-  async increment(feature: UsageFeature): Promise<void> {
-    const store = await readStore();
-    const today = todayKey();
-    if (!store[today]) store[today] = {};
-    store[today][feature] = (store[today][feature] ?? 0) + 1;
-    await writeStore(store);
-  },
-
-  async getRemaining(feature: UsageFeature, isPro: boolean): Promise<number | null> {
+  /** Remaining free slots, or null for pro users (unlimited). */
+  async getRemaining(feature: CappedFeature, isPro: boolean): Promise<number | null> {
     if (isPro) return null;
     const count = await this.getCount(feature);
-    return Math.max(0, DAILY_LIMITS[feature] - count);
+    return Math.max(0, FREE_CAPS[feature] - count);
   },
 };

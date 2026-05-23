@@ -5,7 +5,7 @@
  * @public NotebooksPage
  */
 import React, { useRef, useState, useMemo } from 'react';
-import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal, Plus, GitMerge } from 'lucide-react';
+import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal, Plus, GitMerge, Lock } from 'lucide-react';
 import { useNotebooksPage, UNFILED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
@@ -14,6 +14,7 @@ import MoveFolderDialog from '@/components/dashboard/MoveFolderDialog/MoveFolder
 import NewNotebookModal from '@/components/dashboard/NewNotebookModal/NewNotebookModal';
 import MergeNotebookModal from '@/components/dashboard/MergeNotebookModal/MergeNotebookModal';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { Folder as FolderType, NotebookMeta, NotebookAnnotation } from '@/types';
 import './NotebooksPage.css';
@@ -518,6 +519,7 @@ function EmptyState() {
 
 export default function NotebooksPage() {
   const { handleOpenNotebookDetail: onOpenNotebook } = useNavigation();
+  const { isActive: isPro } = useSubscription();
 
   const {
     notebooks,
@@ -952,20 +954,28 @@ export default function NotebooksPage() {
                 <div className="notebooks-content__title-actions">
                   <button
                     className="notebooks-content__action-btn notebooks-content__action-btn--primary"
-                    onClick={() => setShowNewNotebookModal(true)}
-                    title="Create a new notebook"
+                    onClick={() => isPro ? setShowNewNotebookModal(true) : chrome.runtime.openOptionsPage()}
+                    title={isPro ? 'Create a new notebook' : 'Creating notebooks is a Pro feature'}
                   >
-                    <Plus size={12} strokeWidth={2} />
+                    {isPro ? <Plus size={12} strokeWidth={2} /> : <Lock size={11} strokeWidth={2} />}
                     New notebook
+                    {!isPro && <span className="notebooks-content__pro-badge">Pro</span>}
                   </button>
                   <button
                     className="notebooks-content__action-btn"
-                    onClick={() => setShowMergeModal(true)}
-                    disabled={selectedIds.size < 2}
-                    title={selectedIds.size < 2 ? 'Select 2 or more notebooks to merge' : 'Merge selected notebooks'}
+                    onClick={() => isPro ? setShowMergeModal(true) : chrome.runtime.openOptionsPage()}
+                    disabled={isPro && selectedIds.size < 2}
+                    title={
+                      !isPro
+                        ? 'Merging notebooks is a Pro feature'
+                        : selectedIds.size < 2
+                          ? 'Select 2 or more notebooks to merge'
+                          : 'Merge selected notebooks'
+                    }
                   >
-                    <GitMerge size={12} strokeWidth={2} />
+                    {isPro ? <GitMerge size={12} strokeWidth={2} /> : <Lock size={11} strokeWidth={2} />}
                     Merge selected
+                    {!isPro && <span className="notebooks-content__pro-badge">Pro</span>}
                   </button>
                 </div>
               </div>

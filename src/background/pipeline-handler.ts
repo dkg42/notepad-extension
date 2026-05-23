@@ -29,12 +29,6 @@ function needsPolling(pipeline: Pipeline): boolean {
  */
 export async function runPipelineCheck(): Promise<void> {
   if (!await authStorageService.getAuthProfile()) return;
-  const pro = await isProUser();
-  const allowed = await usageLimitService.canUse('pipeline_run', pro);
-  if (!allowed) {
-    console.warn('[NLM-EXT BG] Pipeline check skipped — daily limit reached');
-    return;
-  }
   try {
     const pipelines = await pipelineService.getAll();
     const pollable = pipelines.filter((p) => p.enabled && needsPolling(p));
@@ -94,7 +88,6 @@ export async function runPipelineCheck(): Promise<void> {
     if (needsArtifacts) {
       await pipelineService.setArtifactBaseline(artifactIds);
     }
-    if (!pro) await usageLimitService.increment('pipeline_run');
   } catch (err) {
     console.warn('[NLM-EXT BG] Pipeline check failed:', err);
   }
@@ -187,8 +180,18 @@ export function handlePipelineMessage(
 
   if (message.type === 'SAVE_PIPELINE') {
     const { pipeline } = message as { type: string; pipeline: Pipeline };
-    pipelineService.save(pipeline)
-      .then(() => sendResponse({ ok: true }))
+    (async () => {
+      // Free users may hold only one pipeline. Editing an existing pipeline is
+      // always allowed; the cap applies only to creating/installing a new one.
+      const existing = await pipelineService.getAll();
+      const isNew = !existing.some((p) => p.id === pipeline.id);
+      if (isNew && !(await usageLimitService.canCreate('pipeline', await isProUser()))) {
+        return { ok: false, reason: 'cap_reached' };
+      }
+      await pipelineService.save(pipeline);
+      return { ok: true };
+    })()
+      .then((result) => sendResponse(result))
       .catch((err: unknown) =>
         sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       );
@@ -238,9 +241,6 @@ export function handlePipelineMessage(
     const { pipeline } = message as { type: string; pipeline: Pipeline };
     (async () => {
       await ensureSignedIn();
-      const pro = await isProUser();
-      const allowed = await usageLimitService.canUse('pipeline_run', pro);
-      if (!allowed) return { ok: false, reason: 'daily_limit' };
 
       const [notebooks, annotations, folders] = await Promise.all([
         notebookSyncService.getAll(),
@@ -255,7 +255,6 @@ export function handlePipelineMessage(
       for (const run of runs) {
         await pipelineService.appendRun(run);
       }
-      if (!pro) await usageLimitService.increment('pipeline_run');
       return { ok: true, runs };
     })()
       .then((result) => sendResponse(result))

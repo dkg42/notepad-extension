@@ -12,6 +12,7 @@ import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import type { DashboardSettings, DashboardView } from '@/types/dashboard';
 import type { ConflictSummary } from '@/services/drive/drive-init-service';
 import { storageService, snippetStorage } from '@/services/storage-service';
+import { usageLimitService } from '@/services/usage-limit-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { useGlobalAudio } from '@/hooks/useGlobalAudio';
@@ -23,7 +24,7 @@ const DEFAULT_SETTINGS: DashboardSettings = {
   defaultSortDirection: 'desc',
 };
 
-export function useDashboardApp() {
+export function useDashboardApp(isPro: boolean) {
   const globalAudio = useGlobalAudio();
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -187,6 +188,7 @@ export function useDashboardApp() {
   };
 
   const handleSaveSnippet = async (title: string, text: string, tags: string[], folderId?: string) => {
+    if (!(await usageLimitService.canCreate('prompt_hub', isPro))) return;
     await storageService.saveWithMeta({
       text, source: 'dashboard', title: title || undefined, folderId, tags,
     });
