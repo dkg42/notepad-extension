@@ -6,8 +6,15 @@
  * @dependencies useChatHistoryPage, SearchBar, @/types, @/contexts/NavigationContext
  * @public ChatHistoryPage
  */
-import React from 'react';
-import { ChevronUp, ChevronDown, Download, Plus, MoreHorizontal } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  ChevronUp,
+  ChevronDown,
+  MoreHorizontal,
+  ExternalLink,
+  Link2,
+  Trash2,
+} from 'lucide-react';
 import type { ChatPlatform } from '@/types';
 import { useChatHistoryPage, formatSmartDate } from './useChatHistoryPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
@@ -29,6 +36,62 @@ function PlatformBadge({ platform }: { platform: ChatPlatform }) {
   );
 }
 
+const MENU_WIDTH = 180;
+const MENU_GAP = 4;
+
+interface RowMenuProps {
+  anchor: DOMRect;
+  url: string | undefined;
+  onOpenOriginal: () => void;
+  onCopyLink: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}
+
+function RowMenu({ anchor, url, onOpenOriginal, onCopyLink, onDelete, onClose }: RowMenuProps) {
+  const hasUrl = !!url;
+  const top = anchor.bottom + MENU_GAP;
+  const left = Math.max(8, Math.min(window.innerWidth - MENU_WIDTH - 8, anchor.right - MENU_WIDTH));
+  return (
+    <>
+      <div className="chp__row-menu__backdrop" onClick={onClose} />
+      <div
+        className="chp__row-menu"
+        role="menu"
+        style={{ top, left, width: MENU_WIDTH }}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          className="chp__row-menu__item"
+          disabled={!hasUrl}
+          onClick={() => { onClose(); onOpenOriginal(); }}
+        >
+          <ExternalLink size={12} /> Open original
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className="chp__row-menu__item"
+          disabled={!hasUrl}
+          onClick={() => { onClose(); onCopyLink(); }}
+        >
+          <Link2 size={12} /> Copy link
+        </button>
+        <div className="chp__row-menu__divider" />
+        <button
+          type="button"
+          role="menuitem"
+          className="chp__row-menu__item chp__row-menu__item--danger"
+          onClick={() => { onClose(); onDelete(); }}
+        >
+          <Trash2 size={12} /> Delete
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function ChatHistoryPage() {
   const { handleOpenChatDetail: onOpenConversation } = useNavigation();
 
@@ -37,7 +100,6 @@ export default function ChatHistoryPage() {
     totalCount,
     countByPlatform,
     isLoading,
-    isSaving,
     activePlatform,
     setActivePlatform,
     sortField,
@@ -46,9 +108,21 @@ export default function ChatHistoryPage() {
     searchQuery,
     setSearchQuery,
     handleOpenConversation,
-    handleSaveCurrentChat,
-    handleExportAll,
+    handleDelete,
   } = useChatHistoryPage(onOpenConversation);
+
+  const [openMenu, setOpenMenu] = useState<{ key: string; anchor: DOMRect } | null>(null);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const close = () => setOpenMenu(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [openMenu]);
 
   return (
     <div className="chp">
@@ -58,20 +132,6 @@ export default function ChatHistoryPage() {
           <p className="chp__eyebrow">Chat History</p>
           <h1 className="chp__title">All chats</h1>
           <p className="chp__subtitle">Saved conversations across every LLM you use.</p>
-        </div>
-        <div className="chp__header-actions">
-          <button className="chp__btn-ghost" onClick={handleExportAll} disabled={totalCount === 0}>
-            <Download size={14} />
-            Export
-          </button>
-          <button
-            className="chp__btn-primary"
-            onClick={() => void handleSaveCurrentChat()}
-            disabled={isSaving}
-          >
-            <Plus size={14} />
-            {isSaving ? 'Saving…' : 'Save current chat'}
-          </button>
         </div>
       </div>
 
@@ -156,9 +216,37 @@ export default function ChatHistoryPage() {
                     <td className="chp__td chp__td--msgs">{conv.messageCount ?? '—'}</td>
                     <td className="chp__td chp__td--updated">{formatSmartDate(conv.updatedAt)}</td>
                     <td className="chp__td chp__td--menu" onClick={(e) => e.stopPropagation()}>
-                      <button className="chp__menu-btn" aria-label="More options">
+                      <button
+                        className={`chp__menu-btn${openMenu?.key === `${conv.platform}:${conv.id}` ? ' chp__menu-btn--open' : ''}`}
+                        aria-label="More options"
+                        aria-haspopup="menu"
+                        aria-expanded={openMenu?.key === `${conv.platform}:${conv.id}`}
+                        onClick={(e) => {
+                          const key = `${conv.platform}:${conv.id}`;
+                          if (openMenu?.key === key) {
+                            setOpenMenu(null);
+                          } else {
+                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                            setOpenMenu({ key, anchor: rect });
+                          }
+                        }}
+                      >
                         <MoreHorizontal size={15} />
                       </button>
+                      {openMenu?.key === `${conv.platform}:${conv.id}` && (
+                        <RowMenu
+                          anchor={openMenu.anchor}
+                          url={conv.url}
+                          onOpenOriginal={() => {
+                            if (conv.url) window.open(conv.url, '_blank', 'noopener,noreferrer');
+                          }}
+                          onCopyLink={() => {
+                            if (conv.url) void navigator.clipboard.writeText(conv.url);
+                          }}
+                          onDelete={() => void handleDelete(conv.platform, conv.id)}
+                          onClose={() => setOpenMenu(null)}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}

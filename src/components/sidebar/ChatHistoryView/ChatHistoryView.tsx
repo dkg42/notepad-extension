@@ -6,11 +6,12 @@
  * @dependencies useChatHistoryView
  * @public ChatHistoryView
  */
-import React from 'react';
-import { Search, Plus, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform, ConversationMeta } from '@/types';
 import { useChatHistoryView } from './useChatHistoryView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
+import ChatHistoryDetailView from '@/components/sidebar/ChatHistoryDetailView/ChatHistoryDetailView';
 import './ChatHistoryView.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -40,27 +41,74 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function ChatCard({ conv }: { conv: ConversationMeta }) {
+function ChatCard({
+  conv,
+  onOpen,
+  onOpenOriginal,
+  onDelete,
+}: {
+  conv: ConversationMeta;
+  onOpen: (conv: ConversationMeta) => void;
+  onOpenOriginal: (conv: ConversationMeta) => void;
+  onDelete: (conv: ConversationMeta) => void;
+}) {
   const color = PLATFORM_COLOR[conv.platform];
 
-  const handleClick = () => {
-    chrome.tabs.create({ url: conv.url });
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onOpen(conv);
+    }
+  };
+
+  const handleOpenOriginalClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onOpenOriginal(conv);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onDelete(conv);
   };
 
   return (
-    <button className="chat-history-view__card" onClick={handleClick}>
+    <div
+      className="chat-history-view__card"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(conv)}
+      onKeyDown={handleKeyDown}
+    >
       <div className="chat-history-view__card-header">
         <span className="chat-history-view__platform-dot" style={{ background: color }} />
         <span className="chat-history-view__platform-label" style={{ color }}>
           {PLATFORM_LABELS[conv.platform]}
         </span>
         <span className="chat-history-view__card-time">{timeAgo(conv.updatedAt)}</span>
+        {conv.url && (
+          <button
+            className="chat-history-view__card-open"
+            onClick={handleOpenOriginalClick}
+            aria-label="Open original chat"
+            title="Open original chat"
+          >
+            <ExternalLink size={12} />
+          </button>
+        )}
+        <button
+          className="chat-history-view__card-delete"
+          onClick={handleDeleteClick}
+          aria-label="Delete chat"
+          title="Delete chat"
+        >
+          <Trash2 size={12} />
+        </button>
       </div>
       <div className="chat-history-view__card-title">{conv.title}</div>
       <div className="chat-history-view__card-preview">
         {conv.messageCount != null ? `${conv.messageCount} messages` : 'No messages'}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -77,10 +125,22 @@ export default function ChatHistoryView() {
     setActivePlatform,
     searchQuery,
     setSearchQuery,
+    handleDelete,
   } = useChatHistoryView();
   const { canCreate: canSave, count: saveCount } = useUsageLimit('chat_history');
+  const [selected, setSelected] = useState<{ platform: ChatPlatform; id: string } | null>(null);
 
   const filters: Array<'all' | ChatPlatform> = ['all', 'chatgpt', 'claude', 'gemini'];
+
+  if (selected) {
+    return (
+      <ChatHistoryDetailView
+        platform={selected.platform}
+        conversationId={selected.id}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
 
   return (
     <div className="chat-history-view">
@@ -106,10 +166,15 @@ export default function ChatHistoryView() {
               </div>
             </div>
             {isAlreadySaved ? (
-              <span className="chat-history-view__saved-badge">
-                <Check size={11} />
-                Saved
-              </span>
+              <button
+                className="chat-history-view__resync-btn"
+                onClick={() => void handleSave()}
+                disabled={isSaving}
+                title="Pull latest messages from this chat"
+              >
+                <RefreshCw size={11} strokeWidth={2.4} className={isSaving ? 'chat-history-view__resync-spin' : undefined} />
+                {isSaving ? 'Syncing…' : 'Re-sync'}
+              </button>
             ) : !canSave ? (
               <span className="chat-history-view__limit-badge">
                 Free limit reached
@@ -157,7 +222,15 @@ export default function ChatHistoryView() {
         ) : (
           <div className="chat-history-view__list">
             {conversations.map((conv) => (
-              <ChatCard key={`${conv.platform}:${conv.id}`} conv={conv} />
+              <ChatCard
+                key={`${conv.platform}:${conv.id}`}
+                conv={conv}
+                onOpen={(c) => setSelected({ platform: c.platform, id: c.id })}
+                onOpenOriginal={(c) => {
+                  if (c.url) window.open(c.url, '_blank', 'noopener,noreferrer');
+                }}
+                onDelete={(c) => void handleDelete(c.platform, c.id)}
+              />
             ))}
           </div>
         )}

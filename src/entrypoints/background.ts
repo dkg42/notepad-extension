@@ -357,6 +357,41 @@ function handleAuthSessionMessage(
   return undefined; // not handled
 }
 
+// ── Content-script bootstrap for already-open LLM tabs ────────────────────
+// Chrome only auto-injects content scripts on fresh navigations, so tabs that
+// were already open when the extension is installed / updated / the browser
+// starts up will never receive the script (and thus cannot extract chat
+// messages on demand). Manually inject into matching tabs to bridge that gap.
+
+const LLM_CONTENT_SCRIPT_PATTERNS = [
+  'https://chatgpt.com/*',
+  'https://chat.openai.com/*',
+  'https://claude.ai/*',
+  'https://gemini.google.com/*',
+  'https://www.perplexity.ai/*',
+  'https://copilot.microsoft.com/*',
+  'https://notebooklm.google.com/*',
+];
+
+async function injectContentScriptIntoExistingTabs(): Promise<void> {
+  try {
+    const tabs = await chrome.tabs.query({ url: LLM_CONTENT_SCRIPT_PATTERNS });
+    await Promise.all(
+      tabs.map(async (tab) => {
+        if (!tab.id) return;
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content-scripts/content.js'],
+          });
+        } catch { /* tab closed, restricted URL, or already injected — ignore */ }
+      }),
+    );
+  } catch (err) {
+    console.warn('[BG] LLM tab bootstrap failed (non-fatal):', err);
+  }
+}
+
 export default defineBackground(() => {
   // Sync on extension install / update
   chrome.runtime.onInstalled.addListener(() => {
@@ -368,6 +403,7 @@ export default defineBackground(() => {
     // Re-arm token refresh alarm in case the extension was updated while signed in.
     void scheduleRefreshAlarm();
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    void injectContentScriptIntoExistingTabs();
   });
 
   // Sync on browser startup
@@ -379,6 +415,7 @@ export default defineBackground(() => {
     // so this no-ops when signed out; the first Drive call will do a just-in-time refresh.
     void scheduleRefreshAlarm();
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    void injectContentScriptIntoExistingTabs();
     // Re-initialize Drive sync. chrome.storage.session is cleared on browser close so the
     // manifest session cache is gone — reload from Drive for signed-in users with Drive scope.
     void (async () => {

@@ -90,6 +90,17 @@ export function useChatHistoryView() {
     return () => chrome.storage.local.onChanged.removeListener(handler);
   }, [loadConversations]);
 
+  const handleDelete = useCallback(async (platform: ChatPlatform, id: string) => {
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'DELETE_CHAT_CONVERSATION',
+        platform,
+        id,
+      });
+      await loadConversations();
+    } catch { /* non-fatal — storage listener will also refresh */ }
+  }, [loadConversations]);
+
   const handleSave = useCallback(async () => {
     if (!currentChat || isSaving) return;
     setIsSaving(true);
@@ -125,6 +136,7 @@ export function useChatHistoryView() {
     isAlreadySaved,
     isSaving,
     handleSave,
+    handleDelete,
     conversations: filtered,
     totalCount: conversations.length,
     countByPlatform,

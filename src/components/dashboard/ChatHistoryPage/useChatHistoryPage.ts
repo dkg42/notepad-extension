@@ -6,7 +6,7 @@
  * @public useChatHistoryPage
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { ChatPlatform, ConversationFull, ConversationMeta } from '@/types';
+import type { ChatPlatform, ConversationMeta } from '@/types';
 
 type SortField = 'updatedAt' | 'createdAt' | 'title';
 type SortDir = 'asc' | 'desc';
@@ -41,7 +41,6 @@ export function useChatHistoryPage(
 ) {
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [activePlatform, setActivePlatform] = useState<PlatformFilter>('all');
   const [sortField, setSortField] = useState<SortField>('updatedAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -110,41 +109,23 @@ export function useChatHistoryPage(
     [onOpenConversation],
   );
 
-  const handleSaveCurrentChat = useCallback(async () => {
-    setIsSaving(true);
+  const handleDelete = useCallback(async (platform: ChatPlatform, id: string) => {
     try {
-      const infoRes = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_CHAT_INFO' }) as {
-        ok: boolean; available?: boolean; conversation?: ConversationFull;
-      };
-      if (!infoRes?.ok || !infoRes.available || !infoRes.conversation) {
-        console.warn('[ChatHistory] No active LLM tab to save');
-        return;
-      }
-      await chrome.runtime.sendMessage({ type: 'SAVE_CURRENT_CHAT', conversation: infoRes.conversation });
+      await chrome.runtime.sendMessage({
+        type: 'DELETE_CHAT_CONVERSATION',
+        platform,
+        id,
+      });
     } catch (err) {
-      console.warn('[ChatHistory] Save current chat failed', err);
-    } finally {
-      setIsSaving(false);
+      console.warn('[ChatHistory] Delete failed', err);
     }
   }, []);
-
-  const handleExportAll = useCallback(() => {
-    if (conversations.length === 0) return;
-    const blob = new Blob([JSON.stringify(conversations, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `notehublm-chats-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [conversations]);
 
   return {
     conversations: filteredConversations,
     totalCount: conversations.length,
     countByPlatform,
     isLoading,
-    isSaving,
     activePlatform,
     setActivePlatform,
     sortField,
@@ -153,7 +134,6 @@ export function useChatHistoryPage(
     searchQuery,
     setSearchQuery,
     handleOpenConversation,
-    handleSaveCurrentChat,
-    handleExportAll,
+    handleDelete,
   };
 }

@@ -1,14 +1,15 @@
 /**
- * @module useChatHistoryDetailPage
- * @description Hook for the conversation detail page that fetches a full conversation
- *   (messages + meta) from the background and exposes export, copy, and delete handlers.
- * @dependencies @/types
- * @public useChatHistoryDetailPage
+ * @module useChatHistoryDetailView
+ * @description Sidepanel hook that fetches one saved conversation's full content from the
+ *   background and exposes copy/delete/retry handlers. Export is handled by the shared
+ *   ChatExportMenu component, so this hook deliberately does not implement export.
+ * @dependencies @/types/chat-history
+ * @public useChatHistoryDetailView
  */
 import { useState, useEffect, useCallback } from 'react';
-import type { ChatPlatform, ConversationFull } from '@/types';
+import type { ChatPlatform, ConversationFull } from '@/types/chat-history';
 
-export function useChatHistoryDetailPage(
+export function useChatHistoryDetailView(
   platform: ChatPlatform,
   conversationId: string,
   onBack: () => void,
@@ -21,11 +22,11 @@ export function useChatHistoryDetailPage(
     setIsLoading(true);
     setError(null);
     try {
-      const res = await chrome.runtime.sendMessage({
+      const res = (await chrome.runtime.sendMessage({
         type: 'GET_CHAT_CONVERSATION_CONTENT',
         platform,
         id: conversationId,
-      }) as { ok: boolean; conversation?: ConversationFull; error?: string };
+      })) as { ok: boolean; conversation?: ConversationFull; error?: string };
 
       if (res?.ok && res.conversation) {
         setConversation(res.conversation);
@@ -63,7 +64,7 @@ export function useChatHistoryDetailPage(
       });
       onBack();
     } catch (err) {
-      console.warn('[ChatHistoryDetail] Delete failed', err);
+      console.warn('[ChatHistoryDetailView] Delete failed', err);
     }
   }, [platform, conversationId, onBack]);
 

@@ -6,10 +6,11 @@
  * @public ChatHistoryDetailPage
  */
 import React from 'react';
-import { ArrowLeft, Copy, Download, Trash2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform } from '@/types';
 import { useChatHistoryDetailPage } from './useChatHistoryDetailPage';
 import { useNavigation } from '@/contexts/NavigationContext';
+import ChatExportMenu from '@/components/shared/ChatExportMenu/ChatExportMenu';
 import './ChatHistoryDetailPage.css';
 
 const PLATFORM_LABELS: Record<ChatPlatform, string> = {
@@ -42,11 +43,14 @@ export default function ChatHistoryDetailPage() {
     conversation,
     isLoading,
     error,
-    handleExportMarkdown,
     handleCopy,
     handleDelete,
     handleRetry,
   } = useChatHistoryDetailPage(platform!, conversationId!, onBack);
+
+  const exportFilename = conversation
+    ? conversation.meta.title.replace(/[^a-z0-9]/gi, '_').toLowerCase().replace(/_+/g, '_').replace(/^_|_$/g, '') || 'chat'
+    : 'chat';
 
   return (
     <div className="chd">
@@ -84,10 +88,11 @@ export default function ChatHistoryDetailPage() {
               <Copy size={14} />
               Copy
             </button>
-            <button className="chd__btn-ghost" onClick={handleExportMarkdown}>
-              <Download size={14} />
-              Export
-            </button>
+            <ChatExportMenu
+              messages={conversation.messages}
+              filename={exportFilename}
+              buttonClassName="chd__btn-ghost"
+            />
             <button className="chd__btn-danger" onClick={() => void handleDelete()}>
               <Trash2 size={14} />
               Delete

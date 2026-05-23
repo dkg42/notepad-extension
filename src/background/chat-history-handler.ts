@@ -31,6 +31,37 @@ function extractIdFromUrl(platform: ChatPlatform, url: string): string {
   return String(Date.now());
 }
 
+/**
+ * Asks the content script to extract the current chat. If the content script
+ * is not loaded (e.g. tab was open before the extension was installed/reloaded),
+ * inject it on demand and retry once. Returns null when extraction is not
+ * possible in this tab.
+ */
+async function extractFromTab(tabId: number): Promise<ConversationFull | null> {
+  const send = async () => {
+    const result = await chrome.tabs.sendMessage(tabId, {
+      type: 'EXTRACT_CURRENT_CHAT_INFO',
+    }) as { ok: boolean; conversation?: ConversationFull; error?: string };
+    return result?.ok && result.conversation ? result.conversation : null;
+  };
+
+  try {
+    return await send();
+  } catch {
+    // Content script not registered in this tab — inject and retry once.
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content-scripts/content.js'],
+      });
+      await new Promise<void>((r) => setTimeout(r, 100));
+      return await send();
+    } catch {
+      return null;
+    }
+  }
+}
+
 /** Builds a minimal conversation stub from tab metadata when the content script is unavailable. */
 function buildFallbackConversation(platform: ChatPlatform, tab: chrome.tabs.Tab): ConversationFull {
   const now = Date.now();
@@ -68,17 +99,11 @@ export function handleChatHistoryMessage(
       if (!platform) return { ok: false, available: false };
 
       // Prefer rich extraction from content script (includes messages + accurate title).
-      // Fall back to tab metadata if the content script is not yet loaded in that tab.
-      try {
-        const result = await chrome.tabs.sendMessage(tab.id, {
-          type: 'EXTRACT_CURRENT_CHAT_INFO',
-        }) as { ok: boolean; conversation?: ConversationFull; error?: string };
-
-        if (result?.ok && result.conversation) {
-          return { ok: true, available: true, conversation: result.conversation };
-        }
-      } catch {
-        // Content script not loaded — fall through to tab-metadata fallback.
+      // The helper injects the content script on demand if it isn't loaded yet,
+      // covering tabs that were open before the extension was installed/reloaded.
+      const extracted = await extractFromTab(tab.id);
+      if (extracted) {
+        return { ok: true, available: true, conversation: extracted };
       }
 
       // Fallback: build basic conversation info from the tab's URL and title.
@@ -104,15 +129,10 @@ export function handleChatHistoryMessage(
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         const tab = tabs[0];
         if (tab?.id) {
-          try {
-            const result = await chrome.tabs.sendMessage(tab.id, {
-              type: 'EXTRACT_CURRENT_CHAT_INFO',
-            }) as { ok: boolean; conversation?: ConversationFull };
-
-            if (result?.ok && result.conversation && result.conversation.messages.length > 0) {
-              toSave = result.conversation;
-            }
-          } catch { /* content script still not available — save as-is */ }
+          const extracted = await extractFromTab(tab.id);
+          if (extracted && extracted.messages.length > 0) {
+            toSave = extracted;
+          }
         }
       }
 
@@ -128,9 +148,7 @@ export function handleChatHistoryMessage(
       }
 
       await chatHistoryStorage.upsertConversations([toSave.meta]);
-      if (pro) {
-        await chatHistoryStorage.saveConversationContent(toSave);
-      }
+      await chatHistoryStorage.saveConversationContent(toSave);
       return { ok: true };
     })()
       .then((result) => sendResponse(result))
