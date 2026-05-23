@@ -1,1 +1,1 @@
-{"nodes": [{"id": "usekeyboardshortcuts_hook", "label": "useKeyboardShortcuts", "file_type": "code", "source_file": "src/hooks/useKeyboardShortcuts.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
+{"nodes": [{"id": "hooks_usekeyboardshortcuts", "label": "useKeyboardShortcuts", "file_type": "code", "source_file": "src/hooks/useKeyboardShortcuts.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
