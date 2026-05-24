@@ -1,12 +1,25 @@
 /**
  * @module useScreenshotView
  * @description State hook for the Screenshot sidebar view. Loads the screenshot store from
- *   the background service worker and exposes captures and a deleteCapture action.
+ *   the background service worker and exposes captures, delete, download, and dashboard
+ *   navigation actions.
  * @dependencies @/types
  * @public useScreenshotView
  */
 import { useState, useEffect, useCallback } from 'react';
-import type { ScreenshotStore } from '@/types';
+import type { CaptureRecord, ScreenshotStore } from '@/types';
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function timestampForFilename(ms: number): string {
+  const d = new Date(ms);
+  return (
+    `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}` +
+    `-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`
+  );
+}
 
 export function useScreenshotView() {
   const [store, setStore] = useState<ScreenshotStore | null>(null);
@@ -35,9 +48,28 @@ export function useScreenshotView() {
     [loadStore],
   );
 
+  const downloadCapture = useCallback((capture: CaptureRecord) => {
+    const filename = `screenshot-${timestampForFilename(capture.capturedAt)}.jpg`;
+    const a = document.createElement('a');
+    a.href = capture.dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, []);
+
+  const openInDashboard = useCallback(async (captureId: string) => {
+    await chrome.storage.local.set({
+      pendingDashboardNav: { view: 'screenshot-editor', captureId },
+    });
+    chrome.runtime.openOptionsPage();
+  }, []);
+
   return {
     captures: store?.captures ?? [],
     deleteCapture,
+    downloadCapture,
+    openInDashboard,
     loadStore,
   };
 }

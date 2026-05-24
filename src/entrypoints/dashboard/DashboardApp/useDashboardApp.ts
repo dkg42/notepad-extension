@@ -391,6 +391,33 @@ export function useDashboardApp(isPro: boolean) {
     setSelectedCaptureId(null);
   };
 
+  // Cross-context navigation from side panel: consume pendingDashboardNav
+  // both on mount (newly opened dashboard) and via storage change events
+  // (already-open dashboard tab focused by openOptionsPage).
+  useEffect(() => {
+    const consume = (nav: unknown) => {
+      if (!nav || typeof nav !== 'object') return;
+      const { view, captureId } = nav as { view?: string; captureId?: string };
+      if (view === 'screenshot-editor' && typeof captureId === 'string') {
+        setSelectedCaptureId(captureId);
+        setCurrentView('screenshot-editor');
+        void chrome.storage.local.remove('pendingDashboardNav');
+      }
+    };
+
+    chrome.storage.local.get('pendingDashboardNav').then((res) => {
+      consume(res.pendingDashboardNav);
+    }).catch(() => {});
+
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('pendingDashboardNav' in changes) {
+        consume(changes.pendingDashboardNav.newValue);
+      }
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, []);
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
   const handleSettingsChange = async (partial: Partial<DashboardSettings>) => {

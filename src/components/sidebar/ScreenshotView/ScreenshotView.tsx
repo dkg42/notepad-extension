@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { CaptureMode, CaptureRecord } from '@/types';
 import { useScreenshotView } from './useScreenshotView';
+import ScreenshotPreviewModal from './ScreenshotPreviewModal';
 import './ScreenshotView.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,12 +87,26 @@ function CaptureBtn({ config, disabled, onClick }: CaptureBtnProps) {
 function CaptureThumbnail({
   capture,
   onDelete,
+  onOpen,
 }: {
   capture: CaptureRecord;
   onDelete: (id: string) => void;
+  onOpen: (capture: CaptureRecord) => void;
 }) {
   return (
-    <div className="screenshot-view__capture-thumb" title={capture.tabTitle}>
+    <div
+      className="screenshot-view__capture-thumb"
+      title={capture.tabTitle}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(capture)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(capture);
+        }
+      }}
+    >
       <img
         className="screenshot-view__thumb-img"
         src={capture.dataUrl}
@@ -124,9 +139,16 @@ function CaptureThumbnail({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ScreenshotView() {
-  const { captures, deleteCapture, loadStore } = useScreenshotView();
+  const {
+    captures,
+    deleteCapture,
+    downloadCapture,
+    openInDashboard,
+    loadStore,
+  } = useScreenshotView();
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [previewCapture, setPreviewCapture] = useState<CaptureRecord | null>(null);
 
   const handleCapture = async (mode: CaptureMode) => {
     if (launching) return;
@@ -180,7 +202,12 @@ export default function ScreenshotView() {
           </div>
           <div className="screenshot-view__captures-grid">
             {captures.map((c) => (
-              <CaptureThumbnail key={c.id} capture={c} onDelete={deleteCapture} />
+              <CaptureThumbnail
+                key={c.id}
+                capture={c}
+                onDelete={deleteCapture}
+                onOpen={setPreviewCapture}
+              />
             ))}
           </div>
         </>
@@ -190,6 +217,18 @@ export default function ScreenshotView() {
         <div className="screenshot-view__empty">
           No captures yet — click a mode above to start.
         </div>
+      )}
+
+      {previewCapture && (
+        <ScreenshotPreviewModal
+          capture={previewCapture}
+          onClose={() => setPreviewCapture(null)}
+          onEdit={(id) => {
+            setPreviewCapture(null);
+            void openInDashboard(id);
+          }}
+          onDownload={downloadCapture}
+        />
       )}
     </div>
   );

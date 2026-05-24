@@ -1,0 +1,120 @@
+.screenshot-preview__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.screenshot-preview {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.screenshot-preview__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.screenshot-preview__title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenshot-preview__close {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.screenshot-preview__close:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+}
+
+.screenshot-preview__image-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px;
+}
+
+.screenshot-preview__image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--r-sm);
+}
+
+.screenshot-preview__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.screenshot-preview__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+}
+
+.screenshot-preview__btn--secondary {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+}
+
+.screenshot-preview__btn--secondary:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+}
+
+.screenshot-preview__btn--primary {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--primary-fg, #fff);
+}
+
+.screenshot-preview__btn--primary:hover {
+  opacity: 0.9;
+}
