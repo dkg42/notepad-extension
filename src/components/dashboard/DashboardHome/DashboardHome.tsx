@@ -14,8 +14,6 @@ import {
   Plus,
   Search,
   Workflow,
-  ArrowRight,
-  Star,
 } from 'lucide-react';
 import { useDashboardHome, type HeatmapCell } from './useDashboardHome';
 import { useSnippets } from '@/contexts/SnippetsContext';
@@ -43,21 +41,23 @@ function ActivityHeatmap({
 
   return (
     <div className="heatmap">
-      <div className="heatmap__grid">
-        {Array.from({ length: WEEKS }).map((_, w) => (
-          <div key={w} className="heatmap__week">
-            {Array.from({ length: DAYS }).map((_, d) => {
-              const cell = cells[w * DAYS + d] ?? { level: 0, count: 0, label: '' };
-              return (
-                <div
-                  key={d}
-                  className={`heatmap__cell heatmap__cell--${cell.level}`}
-                  title={`${cell.count} capture${cell.count === 1 ? '' : 's'}${cell.label ? ` · ${cell.label}` : ''}`}
-                />
-              );
-            })}
-          </div>
-        ))}
+      <div className="heatmap__grid-wrap">
+        <div className="heatmap__grid">
+          {Array.from({ length: WEEKS }).map((_, w) => (
+            <div key={w} className="heatmap__week">
+              {Array.from({ length: DAYS }).map((_, d) => {
+                const cell = cells[w * DAYS + d] ?? { level: 0, count: 0, label: '' };
+                return (
+                  <div
+                    key={d}
+                    className={`heatmap__cell heatmap__cell--${cell.level}`}
+                    title={`${cell.count} capture${cell.count === 1 ? '' : 's'}${cell.label ? ` · ${cell.label}` : ''}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="heatmap__legend">
         <span>Less</span>
@@ -135,7 +135,7 @@ export default function DashboardHome() {
     conversations,
     notebooks,
   } = useNavigation();
-  const { totalTags, recentSnippets, folderMap, captureActivity, formattedDate } =
+  const { totalTags, captureActivity, formattedDate } =
     useDashboardHome(snippets, folders, conversations, notebooks);
   const { isActive: isPro } = useSubscription();
 
@@ -271,68 +271,21 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Body: 2fr recent prompts | 1fr side */}
+      {/* Body: 2fr activity | 1fr side */}
       <div className="dashboard-home__body">
-        {/* Recent prompts card */}
-        <div className="dashboard-home__recent-card">
+        {/* Capture activity card */}
+        <div className="dashboard-home__activity-card">
           <div className="dashboard-home__card-header">
             <div>
-              <div className="dashboard-home__card-title">Recent prompts</div>
-              <div className="dashboard-home__card-subtitle">From your Prompt Hub</div>
+              <div className="dashboard-home__card-title">Capture activity</div>
+              <div className="dashboard-home__card-subtitle">
+                Last 12 weeks · prompts, chats, notebooks
+              </div>
             </div>
-            <button
-              className="dashboard-home__view-all"
-              onClick={() => onNavigate('prompts')}
-            >
-              View all <ArrowRight size={11} strokeWidth={2} />
-            </button>
           </div>
-
-          {recentSnippets.length === 0 ? (
-            <div className="dashboard-home__empty">
-              <Sparkles size={28} strokeWidth={1.4} />
-              <span>No prompts saved yet.</span>
-              <button
-                className="dashboard-home__btn-primary dashboard-home__btn-primary--sm"
-                onClick={() => onNavigate('prompts')}
-              >
-                <Plus size={12} /> Save a prompt
-              </button>
-            </div>
-          ) : (
-            <div className="dashboard-home__prompt-list">
-              {recentSnippets.map((s) => (
-                <div key={s.id} className="dashboard-home__prompt-row">
-                  <Star
-                    size={14}
-                    strokeWidth={1.6}
-                    className={`dashboard-home__star${s.isFavorite ? ' dashboard-home__star--active' : ''}`}
-                  />
-                  <div className="dashboard-home__prompt-info">
-                    <div className="dashboard-home__prompt-title">
-                      {s.title ?? s.text.slice(0, 60)}
-                      {!s.title && s.text.length > 60 ? '…' : ''}
-                    </div>
-                    <div className="dashboard-home__prompt-meta">
-                      {s.folderId && (
-                        <span className="dashboard-home__prompt-folder">
-                          {folderMap.get(s.folderId) ?? ''}
-                        </span>
-                      )}
-                      {s.tags?.slice(0, 2).map((t) => (
-                        <span key={t} className="dashboard-home__tag">#{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                  {s.savedAt && (
-                    <span className="dashboard-home__prompt-date">
-                      {new Date(s.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="dashboard-home__activity-body">
+            <ActivityHeatmap cells={captureActivity.cells} totalCaptures={totalCaptures} />
+          </div>
         </div>
 
         {/* Side panel: quick actions + plan usage */}
@@ -374,16 +327,6 @@ export default function DashboardHome() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Heatmap */}
-      <div className="dashboard-home__heatmap-card">
-        <div className="dashboard-home__card-header">
-          <div className="dashboard-home__section-label" style={{ marginBottom: 0 }}>
-            Capture activity · last 12 weeks
-          </div>
-        </div>
-        <ActivityHeatmap cells={captureActivity.cells} totalCaptures={totalCaptures} />
       </div>
     </div>
   );

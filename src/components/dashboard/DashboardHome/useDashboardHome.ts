@@ -1,6 +1,6 @@
 /**
  * @module useDashboardHome
- * @description Pure-computation hook for the Dashboard Home page that derives summary statistics: total unique tag count, the five most recent snippets, a folder id-to-name map, per-folder snippet counts, and a 12-week capture-activity heatmap (snippets + chats + notebooks bucketed by day).
+ * @description Pure-computation hook for the Dashboard Home page that derives summary statistics: total unique tag count, per-folder snippet counts, and a 12-week capture-activity heatmap (snippets + chats + notebooks bucketed by day).
  * @dependencies @/types, @/types/chat-history
  * @public useDashboardHome
  */
@@ -33,13 +33,6 @@ export function useDashboardHome(
     snippets.forEach((s) => s.tags?.forEach((t) => tagSet.add(t)));
     return tagSet.size;
   }, [snippets]);
-
-  const recentSnippets = useMemo(() => snippets.slice(0, 5), [snippets]);
-
-  const folderMap = useMemo(
-    () => new Map(folders.map((f) => [f.id, f.name])),
-    [folders],
-  );
 
   const snippetsPerFolder = useMemo(() => {
     const counts = new Map<string, number>();
@@ -109,8 +102,6 @@ export function useDashboardHome(
 
   return {
     totalTags,
-    recentSnippets,
-    folderMap,
     snippetsPerFolder,
     captureActivity,
     formattedDate,
