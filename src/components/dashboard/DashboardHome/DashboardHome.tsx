@@ -21,7 +21,10 @@ import { useDashboardHome, type HeatmapCell } from './useDashboardHome';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { useDailyLimit } from '@/hooks/useDailyLimit';
 import { FREE_CAPS } from '@/services/usage-limit-service';
+import { DAILY_LIMITS } from '@/services/daily-limit-service';
 import { authService } from '@/services/auth-service';
 import type { StoredAuthProfile } from '@/types';
 import './DashboardHome.css';
@@ -96,9 +99,10 @@ interface UsageBarProps {
   name: string;
   used: number;
   max: number;
+  suffix?: string;
 }
 
-function UsageBar({ name, used, max }: UsageBarProps) {
+function UsageBar({ name, used, max, suffix }: UsageBarProps) {
   const pct = Math.min((used / max) * 100, 100);
   const warn = pct >= 80;
   return (
@@ -106,7 +110,7 @@ function UsageBar({ name, used, max }: UsageBarProps) {
       <div className="usage-bar__header">
         <span className="usage-bar__name">{name}</span>
         <span className={`usage-bar__count${warn ? ' usage-bar__count--warn' : ''}`}>
-          {used} / {max}
+          {used} / {max}{suffix ? ` ${suffix}` : ''}
         </span>
       </div>
       <div className="usage-bar__track">
@@ -134,6 +138,11 @@ export default function DashboardHome() {
   const { totalTags, recentSnippets, folderMap, captureActivity, formattedDate } =
     useDashboardHome(snippets, folders, conversations, notebooks);
   const { isActive: isPro } = useSubscription();
+
+  const promptUsage = useUsageLimit('prompt_hub');
+  const chatUsage = useUsageLimit('chat_history');
+  const pipelineUsage = useUsageLimit('pipeline');
+  const notebookDaily = useDailyLimit('notebook_add');
 
   const [user, setUser] = useState<StoredAuthProfile | null>(null);
   useEffect(() => {
@@ -205,9 +214,19 @@ export default function DashboardHome() {
     },
   ];
 
-  const usageBars: UsageBarProps[] = [
-    { name: 'Prompts', used: snippets.length, max: FREE_CAPS.prompt_hub },
-    { name: 'Saved chats', used: chatHistoryCount, max: FREE_CAPS.chat_history },
+  const lifetimeBars: UsageBarProps[] = [
+    { name: 'Prompts', used: promptUsage.count ?? 0, max: FREE_CAPS.prompt_hub },
+    { name: 'Saved chats', used: chatUsage.count ?? 0, max: FREE_CAPS.chat_history },
+    { name: 'Pipelines', used: pipelineUsage.count ?? 0, max: FREE_CAPS.pipeline },
+  ];
+
+  const dailyBars: UsageBarProps[] = [
+    {
+      name: 'NotebookLM adds',
+      used: notebookDaily.count ?? 0,
+      max: DAILY_LIMITS.notebook_add,
+      suffix: 'today',
+    },
   ];
 
   const totalCaptures = snippets.length + chatHistoryCount + notebooksCount;
@@ -341,7 +360,14 @@ export default function DashboardHome() {
             <div className="dashboard-home__side-card">
               <div className="dashboard-home__section-label">Plan usage</div>
               <div className="dashboard-home__usage-list">
-                {usageBars.map((u) => (
+                <div className="dashboard-home__usage-group-label dashboard-home__usage-group-label--first">
+                  Lifetime
+                </div>
+                {lifetimeBars.map((u) => (
+                  <UsageBar key={u.name} {...u} />
+                ))}
+                <div className="dashboard-home__usage-group-label">Today</div>
+                {dailyBars.map((u) => (
                   <UsageBar key={u.name} {...u} />
                 ))}
               </div>

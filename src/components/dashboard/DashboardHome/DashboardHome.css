@@ -365,7 +365,20 @@
 .dashboard-home__usage-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+.dashboard-home__usage-group-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+.dashboard-home__usage-group-label--first {
+  margin-top: 0;
 }
 
 .usage-bar__header {
