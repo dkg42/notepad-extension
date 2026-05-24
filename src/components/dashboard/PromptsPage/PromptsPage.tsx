@@ -6,14 +6,15 @@
  */
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  Search, X, Star, LayoutGrid, Folder, FolderOpen, ChevronDown, Plus,
-  ChevronUp, ChevronRight, Check, Trash2, Copy, Pencil, Send,
+  Search, X, Star, LayoutGrid, Folder, ChevronDown, Plus,
+  ChevronUp, Check, Trash2, Copy, Pencil, Send,
   MoreHorizontal, ArrowLeft, ArrowUpDown, Sparkles,
 } from 'lucide-react';
 import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderSubtreeIds, getFolderPath } from '@/utils/folder-utils';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
+import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './PromptsPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -97,211 +98,19 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-// ── Folder panel ───────────────────────────────────────────────────────────────
+// ── Folder panel virtual rows ─────────────────────────────────────────────────
 
-interface FolderPanelProps {
-  folders: FolderType[];
-  snippets: Snippet[];
-  selectedFolder: string;
-  onSelectFolder: (id: string) => void;
-  expandedFolders: Set<string>;
-  onToggleFolder: (id: string) => void;
-  newFolderParentId: string | null;
-  onStartCreate: (parentId: string) => void;
-  onCommitCreate: (name: string, parentId: string) => void;
-  onCancelCreate: () => void;
-  onDeleteFolder: (id: string) => void;
-}
-
-function FolderPanel({
-  folders, snippets, selectedFolder, onSelectFolder,
-  expandedFolders, onToggleFolder, newFolderParentId,
-  onStartCreate, onCommitCreate, onCancelCreate, onDeleteFolder,
-}: FolderPanelProps) {
-  const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
-
-  const displayItems = useMemo(() => {
-    type Item =
-      | { type: 'folder'; folder: FolderType; depth: number }
-      | { type: 'create'; parentId: string; depth: number };
-
-    const result: Item[] = [];
-    const visibleIds = new Set<string>();
-
-    if (newFolderParentId === '') result.push({ type: 'create', parentId: '', depth: 0 });
-
-    for (const { folder, depth } of treeItems) {
-      const parentOk = !folder.parentId || (visibleIds.has(folder.parentId) && expandedFolders.has(folder.parentId));
-      if (!parentOk) continue;
-      visibleIds.add(folder.id);
-      result.push({ type: 'folder', folder, depth });
-      if (newFolderParentId === folder.id) {
-        result.push({ type: 'create', parentId: folder.id, depth: depth + 1 });
-      }
-    }
-    return result;
-  }, [treeItems, expandedFolders, newFolderParentId]);
-
-  const allCount = snippets.length;
-  const starredCount = snippets.filter((s) => s.isFavorite).length;
-
-  return (
-    <div className="ph-folder-panel">
-      <div className="ph-folder-panel__scroll">
-        <FolderRow
-          id="__all" name="All prompts" depth={0}
-          selected={selectedFolder === '__all'} onSelect={() => onSelectFolder('__all')}
-          count={allCount} icon={<LayoutGrid size={12} strokeWidth={1.8} />}
-        />
-        <FolderRow
-          id="__starred" name="Favorites" depth={0}
-          selected={selectedFolder === '__starred'} onSelect={() => onSelectFolder('__starred')}
-          count={starredCount} icon={<Star size={12} strokeWidth={1.8} />}
-        />
-
-        <div className="ph-folder-panel__section-label">Folders</div>
-
-        {displayItems.map((item, i) =>
-          item.type === 'create' ? (
-            <FolderCreateRow
-              key={`create-${i}`} depth={item.depth}
-              onCommit={(name) => onCommitCreate(name, item.parentId)}
-              onCancel={onCancelCreate}
-              validate={(name) => {
-                const siblings = folders.filter((f) => f.parentId === (item.parentId || undefined));
-                return siblings.some((f) => f.name.toLowerCase() === name.toLowerCase())
-                  ? `"${name}" already exists`
-                  : null;
-              }}
-            />
-          ) : (
-            <FolderRow
-              key={item.folder.id} id={item.folder.id} name={item.folder.name}
-              depth={item.depth} selected={selectedFolder === item.folder.id}
-              onSelect={() => onSelectFolder(item.folder.id)}
-              count={countDescendants(item.folder.id, folders, snippets)}
-              icon={expandedFolders.has(item.folder.id) ? <FolderOpen size={12} strokeWidth={1.8} /> : <Folder size={12} strokeWidth={1.8} />}
-              hasChildren={folders.some((f) => f.parentId === item.folder.id)}
-              isOpen={expandedFolders.has(item.folder.id)}
-              onToggle={() => onToggleFolder(item.folder.id)}
-              onCreateChild={() => onStartCreate(item.folder.id)}
-              onDelete={() => onDeleteFolder(item.folder.id)}
-            />
-          ),
-        )}
-
-        {folders.length === 0 && newFolderParentId === null && (
-          <div className="ph-folder-panel__empty">No folders yet</div>
-        )}
-
-        <button className="ph-folder-panel__new-btn" onClick={() => onStartCreate('')}>
-          <Plus size={11} strokeWidth={2} /> New folder
-        </button>
-      </div>
-    </div>
-  );
-}
-
-interface FolderRowProps {
-  id: string; name: string; depth: number; selected: boolean;
-  onSelect: () => void; count: number; icon: React.ReactNode;
-  hasChildren?: boolean; isOpen?: boolean;
-  onToggle?: () => void; onCreateChild?: () => void; onDelete?: () => void;
-}
-
-function FolderRow({ id: _id, name, depth, selected, onSelect, count, icon, hasChildren, isOpen, onToggle, onCreateChild, onDelete }: FolderRowProps) {
-  const [confirming, setConfirming] = useState(false);
-
-  if (confirming) {
-    return (
-      <div className="ph-folder-row ph-folder-row--confirm" style={{ paddingLeft: 8 + depth * 14 }}>
-        <span className="ph-folder-row__icon">{icon}</span>
-        <span className="ph-folder-row__name">{name}</span>
-        <span className="ph-folder-row__spacer" />
-        <span className="ph-folder-row__del-label">Delete?</span>
-        <button className="ph-folder-row__del-confirm" onClick={(e) => { e.stopPropagation(); setConfirming(false); onDelete?.(); }}>
-          <Check size={10} strokeWidth={2.4} />
-        </button>
-        <button className="ph-folder-row__del-cancel" onClick={(e) => { e.stopPropagation(); setConfirming(false); }}>
-          <X size={10} strokeWidth={2} />
-        </button>
-      </div>
-    );
-  }
-
+function VirtualFolderRow({ selected, onClick, icon, label, count }: { selected: boolean; onClick: () => void; icon: React.ReactNode; label: string; count: number }) {
   return (
     <div
       className={`ph-folder-row${selected ? ' ph-folder-row--selected' : ''}`}
-      style={{ paddingLeft: 8 + depth * 14 }}
-      onClick={onSelect}
+      style={{ paddingLeft: 8 }}
+      onClick={onClick}
     >
-      {hasChildren ? (
-        <button className="ph-folder-row__toggle" onClick={(e) => { e.stopPropagation(); onToggle?.(); }}>
-          {isOpen ? <ChevronDown size={11} strokeWidth={2} /> : <ChevronRight size={11} strokeWidth={2} />}
-        </button>
-      ) : (
-        <span className="ph-folder-row__spacer" />
-      )}
-      <span className={`ph-folder-row__icon${selected ? ' ph-folder-row__icon--selected' : ''}`}>{icon}</span>
-      <span className="ph-folder-row__name">{name}</span>
-      {count > 0 && <span className="ph-folder-row__count">{count}</span>}
-      {onCreateChild && (
-        <button className="ph-folder-row__add" title="New subfolder" onClick={(e) => { e.stopPropagation(); onCreateChild(); }}>
-          <Plus size={10} strokeWidth={2} />
-        </button>
-      )}
-      {onDelete && (
-        <button className="ph-folder-row__del" title="Delete folder" onClick={(e) => { e.stopPropagation(); setConfirming(true); }}>
-          <Trash2 size={10} strokeWidth={2} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-interface FolderCreateRowProps {
-  depth: number;
-  onCommit: (name: string) => void;
-  onCancel: () => void;
-  validate: (name: string) => string | null;
-}
-
-function FolderCreateRow({ depth, onCommit, onCancel, validate }: FolderCreateRowProps) {
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const tryCommit = () => {
-    const t = name.trim();
-    if (!t) { onCancel(); return; }
-    const err = validate(t);
-    if (err) { setError(err); return; }
-    onCommit(t);
-  };
-
-  return (
-    <div className="ph-folder-create" style={{ paddingLeft: 8 + depth * 14 }}>
       <span className="ph-folder-row__spacer" />
-      <Folder size={12} strokeWidth={1.8} style={{ flexShrink: 0, color: error ? 'oklch(0.55 0.18 25)' : 'var(--fg-3)' }} />
-      <div className="ph-folder-create__wrap">
-        <div className="ph-folder-create__row">
-          <input
-            className={`ph-folder-create__input${error ? ' ph-folder-create__input--err' : ''}`}
-            value={name}
-            onChange={(e) => { setName(e.target.value); if (error) setError(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tryCommit(); } if (e.key === 'Escape') { e.preventDefault(); onCancel(); } }}
-            onBlur={onCancel}
-            autoFocus
-            placeholder="Folder name"
-          />
-          <button className="ph-folder-create__ok" onMouseDown={(e) => e.preventDefault()} onClick={tryCommit}>
-            <Check size={10} strokeWidth={2.4} />
-          </button>
-          <button className="ph-folder-create__cancel" onMouseDown={(e) => e.preventDefault()} onClick={onCancel}>
-            <X size={10} strokeWidth={2} />
-          </button>
-        </div>
-        {error && <span className="ph-folder-create__err">{error}</span>}
-      </div>
+      <span className={`ph-folder-row__icon${selected ? ' ph-folder-row__icon--selected' : ''}`}>{icon}</span>
+      <span className="ph-folder-row__name">{label}</span>
+      {count > 0 && <span className="ph-folder-row__count">{count}</span>}
     </div>
   );
 }
@@ -632,13 +441,12 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
     handleDelete, handleToggleFavorite,
     handleSaveSnippet, handleUpdateSnippet,
     handleBulkDelete, handleBulkMoveToFolder, handleBulkAddTags,
-    handleCreateFolder, handleDeleteFolder,
+    handleCreateFolder, handleDeleteFolder, handleRenameFolder,
   } = useSnippets();
   const { canCreate: canAddPrompt, count: promptCount } = useUsageLimit('prompt_hub');
 
   // ── UI state
   const [selectedFolder, setSelectedFolder] = useState<string>(initialFolder ?? '__all');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -646,7 +454,6 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
   const [openPromptId, setOpenPromptId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
@@ -702,13 +509,18 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
   const pageTitle = isStarredView ? 'Favorites' : 'Prompt Hub';
   const pageSubtitle = isStarredView ? 'Your starred prompts.' : 'Organize and reuse prompts across every AI tool.';
 
-  // ── Handlers
-  const toggleFolder = (id: string) => setExpandedFolders((prev) => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
+  const snippetCountByFolder = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of folders) {
+      counts.set(f.id, countDescendants(f.id, folders, snippets));
+    }
+    return counts;
+  }, [folders, snippets]);
 
+  const allCount = snippets.length;
+  const starredCount = useMemo(() => snippets.filter((s) => s.isFavorite).length, [snippets]);
+
+  // ── Handlers
   const toggleTag = (tag: string) => setActiveTags((prev) =>
     prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
   );
@@ -839,25 +651,41 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
       {/* Body */}
       <div className="prompt-hub__body">
         {/* Folder panel */}
-        <FolderPanel
-          folders={folders}
-          snippets={snippets}
-          selectedFolder={selectedFolder}
-          onSelectFolder={(id) => { setSelectedFolder(id); setPage(1); setSelectedIds(new Set()); }}
-          expandedFolders={expandedFolders}
-          onToggleFolder={toggleFolder}
-          newFolderParentId={newFolderParentId}
-          onStartCreate={(parentId) => setNewFolderParentId(parentId)}
-          onCommitCreate={(name, parentId) => {
-            void handleCreateFolder(name, parentId || undefined);
-            setNewFolderParentId(null);
-          }}
-          onCancelCreate={() => setNewFolderParentId(null)}
-          onDeleteFolder={(id) => {
-            if (selectedFolder === id) setSelectedFolder('__all');
-            void handleDeleteFolder(id);
-          }}
-        />
+        <div className="ph-folder-panel">
+          <div className="ph-folder-panel__scroll">
+            <FolderNav
+              folders={folders}
+              selectedId={selectedFolder === '__all' || selectedFolder === '__starred' ? undefined : selectedFolder}
+              onSelect={(id) => { setSelectedFolder(id); setSelectedIds(new Set()); }}
+              snippetCountByFolder={snippetCountByFolder}
+              onCreateFolder={handleCreateFolder}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={(id) => {
+                if (selectedFolder === id) setSelectedFolder('__all');
+                void handleDeleteFolder(id);
+              }}
+              emptyMessage="No folders yet"
+              topSlot={
+                <>
+                  <VirtualFolderRow
+                    selected={selectedFolder === '__all'}
+                    onClick={() => { setSelectedFolder('__all'); setSelectedIds(new Set()); }}
+                    icon={<LayoutGrid size={12} strokeWidth={1.8} />}
+                    label="All prompts"
+                    count={allCount}
+                  />
+                  <VirtualFolderRow
+                    selected={selectedFolder === '__starred'}
+                    onClick={() => { setSelectedFolder('__starred'); setSelectedIds(new Set()); }}
+                    icon={<Star size={12} strokeWidth={1.8} />}
+                    label="Favorites"
+                    count={starredCount}
+                  />
+                </>
+              }
+            />
+          </div>
+        </div>
 
         {/* Content panel */}
         <div className="prompt-hub__content" ref={listRef}>

@@ -11,8 +11,6 @@ import {
   Star,
   LayoutGrid,
   Folder,
-  FolderOpen,
-  ChevronDown,
   Plus,
   ArrowLeft,
   Pencil,
@@ -31,6 +29,7 @@ import { usePromptHubView, type SortOrder } from './usePromptHubView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { aiService } from '@/services/ai-service';
 import { snippetStorage } from '@/services/storage/snippet-storage';
+import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -97,295 +96,19 @@ function TagPill({ tag, removable, onRemove }: { tag: string; removable?: boolea
   );
 }
 
-// ── Folder tree ────────────────────────────────────────────────────────────────
+// ── Sidebar virtual row (for "All prompts" / "Favorites") ─────────────────────
 
-interface FolderTreeProps {
-  folders: FolderType[];
-  snippets: Snippet[];
-  selectedFolder: string;
-  onSelectFolder: (id: string) => void;
-  expandedFolders: Set<string>;
-  onToggleFolder: (id: string) => void;
-  newFolderParentId: string | null;
-  onStartCreateFolder: (parentId: string) => void;
-  onCommitCreateFolder: (name: string, parentId: string) => void;
-  onCancelCreateFolder: () => void;
-  onDeleteFolder: (id: string) => void;
-}
-
-function FolderTree({
-  folders,
-  snippets,
-  selectedFolder,
-  onSelectFolder,
-  expandedFolders,
-  onToggleFolder,
-  newFolderParentId,
-  onStartCreateFolder,
-  onCommitCreateFolder,
-  onCancelCreateFolder,
-  onDeleteFolder,
-}: FolderTreeProps) {
-  const treeItems = useMemo(() => getFolderTreeItems(folders), [folders]);
-
-  const displayItems = useMemo(() => {
-    type DisplayItem =
-      | { type: 'folder'; folder: FolderType; depth: number }
-      | { type: 'create'; parentId: string; depth: number };
-
-    const result: DisplayItem[] = [];
-    const visibleIds = new Set<string>();
-
-    if (newFolderParentId === '') {
-      result.push({ type: 'create', parentId: '', depth: 0 });
-    }
-
-    for (const { folder, depth } of treeItems) {
-      const parentVisible = !folder.parentId || (visibleIds.has(folder.parentId) && expandedFolders.has(folder.parentId));
-      if (!parentVisible) continue;
-      visibleIds.add(folder.id);
-      result.push({ type: 'folder', folder, depth });
-      if (newFolderParentId === folder.id) {
-        result.push({ type: 'create', parentId: folder.id, depth: depth + 1 });
-      }
-    }
-
-    return result;
-  }, [treeItems, expandedFolders, newFolderParentId]);
-
-  const totalCount = snippets.length;
-  const starredCount = snippets.filter((s) => s.isFavorite).length;
-
-  return (
-    <div className="prompt-hub__folder-tree">
-      <FolderRow
-        id="__all"
-        name="All prompts"
-        depth={0}
-        selected={selectedFolder === '__all'}
-        onSelect={() => onSelectFolder('__all')}
-        count={totalCount}
-        icon={<LayoutGrid size={13} strokeWidth={1.8} />}
-      />
-      <FolderRow
-        id="__starred"
-        name="Favorites"
-        depth={0}
-        selected={selectedFolder === '__starred'}
-        onSelect={() => onSelectFolder('__starred')}
-        count={starredCount}
-        icon={<Star size={13} strokeWidth={1.8} />}
-      />
-
-      <div className="prompt-hub__folders-header">
-        <span className="prompt-hub__folders-label">Folders</span>
-        <button
-          className="prompt-hub__folders-add"
-          title="New folder"
-          onClick={() => onStartCreateFolder('')}
-        >
-          <Plus size={12} strokeWidth={2} />
-        </button>
-      </div>
-
-      {displayItems.map((item, i) =>
-        item.type === 'create' ? (
-          <FolderCreateRow
-            key={`create-${i}`}
-            depth={item.depth}
-            onCommit={(name) => onCommitCreateFolder(name, item.parentId)}
-            onCancel={onCancelCreateFolder}
-            validate={(name) => {
-              const parentIdToCheck = item.parentId || undefined;
-              const siblings = folders.filter((f) => f.parentId === parentIdToCheck);
-              return siblings.some((f) => f.name.toLowerCase() === name.toLowerCase())
-                ? `"${name}" already exists here`
-                : null;
-            }}
-          />
-        ) : (
-          <FolderRow
-            key={item.folder.id}
-            id={item.folder.id}
-            name={item.folder.name}
-            depth={item.depth}
-            selected={selectedFolder === item.folder.id}
-            onSelect={() => onSelectFolder(item.folder.id)}
-            count={countDescendants(item.folder.id, folders, snippets)}
-            icon={
-              expandedFolders.has(item.folder.id)
-                ? <FolderOpen size={13} strokeWidth={1.8} />
-                : <Folder size={13} strokeWidth={1.8} />
-            }
-            hasChildren={folders.some((f) => f.parentId === item.folder.id)}
-            isOpen={expandedFolders.has(item.folder.id)}
-            onToggle={() => onToggleFolder(item.folder.id)}
-            onCreateChild={() => onStartCreateFolder(item.folder.id)}
-            onDelete={() => onDeleteFolder(item.folder.id)}
-          />
-        ),
-      )}
-    </div>
-  );
-}
-
-interface FolderRowProps {
-  id: string;
-  name: string;
-  depth: number;
-  selected: boolean;
-  onSelect: () => void;
-  count: number;
-  icon: React.ReactNode;
-  hasChildren?: boolean;
-  isOpen?: boolean;
-  onToggle?: () => void;
-  onCreateChild?: () => void;
-  onDelete?: () => void;
-}
-
-function FolderRow({ id, name, depth, selected, onSelect, count, icon, hasChildren, isOpen, onToggle, onCreateChild, onDelete }: FolderRowProps) {
-  const [confirming, setConfirming] = useState(false);
-
-  if (confirming) {
-    return (
-      <div
-        className="prompt-hub__folder-row prompt-hub__folder-row--deleting"
-        style={{ paddingLeft: 8 + depth * 14 }}
-      >
-        {hasChildren ? (
-          <button
-            className={`prompt-hub__folder-toggle${isOpen ? ' prompt-hub__folder-toggle--open' : ' prompt-hub__folder-toggle--closed'}`}
-            onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
-          >
-            <ChevronDown size={11} strokeWidth={2} />
-          </button>
-        ) : (
-          <span className="prompt-hub__folder-spacer" />
-        )}
-        <span className="prompt-hub__folder-icon">{icon}</span>
-        <span className="prompt-hub__folder-name">{name}</span>
-        <span style={{ flex: 1 }} />
-        <span className="prompt-hub__folder-delete-label">Delete?</span>
-        <button
-          className="prompt-hub__folder-delete-confirm"
-          title="Confirm delete"
-          onClick={(e) => { e.stopPropagation(); setConfirming(false); onDelete?.(); }}
-        >
-          <Check size={11} strokeWidth={2.2} />
-        </button>
-        <button
-          className="prompt-hub__folder-delete-cancel"
-          title="Cancel"
-          onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
-        >
-          <X size={11} strokeWidth={2} />
-        </button>
-      </div>
-    );
-  }
-
+function PromptHubVirtualRow({ selected, onClick, icon, label, count }: { selected: boolean; onClick: () => void; icon: React.ReactNode; label: string; count: number }) {
   return (
     <div
       className={`prompt-hub__folder-row${selected ? ' prompt-hub__folder-row--selected' : ''}`}
-      style={{ paddingLeft: 8 + depth * 14 }}
-      onClick={onSelect}
+      style={{ paddingLeft: 8 }}
+      onClick={onClick}
     >
-      {hasChildren ? (
-        <button
-          className={`prompt-hub__folder-toggle${isOpen ? ' prompt-hub__folder-toggle--open' : ' prompt-hub__folder-toggle--closed'}`}
-          onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
-        >
-          <ChevronDown size={11} strokeWidth={2} />
-        </button>
-      ) : (
-        <span className="prompt-hub__folder-spacer" />
-      )}
-      <span className={`prompt-hub__folder-icon${selected ? ' prompt-hub__folder-icon--selected' : ''}`}>
-        {icon}
-      </span>
-      <span className="prompt-hub__folder-name">{name}</span>
-      {count > 0 && (
-        <span className="prompt-hub__folder-count">{count}</span>
-      )}
-      {onCreateChild && (
-        <button
-          className="prompt-hub__folder-add-child"
-          title="New subfolder"
-          onClick={(e) => { e.stopPropagation(); onCreateChild(); }}
-        >
-          <Plus size={11} strokeWidth={2} />
-        </button>
-      )}
-      {onDelete && (
-        <button
-          className="prompt-hub__folder-delete-btn"
-          title="Delete folder"
-          onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
-        >
-          <Trash2 size={11} strokeWidth={2} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-interface FolderCreateRowProps {
-  depth: number;
-  onCommit: (name: string) => void;
-  onCancel: () => void;
-  validate: (name: string) => string | null;
-}
-
-function FolderCreateRow({ depth, onCommit, onCancel, validate }: FolderCreateRowProps) {
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const tryCommit = () => {
-    const trimmed = name.trim();
-    if (!trimmed) { onCancel(); return; }
-    const err = validate(trimmed);
-    if (err) { setError(err); return; }
-    onCommit(trimmed);
-  };
-
-  return (
-    <div className="prompt-hub__folder-create-row" style={{ paddingLeft: 8 + depth * 14 }}>
       <span className="prompt-hub__folder-spacer" />
-      <Folder size={13} strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 3, color: error ? 'var(--error, oklch(0.55 0.18 25))' : 'var(--fg-3)' }} />
-      <div className="prompt-hub__folder-create-wrap">
-        <div className="prompt-hub__folder-create-input-row">
-          <input
-            className={`prompt-hub__folder-create-input${error ? ' prompt-hub__folder-create-input--error' : ''}`}
-            value={name}
-            onChange={(e) => { setName(e.target.value); if (error) setError(null); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); tryCommit(); }
-              if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-            }}
-            onBlur={onCancel}
-            autoFocus
-            placeholder="Folder name"
-          />
-          <button
-            className="prompt-hub__folder-create-confirm"
-            title="Create folder"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={tryCommit}
-          >
-            <Check size={11} strokeWidth={2.2} />
-          </button>
-          <button
-            className="prompt-hub__folder-create-cancel-btn"
-            title="Cancel"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={onCancel}
-          >
-            <X size={11} strokeWidth={2} />
-          </button>
-        </div>
-        {error && <span className="prompt-hub__folder-create-error">{error}</span>}
-      </div>
+      <span className={`prompt-hub__folder-icon${selected ? ' prompt-hub__folder-icon--selected' : ''}`}>{icon}</span>
+      <span className="prompt-hub__folder-name">{label}</span>
+      {count > 0 && <span className="prompt-hub__folder-count">{count}</span>}
     </div>
   );
 }
@@ -902,6 +625,7 @@ interface PromptHubViewProps {
   handleToggleFavorite: (id: string) => void;
   handleAddSnippet: (title: string, text: string, tags: string[], folderId?: string) => void;
   handleCreateFolder: (name: string, parentId?: string) => void;
+  handleRenameFolder: (id: string, name: string) => void;
   handleDeleteFolder: (id: string) => void;
   handleMoveToFolder: (id: string, folderId: string | undefined) => void;
 }
@@ -916,14 +640,13 @@ export default function PromptHubView({
   handleToggleFavorite,
   handleAddSnippet,
   handleCreateFolder,
+  handleRenameFolder,
   handleDeleteFolder,
   handleMoveToFolder,
 }: PromptHubViewProps) {
   const {
     selectedFolder,
     setSelectedFolder,
-    expandedFolders,
-    toggleFolder,
     openPromptId,
     openDetail,
     closeDetail,
@@ -938,13 +661,22 @@ export default function PromptHubView({
     activeTags,
     toggleTag,
     setActiveTags,
-    newFolderParentId,
-    setNewFolderParentId,
     sortOrder,
     setSortOrder,
     sortOpen,
     setSortOpen,
   } = usePromptHubView();
+
+  const snippetCountByFolder = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of folders) {
+      counts.set(f.id, countDescendants(f.id, folders, snippets));
+    }
+    return counts;
+  }, [folders, snippets]);
+
+  const totalCount = snippets.length;
+  const starredCount = useMemo(() => snippets.filter((s) => s.isFavorite).length, [snippets]);
 
   const { canCreate: canAddPrompt, count: promptCount } = useUsageLimit('prompt_hub');
   const [pendingEnhance, setPendingEnhance] = useState(false);
@@ -1098,25 +830,38 @@ export default function PromptHubView({
 
           {/* Scrollable body */}
           <div className="prompt-hub__body">
-            <FolderTree
-              folders={folders}
-              snippets={snippets}
-              selectedFolder={selectedFolder}
-              onSelectFolder={setSelectedFolder}
-              expandedFolders={expandedFolders}
-              onToggleFolder={toggleFolder}
-              newFolderParentId={newFolderParentId}
-              onStartCreateFolder={(parentId) => setNewFolderParentId(parentId)}
-              onCommitCreateFolder={(name, parentId) => {
-                handleCreateFolder(name, parentId || undefined);
-                setNewFolderParentId(null);
-              }}
-              onCancelCreateFolder={() => setNewFolderParentId(null)}
-              onDeleteFolder={(id) => {
-                if (selectedFolder === id) setSelectedFolder('__all');
-                handleDeleteFolder(id);
-              }}
-            />
+            <div className="prompt-hub__folder-tree">
+              <FolderNav
+                folders={folders}
+                selectedId={selectedFolder === '__all' || selectedFolder === '__starred' ? undefined : selectedFolder}
+                onSelect={setSelectedFolder}
+                snippetCountByFolder={snippetCountByFolder}
+                onCreateFolder={handleCreateFolder}
+                onRenameFolder={handleRenameFolder}
+                onDeleteFolder={(id) => {
+                  if (selectedFolder === id) setSelectedFolder('__all');
+                  handleDeleteFolder(id);
+                }}
+                topSlot={
+                  <>
+                    <PromptHubVirtualRow
+                      selected={selectedFolder === '__all'}
+                      onClick={() => setSelectedFolder('__all')}
+                      icon={<LayoutGrid size={13} strokeWidth={1.8} />}
+                      label="All prompts"
+                      count={totalCount}
+                    />
+                    <PromptHubVirtualRow
+                      selected={selectedFolder === '__starred'}
+                      onClick={() => setSelectedFolder('__starred')}
+                      icon={<Star size={13} strokeWidth={1.8} />}
+                      label="Favorites"
+                      count={starredCount}
+                    />
+                  </>
+                }
+              />
+            </div>
 
             {snippets.length === 0 ? (
               <div className="prompt-hub__no-prompts">

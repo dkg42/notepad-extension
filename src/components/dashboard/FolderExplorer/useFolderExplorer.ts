@@ -1,6 +1,6 @@
 /**
  * @module useFolderExplorer
- * @description React hook that manages all UI interaction state for the FolderExplorer component, including grid/tree view mode, drag-to-reorder, inline subfolder creation, inline renaming, and the move-folder dialog. Derives sorted folders and per-folder snippet counts via memoization.
+ * @description React hook that manages view-mode, drag-to-reorder selection, tree-selection, and the move-folder dialog for the FolderExplorer page. Folder create/rename/subfolder UX is owned by FolderNav.
  * @dependencies @/types
  * @public useFolderExplorer, FolderViewMode
  */
@@ -10,24 +10,10 @@ import type { Folder, Snippet } from '@/types';
 export type FolderViewMode = 'grid' | 'tree';
 
 export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
-  const [newFolderName, setNewFolderName] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [viewMode, setViewMode] = useState<FolderViewMode>('tree');
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [selectedTreeId, setSelectedTreeId] = useState<string | undefined>(undefined);
-
-  // State for inline subfolder creation in tree view
-  const [creatingSubfolderParentId, setCreatingSubfolderParentId] = useState<string | null>(null);
-  const [newSubfolderName, setNewSubfolderName] = useState('');
-  const [subfolderError, setSubfolderError] = useState('');
-
-  // State for inline rename in tree view
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-
-  // State for move dialog
   const [movingFolderId, setMovingFolderId] = useState<string | null>(null);
 
   const snippetCountByFolder = useMemo(() => {
@@ -50,34 +36,6 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
       }),
     [folders],
   );
-
-  const clearError = () => setErrorMessage('');
-
-  // ── Subfolder creation ─────────────────────────────────────────────────────
-
-  const startCreatingSubfolder = useCallback((parentId: string) => {
-    setCreatingSubfolderParentId(parentId);
-    setNewSubfolderName('');
-    setSubfolderError('');
-  }, []);
-
-  const cancelCreatingSubfolder = useCallback(() => {
-    setCreatingSubfolderParentId(null);
-    setNewSubfolderName('');
-    setSubfolderError('');
-  }, []);
-
-  // ── Rename (tree view inline) ──────────────────────────────────────────────
-
-  const startRenaming = useCallback((id: string, currentName: string) => {
-    setRenamingFolderId(id);
-    setRenameValue(currentName);
-  }, []);
-
-  const cancelRenaming = useCallback(() => {
-    setRenamingFolderId(null);
-    setRenameValue('');
-  }, []);
 
   // ── Move dialog ────────────────────────────────────────────────────────────
 
@@ -118,13 +76,6 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
   );
 
   return {
-    newFolderName,
-    setNewFolderName,
-    isCreating,
-    setIsCreating,
-    errorMessage,
-    setErrorMessage,
-    clearError,
     snippetCountByFolder,
     sortedFolders,
     viewMode,
@@ -137,21 +88,6 @@ export function useFolderExplorer(folders: Folder[], snippets: Snippet[]) {
     handleDragOver,
     handleDragEnd,
     computeReorder,
-    // Subfolder creation
-    creatingSubfolderParentId,
-    newSubfolderName,
-    setNewSubfolderName,
-    subfolderError,
-    setSubfolderError,
-    startCreatingSubfolder,
-    cancelCreatingSubfolder,
-    // Rename
-    renamingFolderId,
-    renameValue,
-    setRenameValue,
-    startRenaming,
-    cancelRenaming,
-    // Move dialog
     movingFolderId,
     openMoveDialog,
     closeMoveDialog,

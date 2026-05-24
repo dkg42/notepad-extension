@@ -4,12 +4,12 @@
  * @dependencies ./useNotebooksPage, @/export/source-export-registry, @/components/dashboard/NotebookFolderModal/NotebookFolderModal, @/components/dashboard/FolderTree/FolderTree, @/components/dashboard/MoveFolderDialog/MoveFolderDialog, @/contexts/NavigationContext, @/utils/folder-utils
  * @public NotebooksPage
  */
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal, Plus, GitMerge, Lock } from 'lucide-react';
 import { useNotebooksPage, UNFILED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
-import FolderTree from '@/components/dashboard/FolderTree/FolderTree';
+import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import MoveFolderDialog from '@/components/dashboard/MoveFolderDialog/MoveFolderDialog';
 import NewNotebookModal from '@/components/dashboard/NewNotebookModal/NewNotebookModal';
 import MergeNotebookModal from '@/components/dashboard/MergeNotebookModal/MergeNotebookModal';
@@ -572,18 +572,7 @@ export default function NotebooksPage() {
   const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Sidebar folder management
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderError, setNewFolderError] = useState('');
-  const [creatingSubfolderParentId, setCreatingSubfolderParentId] = useState<string | null>(null);
-  const [newSubfolderName, setNewSubfolderName] = useState('');
-  const [subfolderError, setSubfolderError] = useState('');
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [renameError, setRenameError] = useState('');
   const [movingFolderId, setMovingFolderId] = useState<string | null>(null);
-
-  const newFolderInputRef = useRef<HTMLInputElement>(null);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -632,64 +621,6 @@ export default function NotebooksPage() {
     }).length;
   }, [notebooks, activeFolderId, folders, unfiledCount, getAnnotation]);
 
-  // ── Sidebar handlers ────────────────────────────────────────────────────────
-
-  async function handleCreateRootFolder() {
-    const name = newFolderName.trim();
-    if (!name) return;
-    try {
-      const id = await handleCreateFolder(name);
-      setNewFolderName('');
-      setIsCreatingFolder(false);
-      setNewFolderError('');
-      setActiveFolderId(id);
-    } catch (err) {
-      setNewFolderError(err instanceof Error ? err.message : 'Failed to create folder.');
-    }
-  }
-
-  async function handleCreateSubfolderConfirm() {
-    if (!creatingSubfolderParentId) return;
-    const name = newSubfolderName.trim();
-    if (!name) return;
-    try {
-      await handleCreateFolder(name, creatingSubfolderParentId);
-      setCreatingSubfolderParentId(null);
-      setNewSubfolderName('');
-      setSubfolderError('');
-    } catch (err) {
-      setSubfolderError(err instanceof Error ? err.message : 'Failed to create subfolder.');
-    }
-  }
-
-  async function handleRenameConfirm() {
-    if (!renamingFolderId) return;
-    const name = renameValue.trim();
-    if (!name) return;
-    try {
-      await handleRenameFolder(renamingFolderId, name);
-      setRenamingFolderId(null);
-      setRenameValue('');
-      setRenameError('');
-    } catch (err) {
-      setRenameError(err instanceof Error ? err.message : 'Failed to rename folder.');
-    }
-  }
-
-  function startRenaming(id: string, currentName: string) {
-    setRenamingFolderId(id);
-    setRenameValue(currentName);
-    setRenameError('');
-    setCreatingSubfolderParentId(null);
-  }
-
-  function startCreatingSubfolder(parentId: string) {
-    setCreatingSubfolderParentId(parentId);
-    setNewSubfolderName('');
-    setSubfolderError('');
-    setRenamingFolderId(null);
-  }
-
   // ── Title for breadcrumb/header ──────────────────────────────────────────────
 
   const pageTitle = activeFolderId === null
@@ -737,120 +668,32 @@ export default function NotebooksPage() {
       {/* ── Sidebar ──────────────────────────────────────────────────────────── */}
       <aside className="notebooks-page__sidebar">
 
-        {/* Panel header */}
-        <div className="notebooks-sidebar__panel-header">
-          <span className="notebooks-sidebar__panel-label">Folders</span>
-          <button
-            className="notebooks-sidebar__add-btn"
-            onClick={() => setIsCreatingFolder(true)}
-            title="New folder"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Tree scroll area */}
+        {/* Folder navigation (header + tree + inline forms) */}
         <div className="notebooks-sidebar__tree-scroll">
-
-          {/* Virtual "All Notebooks" root */}
-          <button
-            className={`notebooks-sidebar__virtual-row${activeFolderId === null ? ' notebooks-sidebar__virtual-row--active' : ''}`}
-            onClick={() => setActiveFolderId(null)}
-          >
-            <span className="notebooks-sidebar__virtual-icon">
-              {activeFolderId === null
-                ? <FolderOpen size={13} strokeWidth={1.6} />
-                : <Folder size={13} strokeWidth={1.6} />}
-            </span>
-            <span className="notebooks-sidebar__virtual-label">All Notebooks</span>
-            <span className="notebooks-sidebar__virtual-count">{notebooks.length}</span>
-          </button>
-
-          {/* Folder tree */}
-          {folders.length > 0 && (
-            <div className="notebooks-sidebar__tree-wrap">
-              <FolderTree
-                folders={folders}
-                selectedId={activeFolderId ?? undefined}
-                onSelect={setActiveFolderId}
-                snippetCountByFolder={notebookCountByFolder}
-                onCreateSubfolder={startCreatingSubfolder}
-                onRename={startRenaming}
-                onDelete={handleDeleteFolder}
-                onMove={(id) => setMovingFolderId(id)}
-              />
-            </div>
-          )}
-
-          {/* Inline subfolder creation form */}
-          {creatingSubfolderParentId && (
-            <div className="notebooks-sidebar__inline-form">
-              <span className="notebooks-sidebar__inline-label">
-                Inside "{folders.find((f) => f.id === creatingSubfolderParentId)?.name}":
-              </span>
-              <input
-                className="notebooks-sidebar__inline-input"
-                autoFocus
-                placeholder="Subfolder name…"
-                value={newSubfolderName}
-                onChange={(e) => { setNewSubfolderName(e.target.value); setSubfolderError(''); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleCreateSubfolderConfirm();
-                  if (e.key === 'Escape') { setCreatingSubfolderParentId(null); setNewSubfolderName(''); }
-                }}
-              />
-              <div className="notebooks-sidebar__inline-actions">
-                <button className="notebooks-sidebar__inline-confirm" onClick={() => void handleCreateSubfolderConfirm()}>Create</button>
-                <button className="notebooks-sidebar__inline-cancel" onClick={() => { setCreatingSubfolderParentId(null); setNewSubfolderName(''); }}>Cancel</button>
-              </div>
-              {subfolderError && <p className="notebooks-sidebar__inline-error">{subfolderError}</p>}
-            </div>
-          )}
-
-          {/* Inline rename form */}
-          {renamingFolderId && (
-            <div className="notebooks-sidebar__inline-form">
-              <span className="notebooks-sidebar__inline-label">Rename folder:</span>
-              <input
-                className="notebooks-sidebar__inline-input"
-                autoFocus
-                value={renameValue}
-                onChange={(e) => { setRenameValue(e.target.value); setRenameError(''); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleRenameConfirm();
-                  if (e.key === 'Escape') { setRenamingFolderId(null); setRenameValue(''); }
-                }}
-              />
-              <div className="notebooks-sidebar__inline-actions">
-                <button className="notebooks-sidebar__inline-confirm" onClick={() => void handleRenameConfirm()}>Rename</button>
-                <button className="notebooks-sidebar__inline-cancel" onClick={() => { setRenamingFolderId(null); setRenameValue(''); }}>Cancel</button>
-              </div>
-              {renameError && <p className="notebooks-sidebar__inline-error">{renameError}</p>}
-            </div>
-          )}
-
-          {/* New root folder form */}
-          {isCreatingFolder && (
-            <div className="notebooks-sidebar__inline-form">
-              <input
-                ref={newFolderInputRef}
-                className="notebooks-sidebar__inline-input"
-                autoFocus
-                placeholder="Folder name…"
-                value={newFolderName}
-                onChange={(e) => { setNewFolderName(e.target.value); setNewFolderError(''); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleCreateRootFolder();
-                  if (e.key === 'Escape') { setIsCreatingFolder(false); setNewFolderName(''); }
-                }}
-              />
-              <div className="notebooks-sidebar__inline-actions">
-                <button className="notebooks-sidebar__inline-confirm" onClick={() => void handleCreateRootFolder()}>Create</button>
-                <button className="notebooks-sidebar__inline-cancel" onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}>Cancel</button>
-              </div>
-              {newFolderError && <p className="notebooks-sidebar__inline-error">{newFolderError}</p>}
-            </div>
-          )}
+          <FolderNav
+            folders={folders}
+            selectedId={activeFolderId ?? undefined}
+            onSelect={(id) => setActiveFolderId(id)}
+            snippetCountByFolder={notebookCountByFolder}
+            onCreateFolder={handleCreateFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onMoveFolder={(id) => setMovingFolderId(id)}
+            topSlot={
+              <button
+                className={`notebooks-sidebar__virtual-row${activeFolderId === null ? ' notebooks-sidebar__virtual-row--active' : ''}`}
+                onClick={() => setActiveFolderId(null)}
+              >
+                <span className="notebooks-sidebar__virtual-icon">
+                  {activeFolderId === null
+                    ? <FolderOpen size={13} strokeWidth={1.6} />
+                    : <Folder size={13} strokeWidth={1.6} />}
+                </span>
+                <span className="notebooks-sidebar__virtual-label">All Notebooks</span>
+                <span className="notebooks-sidebar__virtual-count">{notebooks.length}</span>
+              </button>
+            }
+          />
         </div>
 
         {/* Sync footer */}

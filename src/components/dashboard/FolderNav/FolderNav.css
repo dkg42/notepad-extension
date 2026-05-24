@@ -1,0 +1,136 @@
+/* ── FolderNav — shared folder management UX ──────────────────────────────── */
+
+.folder-nav {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Header (label + "+ new folder" trigger) ──────────────────────────────── */
+
+.folder-nav__header {
+  padding: 14px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.folder-nav__label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  color: var(--fg-3);
+}
+
+.folder-nav__add-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--fg-2);
+  font-size: 16px;
+  line-height: 1;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.folder-nav__add-btn:hover {
+  background: var(--bg-3);
+  border-color: var(--line-2);
+}
+
+/* ── Body (tree + inline forms) ───────────────────────────────────────────── */
+
+.folder-nav__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+.folder-nav__tree-wrap {
+  margin-top: 2px;
+}
+
+/* ── Inline forms (create root, create subfolder, rename) ─────────────────── */
+
+.folder-nav__inline-form {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-2);
+  border-radius: var(--r-sm);
+  margin: 4px 2px;
+}
+
+.folder-nav__inline-label {
+  font-size: 11px;
+  color: var(--fg-3);
+  line-height: 1.4;
+}
+
+.folder-nav__inline-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--primary);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.folder-nav__inline-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.folder-nav__inline-confirm {
+  padding: 4px 10px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+.folder-nav__inline-confirm:hover { opacity: 0.88; }
+
+.folder-nav__inline-cancel {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 11.5px;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.folder-nav__inline-cancel:hover { background: var(--bg-3); }
+
+.folder-nav__inline-error {
+  font-size: 11px;
+  color: var(--color-danger);
+  margin: 0;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+
+.folder-nav__empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--fg-3);
+  text-align: center;
+}

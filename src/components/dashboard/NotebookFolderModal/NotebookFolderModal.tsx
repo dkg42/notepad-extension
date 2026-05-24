@@ -1,12 +1,12 @@
 /**
  * @module NotebookFolderModal
- * @description Modal dialog for assigning one or more notebooks to a nested folder. Renders a FolderTree for selection and supports inline root-folder creation.
- * @dependencies @/types (Folder), @/components/dashboard/FolderTree/FolderTree
+ * @description Modal dialog for assigning one or more notebooks to a nested folder. Uses the shared FolderNav for tree selection and inline root-folder creation.
+ * @dependencies @/types, @/components/dashboard/FolderNav/FolderNav
  * @public NotebookFolderModal
  */
 import React, { useState } from 'react';
 import type { Folder } from '@/types';
-import FolderTree from '@/components/dashboard/FolderTree/FolderTree';
+import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './NotebookFolderModal.css';
 
 interface NotebookFolderModalProps {
@@ -27,31 +27,22 @@ export default function NotebookFolderModal({
   onClose,
 }: NotebookFolderModalProps) {
   const [selected, setSelected] = useState<string | undefined>(currentFolderId);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [createError, setCreateError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleCreateAndSelect() {
-    const name = newName.trim();
-    if (!name) return;
-    setIsSubmitting(true);
-    setCreateError(null);
-    try {
-      const id = await onCreateFolder(name);
-      setSelected(id);
-      setNewName('');
-      setIsCreating(false);
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create folder.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   function handleConfirm() {
     onConfirm(selected);
     onClose();
+  }
+
+  async function handleCreateAndSelect(name: string, parentId?: string): Promise<string> {
+    setIsSubmitting(true);
+    try {
+      const id = await onCreateFolder(name, parentId);
+      setSelected(id);
+      return id;
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -72,69 +63,23 @@ export default function NotebookFolderModal({
         </p>
 
         <div className="notebook-folder-modal__body">
-          {/* None option */}
-          <button
-            className={`notebook-folder-modal__none-btn${selected === undefined ? ' notebook-folder-modal__none-btn--selected' : ''}`}
-            onClick={() => setSelected(undefined)}
-          >
-            <span className="notebook-folder-modal__none-icon">○</span>
-            <span className="notebook-folder-modal__none-label">None</span>
-            <span className="notebook-folder-modal__none-hint">Remove from any folder</span>
-          </button>
-
-          {folders.length > 0 && (
-            <div className="notebook-folder-modal__tree">
-              <FolderTree
-                folders={folders}
-                selectedId={selected}
-                onSelect={setSelected}
-              />
-            </div>
-          )}
-
-          {folders.length === 0 && !isCreating && (
-            <p className="notebook-folder-modal__empty">No folders yet. Create one below.</p>
-          )}
-        </div>
-
-        {/* New root folder creator */}
-        <div className="notebook-folder-modal__new">
-          {isCreating ? (
-            <>
-              <div className="notebook-folder-modal__new-row">
-                <input
-                  className="notebook-folder-modal__new-input"
-                  autoFocus
-                  placeholder="Folder name…"
-                  value={newName}
-                  onChange={(e) => { setNewName(e.target.value); setCreateError(null); }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void handleCreateAndSelect();
-                    if (e.key === 'Escape') { setNewName(''); setIsCreating(false); }
-                  }}
-                  disabled={isSubmitting}
-                />
-                <button
-                  className="notebook-folder-modal__new-confirm"
-                  onClick={() => void handleCreateAndSelect()}
-                  disabled={!newName.trim() || isSubmitting}
-                >
-                  Create
-                </button>
-                <button
-                  className="notebook-folder-modal__new-cancel"
-                  onClick={() => { setNewName(''); setIsCreating(false); setCreateError(null); }}
-                >
-                  Cancel
-                </button>
-              </div>
-              {createError && <p className="notebook-folder-modal__new-error">{createError}</p>}
-            </>
-          ) : (
-            <button className="notebook-folder-modal__new-btn" onClick={() => setIsCreating(true)}>
-              + New folder
-            </button>
-          )}
+          <FolderNav
+            folders={folders}
+            selectedId={selected}
+            onSelect={setSelected}
+            onCreateFolder={handleCreateAndSelect}
+            emptyMessage="No folders yet. Create one with + above."
+            topSlot={
+              <button
+                className={`notebook-folder-modal__none-btn${selected === undefined ? ' notebook-folder-modal__none-btn--selected' : ''}`}
+                onClick={() => setSelected(undefined)}
+              >
+                <span className="notebook-folder-modal__none-icon">○</span>
+                <span className="notebook-folder-modal__none-label">None</span>
+                <span className="notebook-folder-modal__none-hint">Remove from any folder</span>
+              </button>
+            }
+          />
         </div>
 
         <div className="notebook-folder-modal__footer">
