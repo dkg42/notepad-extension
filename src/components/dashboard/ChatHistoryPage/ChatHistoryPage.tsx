@@ -16,22 +16,17 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ChatPlatform } from '@/types';
+import { CHAT_PLATFORMS, CHAT_PLATFORM_KEYS } from '@/types';
 import { useChatHistoryPage, formatSmartDate } from './useChatHistoryPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './ChatHistoryPage.css';
 
-const PLATFORM_LABELS: Record<ChatPlatform, string> = {
-  chatgpt: 'ChatGPT',
-  claude: 'Claude',
-  gemini: 'Gemini',
-};
-
 function PlatformBadge({ platform }: { platform: ChatPlatform }) {
   return (
     <span className={`chp-badge chp-badge--${platform}`}>
       <span className="chp-badge__dot" />
-      {PLATFORM_LABELS[platform]}
+      {CHAT_PLATFORMS[platform].label}
     </span>
   );
 }
@@ -138,13 +133,13 @@ export default function ChatHistoryPage() {
       {/* ── Toolbar ── */}
       <div className="chp__toolbar">
         <div className="chp__tabs">
-          {(['all', 'chatgpt', 'claude', 'gemini'] as const).map((p) => (
+          {(['all', ...CHAT_PLATFORM_KEYS] as Array<'all' | ChatPlatform>).map((p) => (
             <button
               key={p}
               className={`chp__tab${activePlatform === p ? ' chp__tab--active' : ''}`}
               onClick={() => setActivePlatform(p)}
             >
-              {p === 'all' ? 'All' : PLATFORM_LABELS[p]}
+              {p === 'all' ? 'All' : CHAT_PLATFORMS[p].label}
               <span className="chp__tab-count">
                 {p === 'all' ? totalCount : countByPlatform[p]}
               </span>

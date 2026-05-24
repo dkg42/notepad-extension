@@ -9,28 +9,11 @@
 import React, { useState } from 'react';
 import { Search, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform, ConversationMeta } from '@/types';
+import { CHAT_PLATFORMS, CHAT_PLATFORM_KEYS } from '@/types';
 import { useChatHistoryView } from './useChatHistoryView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import ChatHistoryDetailView from '@/components/sidebar/ChatHistoryDetailView/ChatHistoryDetailView';
 import './ChatHistoryView.css';
-
-const PLATFORM_LABELS: Record<ChatPlatform, string> = {
-  chatgpt: 'ChatGPT',
-  claude: 'Claude',
-  gemini: 'Gemini',
-};
-
-const PLATFORM_LETTER: Record<ChatPlatform, string> = {
-  chatgpt: 'G',
-  claude: 'C',
-  gemini: 'Gem',
-};
-
-const PLATFORM_COLOR: Record<ChatPlatform, string> = {
-  chatgpt: 'oklch(0.65 0.15 160)',
-  claude: 'oklch(0.62 0.16 35)',
-  gemini: 'oklch(0.62 0.18 270)',
-};
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -52,7 +35,7 @@ function ChatCard({
   onOpenOriginal: (conv: ConversationMeta) => void;
   onDelete: (conv: ConversationMeta) => void;
 }) {
-  const color = PLATFORM_COLOR[conv.platform];
+  const color = CHAT_PLATFORMS[conv.platform].color;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -82,7 +65,7 @@ function ChatCard({
       <div className="chat-history-view__card-header">
         <span className="chat-history-view__platform-dot" style={{ background: color }} />
         <span className="chat-history-view__platform-label" style={{ color }}>
-          {PLATFORM_LABELS[conv.platform]}
+          {CHAT_PLATFORMS[conv.platform].label}
         </span>
         <span className="chat-history-view__card-time">{timeAgo(conv.updatedAt)}</span>
         {conv.url && (
@@ -130,7 +113,7 @@ export default function ChatHistoryView() {
   const { canCreate: canSave, count: saveCount } = useUsageLimit('chat_history');
   const [selected, setSelected] = useState<{ platform: ChatPlatform; id: string } | null>(null);
 
-  const filters: Array<'all' | ChatPlatform> = ['all', 'chatgpt', 'claude', 'gemini'];
+  const filters: Array<'all' | ChatPlatform> = ['all', ...CHAT_PLATFORM_KEYS];
 
   if (selected) {
     return (
@@ -149,16 +132,16 @@ export default function ChatHistoryView() {
           <div className="chat-history-view__banner">
             <div
               className="chat-history-view__platform-badge"
-              style={{ color: PLATFORM_COLOR[currentChat.platform] }}
+              style={{ color: CHAT_PLATFORMS[currentChat.platform].color }}
             >
-              {PLATFORM_LETTER[currentChat.platform]}
+              {CHAT_PLATFORMS[currentChat.platform].letter}
             </div>
             <div className="chat-history-view__banner-info">
               <div className="chat-history-view__banner-title">
                 {currentChat.conversation.meta.title}
               </div>
               <div className="chat-history-view__banner-meta">
-                {PLATFORM_LABELS[currentChat.platform]}
+                {CHAT_PLATFORMS[currentChat.platform].label}
                 {currentChat.conversation.meta.messageCount != null
                   ? ` · ${currentChat.conversation.meta.messageCount} messages`
                   : ''}
@@ -208,7 +191,7 @@ export default function ChatHistoryView() {
               className={`chat-history-view__filter-btn${activePlatform === f ? ' chat-history-view__filter-btn--active' : ''}`}
               onClick={() => setActivePlatform(f)}
             >
-              {f === 'all' ? `All (${totalCount})` : `${PLATFORM_LABELS[f as ChatPlatform]} (${countByPlatform[f as ChatPlatform]})`}
+              {f === 'all' ? `All (${totalCount})` : `${CHAT_PLATFORMS[f as ChatPlatform].label} (${countByPlatform[f as ChatPlatform]})`}
             </button>
           ))}
         </div>
@@ -216,7 +199,7 @@ export default function ChatHistoryView() {
         {conversations.length === 0 ? (
           <div className="chat-history-view__empty">
             {totalCount === 0
-              ? 'No saved chats yet.\nOpen a chat on ChatGPT, Claude, or Gemini and click Save.'
+              ? 'No saved chats yet.\nOpen a chat on a supported LLM site and click Save.'
               : 'No chats match your search.'}
           </div>
         ) : (

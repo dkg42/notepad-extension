@@ -8,16 +8,11 @@
 import React from 'react';
 import { ArrowLeft, Copy, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform } from '@/types';
+import { CHAT_PLATFORMS } from '@/types';
 import { useChatHistoryDetailPage } from './useChatHistoryDetailPage';
 import { useNavigation } from '@/contexts/NavigationContext';
 import ChatExportMenu from '@/components/shared/ChatExportMenu/ChatExportMenu';
 import './ChatHistoryDetailPage.css';
-
-const PLATFORM_LABELS: Record<ChatPlatform, string> = {
-  chatgpt: 'ChatGPT',
-  claude: 'Claude',
-  gemini: 'Gemini',
-};
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -27,7 +22,7 @@ function PlatformBadge({ platform }: { platform: ChatPlatform }) {
   return (
     <span className={`chd-badge chd-badge--${platform}`}>
       <span className="chd-badge__dot" />
-      {PLATFORM_LABELS[platform]}
+      {CHAT_PLATFORMS[platform].label}
     </span>
   );
 }

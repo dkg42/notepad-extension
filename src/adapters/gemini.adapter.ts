@@ -1,6 +1,6 @@
 /**
  * @module gemini.adapter
- * @description Implements ChatSiteAdapter for gemini.google.com. Targets the .top-bar-actions right section for header injection and walks .conversation-container elements to pair user-query and model-response nodes, reconstructing conversation order from the DOM.
+ * @description Implements ChatSiteAdapter for gemini.google.com. Walks .conversation-container elements to pair user-query and model-response nodes, reconstructing conversation order from the DOM.
  * @dependencies adapter.interface, types
  * @public GeminiAdapter
  */
@@ -9,14 +9,6 @@ import type { ChatMessage } from '@/types';
 
 export class GeminiAdapter implements ChatSiteAdapter {
   readonly hostnames = ['gemini.google.com'] as const;
-
-  findHeaderAnchor(): Element | null {
-    return (
-      document.querySelector('.top-bar-actions .right-section') ??
-      document.querySelector('.top-bar-actions') ??
-      null
-    );
-  }
 
   extractMessages(): ChatMessage[] {
     const messages: ChatMessage[] = [];
@@ -36,11 +28,5 @@ export class GeminiAdapter implements ChatSiteAdapter {
     });
 
     return messages;
-  }
-
-  extractPrompts(): string[] {
-    return this.extractMessages()
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content);
   }
 }

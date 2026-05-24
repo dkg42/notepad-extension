@@ -55,22 +55,6 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
   // Inspect: DevTools → Elements panel on notebooklm.google.com → search for the
   // relevant component names listed in each comment.
 
-  findHeaderAnchor(): Element | null {
-    // The chat panel header's right-side button group.
-    // DOM path: section.chat-panel > div.panel-header > span.chat-header-buttons
-    // This span already contains the "Configure notebook" (tune) and "Chat options"
-    // (more_vert) icon buttons — our buttons are appended alongside them.
-    //
-    // IMPORTANT: do NOT use document.querySelector('header') here — the emoji picker
-    // component on the page also renders a <header> element that appears earlier in the
-    // DOM and will capture the selector first.
-    return (
-      document.querySelector<Element>('section.chat-panel .chat-header-buttons') ??
-      document.querySelector<Element>('section.chat-panel .panel-header') ??
-      null
-    );
-  }
-
   extractMessages(): ChatMessage[] {
     const messages: ChatMessage[] = [];
 
@@ -102,12 +86,6 @@ export class NotebookLMAdapter implements ChatSiteAdapter, SourcePanelAdapter, S
     }
 
     return messages;
-  }
-
-  extractPrompts(): string[] {
-    return this.extractMessages()
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content);
   }
 
   private extractMessageText(msg: HTMLElement, isUser: boolean): string {

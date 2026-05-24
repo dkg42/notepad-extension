@@ -3,51 +3,34 @@
  * @description Registers a content-script listener that extracts the current chat's
  *   metadata and messages from the DOM on demand. After SPA navigation the new
  *   chat's message elements take time to render, so the handler polls the DOM until
- *   they appear (up to 5 s) before responding.
+ *   they appear (up to 5 s) before responding. Platform identity + URL parsing live
+ *   in the CHAT_PLATFORMS registry so adding a site is one entry there.
  * @dependencies @/adapters/adapter.interface, @/types
  * @public setupChatSaveHandler
  */
 import type { ChatSiteAdapter } from '@/adapters/adapter.interface';
-import type { ChatPlatform, ConversationFull, ConversationMessage } from '@/types';
+import type { ConversationFull, ConversationMessage } from '@/types';
+import {
+  extractConversationId,
+  getPlatformFromUrl,
+  isConversationUrl,
+} from '@/types';
 
 const POLL_INTERVAL_MS = 400;
 const POLL_TIMEOUT_MS = 5000;
-
-function detectPlatform(): ChatPlatform | null {
-  const h = location.hostname;
-  if (h.includes('chatgpt.com') || h.includes('chat.openai.com')) return 'chatgpt';
-  if (h.includes('claude.ai')) return 'claude';
-  if (h.includes('gemini.google.com')) return 'gemini';
-  return null;
-}
-
-function extractConversationId(platform: ChatPlatform, url: string): string {
-  if (platform === 'chatgpt') return url.match(/\/c\/([a-z0-9-]+)/i)?.[1] ?? String(Date.now());
-  if (platform === 'claude') return url.match(/\/chat\/([a-z0-9-]+)/i)?.[1] ?? String(Date.now());
-  if (platform === 'gemini') return url.match(/\/app\/([a-z0-9]+)/i)?.[1] ?? String(Date.now());
-  return String(Date.now());
-}
-
-/** Returns true if the URL points to a specific conversation (not the home/new-chat page). */
-function isConversationUrl(platform: ChatPlatform, url: string): boolean {
-  if (platform === 'chatgpt') return /\/c\/[a-z0-9-]+/i.test(url);
-  if (platform === 'claude') return /\/chat\/[a-z0-9-]+/i.test(url);
-  if (platform === 'gemini') return /\/app\/[a-z0-9]+/i.test(url);
-  return false;
-}
 
 export function setupChatSaveHandler(adapter: ChatSiteAdapter): void {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type !== 'EXTRACT_CURRENT_CHAT_INFO') return false;
 
     void (async () => {
-      const platform = detectPlatform();
+      const url = location.href;
+      const platform = getPlatformFromUrl(url);
       if (!platform) {
         sendResponse({ ok: false, error: 'Not on a supported LLM platform' });
         return;
       }
 
-      const url = location.href;
       const id = extractConversationId(platform, url);
 
       // Poll for messages to appear in the DOM. After SPA navigation the new

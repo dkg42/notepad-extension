@@ -10,6 +10,7 @@
 import React from 'react';
 import { ArrowLeft, Copy, Trash2, ExternalLink } from 'lucide-react';
 import type { ChatPlatform } from '@/types/chat-history';
+import { CHAT_PLATFORMS } from '@/types/chat-history';
 import ChatExportMenu from '@/components/shared/ChatExportMenu/ChatExportMenu';
 import { useChatHistoryDetailView } from './useChatHistoryDetailView';
 import './ChatHistoryDetailView.css';
@@ -19,18 +20,6 @@ interface ChatHistoryDetailViewProps {
   conversationId: string;
   onBack: () => void;
 }
-
-const PLATFORM_LABELS: Record<ChatPlatform, string> = {
-  chatgpt: 'ChatGPT',
-  claude: 'Claude',
-  gemini: 'Gemini',
-};
-
-const PLATFORM_COLOR: Record<ChatPlatform, string> = {
-  chatgpt: 'oklch(0.65 0.15 160)',
-  claude: 'oklch(0.62 0.16 35)',
-  gemini: 'oklch(0.62 0.18 270)',
-};
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -66,13 +55,13 @@ export default function ChatHistoryDetailView({
           <div className="chdv__title-row">
             <span
               className="chdv__platform-dot"
-              style={{ background: PLATFORM_COLOR[platform] }}
+              style={{ background: CHAT_PLATFORMS[platform].color }}
             />
             <span
               className="chdv__platform-label"
-              style={{ color: PLATFORM_COLOR[platform] }}
+              style={{ color: CHAT_PLATFORMS[platform].color }}
             >
-              {PLATFORM_LABELS[platform]}
+              {CHAT_PLATFORMS[platform].label}
             </span>
             <span className="chdv__msg-count">
               · {conversation.messages.length} messages

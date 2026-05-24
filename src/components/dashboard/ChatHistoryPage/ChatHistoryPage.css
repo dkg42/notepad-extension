@@ -304,9 +304,14 @@
   flex-shrink: 0;
 }
 
-.chp-badge--chatgpt .chp-badge__dot { background: #10a37f; }
-.chp-badge--claude  .chp-badge__dot { background: #cc6633; }
-.chp-badge--gemini  .chp-badge__dot { background: #8b5cf6; }
+.chp-badge--chatgpt    .chp-badge__dot { background: #10a37f; }
+.chp-badge--claude     .chp-badge__dot { background: #cc6633; }
+.chp-badge--gemini     .chp-badge__dot { background: #8b5cf6; }
+.chp-badge--perplexity .chp-badge__dot { background: #20b2aa; }
+.chp-badge--copilot    .chp-badge__dot { background: #2b88d8; }
+.chp-badge--deepseek   .chp-badge__dot { background: #4d6bfe; }
+.chp-badge--mistral    .chp-badge__dot { background: #fa500f; }
+.chp-badge--grok       .chp-badge__dot { background: #1e1f22; }
 
 /* ── Row menu button ─────────────────────────────────────────────────────── */
 

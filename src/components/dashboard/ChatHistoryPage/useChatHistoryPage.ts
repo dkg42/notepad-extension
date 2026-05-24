@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ChatPlatform, ConversationMeta } from '@/types';
+import { CHAT_PLATFORM_KEYS } from '@/types';
 
 type SortField = 'updatedAt' | 'createdAt' | 'title';
 type SortDir = 'asc' | 'desc';
@@ -82,7 +83,9 @@ export function useChatHistoryPage(
   }, []);
 
   const countByPlatform = useMemo(() => {
-    const counts: Record<ChatPlatform, number> = { chatgpt: 0, claude: 0, gemini: 0 };
+    const counts = Object.fromEntries(
+      CHAT_PLATFORM_KEYS.map((k) => [k, 0]),
+    ) as Record<ChatPlatform, number>;
     for (const c of conversations) counts[c.platform]++;
     return counts;
   }, [conversations]);

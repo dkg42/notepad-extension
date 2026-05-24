@@ -21,6 +21,9 @@ export default defineContentScript({
     'https://gemini.google.com/*',
     'https://www.perplexity.ai/*',
     'https://copilot.microsoft.com/*',
+    'https://chat.deepseek.com/*',
+    'https://chat.mistral.ai/*',
+    'https://grok.com/*',
     'https://notebooklm.google.com/*',
   ],
   main() {

@@ -3,33 +3,14 @@
  * @description Handles chat history chrome.runtime messages for the background service worker.
  *   Supports on-demand extraction of the currently open LLM chat, manual save, and reading
  *   saved conversations. Auto-sync has been removed — saves are user-initiated only.
- * @dependencies chat-history-storage
+ * @dependencies chat-history-storage, @/types (CHAT_PLATFORMS registry)
  * @public handleChatHistoryMessage
  */
 import type { ChatPlatform, ConversationFull } from '@/types';
+import { extractConversationId, getPlatformFromUrl } from '@/types';
 import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { usageLimitService } from '@/services/usage-limit-service';
 import { isProUser } from './shared';
-
-const SUPPORTED_LLM_PATTERNS = [
-  { pattern: /chatgpt\.com|chat\.openai\.com/, platform: 'chatgpt' as ChatPlatform },
-  { pattern: /claude\.ai/, platform: 'claude' as ChatPlatform },
-  { pattern: /gemini\.google\.com/, platform: 'gemini' as ChatPlatform },
-];
-
-function getLLMPlatform(url: string): ChatPlatform | null {
-  for (const { pattern, platform } of SUPPORTED_LLM_PATTERNS) {
-    if (pattern.test(url)) return platform;
-  }
-  return null;
-}
-
-function extractIdFromUrl(platform: ChatPlatform, url: string): string {
-  if (platform === 'chatgpt') return url.match(/\/c\/([a-z0-9-]+)/i)?.[1] ?? String(Date.now());
-  if (platform === 'claude') return url.match(/\/chat\/([a-z0-9-]+)/i)?.[1] ?? String(Date.now());
-  if (platform === 'gemini') return url.match(/\/app\/([a-z0-9]+)/i)?.[1] ?? String(Date.now());
-  return String(Date.now());
-}
 
 /**
  * Asks the content script to extract the current chat. If the content script
@@ -69,7 +50,7 @@ function buildFallbackConversation(platform: ChatPlatform, tab: chrome.tabs.Tab)
   const rawTitle = (tab.title ?? '').replace(/\s*[-|].*$/, '').trim();
   return {
     meta: {
-      id: extractIdFromUrl(platform, url),
+      id: extractConversationId(platform, url),
       platform,
       title: rawTitle || 'Untitled conversation',
       createdAt: now,
@@ -95,7 +76,7 @@ export function handleChatHistoryMessage(
       const tab = tabs[0];
       if (!tab?.id || !tab.url) return { ok: false, available: false };
 
-      const platform = getLLMPlatform(tab.url);
+      const platform = getPlatformFromUrl(tab.url);
       if (!platform) return { ok: false, available: false };
 
       // Prefer rich extraction from content script (includes messages + accurate title).

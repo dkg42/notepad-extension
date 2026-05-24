@@ -1,6 +1,6 @@
 /**
  * @module perplexity.adapter
- * @description Implements ChatSiteAdapter for perplexity.ai. Extracts messages via data-testid conversation-turn selectors and includes a broad .break-words fallback for cases where the primary selectors yield no results, reflecting Perplexity's less stable DOM structure.
+ * @description Implements ChatSiteAdapter for perplexity.ai. Extracts messages by walking h1.group/query elements (user prompts) and [id^="markdown-content-"] containers (assistant answers) in DOM order, stripping inline citation chips so chip labels do not leak into the exported transcript.
  * @dependencies adapter.interface, types
  * @public PerplexityAdapter
  */
@@ -10,44 +10,35 @@ import type { ChatMessage } from '@/types';
 export class PerplexityAdapter implements ChatSiteAdapter {
   readonly hostnames = ['perplexity.ai'] as const;
 
-  findHeaderAnchor(): Element | null {
-    return (
-      document.querySelector('header') ??
-      document.querySelector('[class*="sticky top-0"]') ??
-      null
-    );
-  }
-
   extractMessages(): ChatMessage[] {
-    const messages: ChatMessage[] = [];
+    // User turns:      <h1 class="group/query ...">  → prompt text
+    // Assistant turns: <div id="markdown-content-N"> → rendered markdown answer
+    // Both selectors are queried together so the resulting NodeList is in
+    // document order, preserving turn sequence for multi-turn threads.
+    const turnElements = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'h1[class*="group/query"], [id^="markdown-content-"]',
+      ),
+    );
 
-    // Each conversation block has a user query followed by an answer
-    document.querySelectorAll<HTMLElement>('[data-testid="conversation-turn"]').forEach((turn) => {
-      const queryEl = turn.querySelector<HTMLElement>('[data-testid="user-query"]');
-      const answerEl = turn.querySelector<HTMLElement>('[data-testid="answer-text"]');
-
-      if (queryEl?.textContent?.trim()) {
-        messages.push({ role: 'user', content: queryEl.textContent.trim() });
-      }
-      if (answerEl?.textContent?.trim()) {
-        messages.push({ role: 'assistant', content: answerEl.textContent.trim() });
-      }
-    });
-
-    // Fallback: broad text content selectors
-    if (messages.length === 0) {
-      document.querySelectorAll<HTMLElement>('.break-words').forEach((el) => {
-        const content = el.textContent?.trim() ?? '';
-        if (content.length > 10) messages.push({ role: 'user', content });
-      });
-    }
-
-    return messages;
+    return turnElements.reduce<ChatMessage[]>((acc, el) => {
+      const isUser = el.tagName === 'H1';
+      const role: 'user' | 'assistant' = isUser ? 'user' : 'assistant';
+      const content = isUser
+        ? (el.textContent?.trim() ?? '')
+        : this.extractAssistantText(el);
+      if (content) acc.push({ role, content });
+      return acc;
+    }, []);
   }
 
-  extractPrompts(): string[] {
-    return this.extractMessages()
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content);
+  // Inline citation chips render as span[class*="group/trigger"] wrappers
+  // containing source-domain labels (e.g. "deepsilver+1"). Stripping them
+  // from a clone before reading textContent keeps the source DOM untouched
+  // while removing chip noise from the exported transcript.
+  private extractAssistantText(el: HTMLElement): string {
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('[class*="group/trigger"]').forEach((n) => n.remove());
+    return clone.textContent?.trim() ?? '';
   }
 }

@@ -1,6 +1,6 @@
 /**
  * @module claude.adapter
- * @description Implements ChatSiteAdapter for claude.ai. Injects into the flex-1 title div inside the page header (using its 100 px right-padding safe zone) to avoid colliding with the native Share button, and extracts messages from data-testid="user-message" and data-is-streaming elements in a single DOM pass.
+ * @description Implements ChatSiteAdapter for claude.ai. Extracts messages from data-testid="user-message" and data-is-streaming elements in a single DOM pass to preserve turn order.
  * @dependencies adapter.interface, types
  * @public ClaudeAdapter
  */
@@ -9,29 +9,6 @@ import type { ChatMessage } from '@/types';
 
 export class ClaudeAdapter implements ChatSiteAdapter {
   readonly hostnames = ['claude.ai'] as const;
-
-  findHeaderAnchor(): Element | null {
-    // The Share button lives *outside* the <header> element but is absolutely
-    // positioned (md:absolute right-0 top-0 z-20) so it visually overlaps the
-    // header's right edge. Injecting into the header root or the right-side slot
-    // still collides with it.
-    //
-    // Instead we inject into the flex-1 title div (first child of the inner flex
-    // row). That div has pr-[100px] which reserves 100 px of right padding as a
-    // safe zone for the Share button. Our container uses margin-left:auto so it
-    // right-aligns within the title div's content box — visually adjacent to the
-    // Share button but never behind it.
-    const header = document.querySelector<HTMLElement>('header[data-testid="page-header"]');
-    if (header) {
-      // Skip the first child (gradient overlay, position:absolute) and grab the
-      // actual flex row which carries the justify-between layout.
-      const innerRow = header.querySelector<HTMLElement>(':scope > div.flex.w-full');
-      const titleDiv = innerRow?.querySelector<HTMLElement>(':scope > div:first-child');
-      if (titleDiv) return titleDiv;
-      return header;
-    }
-    return document.querySelector('[class*="sticky top-0"]') ?? null;
-  }
 
   extractMessages(): ChatMessage[] {
     // Query both turn types in a single pass to preserve DOM order.
@@ -50,11 +27,5 @@ export class ClaudeAdapter implements ChatSiteAdapter {
       if (content) acc.push({ role, content });
       return acc;
     }, []);
-  }
-
-  extractPrompts(): string[] {
-    return this.extractMessages()
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content);
   }
 }

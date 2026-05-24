@@ -1,6 +1,6 @@
 /**
  * @module copilot.adapter
- * @description Implements ChatSiteAdapter for copilot.microsoft.com. Targets the .cib-header element for injection and extracts messages by walking .cib-chat-turn containers, querying the .cib-chat-message-user and .cib-chat-message-bot children used by Microsoft's Copilot web shell.
+ * @description Implements ChatSiteAdapter for copilot.microsoft.com. Extracts messages by walking [data-content="user-message"] and [data-content="ai-message"] elements in DOM order — the stable data-attribute hooks Copilot's own SPA uses to identify turns. Assistant text is read from a clone with every [data-copy="false"] descendant removed, which is Copilot's native convention for marking inline citation chips, the citation cards row, action buttons, and other in-message chrome.
  * @dependencies adapter.interface, types
  * @public CopilotAdapter
  */
@@ -10,36 +10,31 @@ import type { ChatMessage } from '@/types';
 export class CopilotAdapter implements ChatSiteAdapter {
   readonly hostnames = ['copilot.microsoft.com'] as const;
 
-  findHeaderAnchor(): Element | null {
-    return (
-      document.querySelector('.cib-header') ??
-      document.querySelector('header') ??
-      document.querySelector('[class*="sticky top-0"]') ??
-      null
-    );
-  }
-
   extractMessages(): ChatMessage[] {
-    const messages: ChatMessage[] = [];
+    // Querying both selectors together preserves DOM order across turns.
+    const turnElements = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-content="user-message"], [data-content="ai-message"]',
+      ),
+    );
 
-    document.querySelectorAll<HTMLElement>('.cib-chat-turn').forEach((turn) => {
-      const userEl = turn.querySelector<HTMLElement>('.cib-chat-message-user');
-      const botEl = turn.querySelector<HTMLElement>('.cib-chat-message-bot');
-
-      if (userEl?.textContent?.trim()) {
-        messages.push({ role: 'user', content: userEl.textContent.trim() });
-      }
-      if (botEl?.textContent?.trim()) {
-        messages.push({ role: 'assistant', content: botEl.textContent.trim() });
-      }
-    });
-
-    return messages;
+    return turnElements.reduce<ChatMessage[]>((acc, el) => {
+      const isUser = el.getAttribute('data-content') === 'user-message';
+      const role: 'user' | 'assistant' = isUser ? 'user' : 'assistant';
+      const content = isUser
+        ? (el.textContent?.trim() ?? '')
+        : this.extractAssistantText(el);
+      if (content) acc.push({ role, content });
+      return acc;
+    }, []);
   }
 
-  extractPrompts(): string[] {
-    return this.extractMessages()
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content);
+  // Copilot marks all in-message UI chrome (citation chips, citation cards row,
+  // action buttons, image carousels, etc.) with data-copy="false". Removing
+  // those from a clone before reading textContent yields just the response body.
+  private extractAssistantText(el: HTMLElement): string {
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('[data-copy="false"]').forEach((n) => n.remove());
+    return clone.textContent?.trim() ?? '';
   }
 }
