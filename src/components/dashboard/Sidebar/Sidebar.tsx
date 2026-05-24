@@ -62,6 +62,7 @@ const NOTEBOOKS_GROUP: NavGroup = {
   icon: BookOpen,
   label: 'Notebooks',
   subItems: [
+    { view: 'notebooks', icon: BookOpen, label: 'All Notebooks' },
     { view: 'all-sources', icon: Database, label: 'All Sources' },
     { view: 'all-artifacts', icon: Package, label: 'All Artifacts' },
   ],
@@ -142,7 +143,10 @@ function CollapsibleGroup({
                     currentView === 'chat-history-detail') ||
                   (group.view === 'podcasts' &&
                     sub.view === 'podcasts' &&
-                    currentView === 'podcast-detail');
+                    currentView === 'podcast-detail') ||
+                  (group.view === 'notebooks' &&
+                    sub.view === 'notebooks' &&
+                    currentView === 'notebook-detail');
 
                 return (
                   <button
