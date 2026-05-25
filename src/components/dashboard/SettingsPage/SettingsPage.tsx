@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
+import { isAuthCancellation, getFriendlyAuthError } from '@/utils/auth-errors';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './SettingsPage.css';
 
@@ -54,9 +55,14 @@ export default function SettingsPage() {
     setAuthError(null);
     try {
       const res = await authService.signIn();
-      if (!res.ok) setAuthError(res.error ?? 'Sign-in failed.');
-    } catch {
-      setAuthError('Sign-in failed.');
+      if (!res.ok && !isAuthCancellation(res.error)) {
+        setAuthError(getFriendlyAuthError(res.error ?? ''));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (!isAuthCancellation(msg)) {
+        setAuthError(getFriendlyAuthError(msg));
+      }
     } finally {
       setSigningIn(false);
     }

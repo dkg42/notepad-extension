@@ -33,6 +33,7 @@ import { driveInitService } from '@/services/drive/drive-init-service';
 import { driveWriteQueue } from '@/services/drive/drive-write-queue';
 import { tabGroupsSyncService } from '@/services/tab-groups-sync-service';
 import { clipboardSessionService } from '@/services/clipboard-session-service';
+import { isAuthCancellation } from '@/utils/auth-errors';
 
 import { isMessage, ensureSignedIn } from '@/background/shared';
 import { syncNotebooks } from '@/background/notebook-handler';
@@ -154,6 +155,24 @@ function requestFirebaseAuth(): Promise<OAuthCredentialPayload> {
 }
 
 /**
+ * Brings any popup-type window created during the call to the foreground.
+ * On macOS, the Google OAuth popup spawned by GIS inside our offscreen iframe
+ * opens behind the main browser window because the user-activation chain is
+ * broken by the service-worker hop. Returns an unsubscribe function.
+ */
+function focusPopupsDuringAuth(): () => void {
+  const handleCreated = (win: chrome.windows.Window): void => {
+    if (win.type !== 'popup' || win.id === undefined) return;
+    chrome.windows.update(win.id, { focused: true, drawAttention: true })
+      .catch((err: unknown) => {
+        console.warn('[AUTH][BG] Failed to focus OAuth popup:', err);
+      });
+  };
+  chrome.windows.onCreated.addListener(handleCreated);
+  return () => chrome.windows.onCreated.removeListener(handleCreated);
+}
+
+/**
  * Orchestrates the full Firebase OAuth flow: creates the offscreen document,
  * delegates to `requestFirebaseAuth`, and ensures the document is closed on
  * both success and failure.
@@ -163,6 +182,7 @@ function requestFirebaseAuth(): Promise<OAuthCredentialPayload> {
  */
 async function firebaseAuth(): Promise<OAuthCredentialPayload> {
   await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
+  const stopFocusingPopups = focusPopupsDuringAuth();
 
   try {
     const credential = await requestFirebaseAuth();
@@ -170,7 +190,10 @@ async function firebaseAuth(): Promise<OAuthCredentialPayload> {
     return credential;
   } catch (err) {
     const authErr = err as AuthError;
-    if (authErr.code === 'auth/operation-not-allowed') {
+    const message = err instanceof Error ? err.message : String(err);
+    if (authErr.code === 'auth/popup-closed-by-user' || isAuthCancellation(message)) {
+      console.info('[AUTH][BG] sign-in cancelled by user');
+    } else if (authErr.code === 'auth/operation-not-allowed') {
       console.error(
         '[AUTH][BG] You must enable an OAuth provider in the Firebase console' +
           ' in order to use signInWithPopup.',
@@ -183,6 +206,7 @@ async function firebaseAuth(): Promise<OAuthCredentialPayload> {
     // report success while storing nothing in chrome.storage.
     throw err;
   } finally {
+    stopFocusingPopups();
     await closeOffscreenDocument();
   }
 }
@@ -278,8 +302,13 @@ function handleAuthSessionMessage(
         }).catch(() => {});
       })
       .catch((err: unknown) => {
-        console.error('[AUTH][BG] Auth flow error:', err);
-        sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        if (isAuthCancellation(msg)) {
+          console.info('[AUTH][BG] Auth flow cancelled by user');
+        } else {
+          console.error('[AUTH][BG] Auth flow error:', err);
+        }
+        sendResponse({ ok: false, error: msg });
       });
     return true;
   }

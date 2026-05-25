@@ -20,6 +20,7 @@
  */
 
 import { OAuthProvider } from 'firebase/auth/web-extension';
+import { isAuthCancellation } from '@/utils/auth-errors';
 
 const EXTERNAL_AUTH_URL = 'https://localhost:3000/auth';
 const EXTERNAL_AUTH_ORIGIN = 'https://localhost:3000';
@@ -199,7 +200,11 @@ chrome.runtime.onMessage.addListener(
         // channel is already closed (ACK above), so sendResponse can't be reused.
         if (!payload || payload.error || payloadIsFirebaseError) {
           const error = payload?.code ?? payload?.error ?? 'Unknown auth error';
-          console.error('[AUTH][Offscreen] iframe returned error:', error);
+          if (isAuthCancellation(error)) {
+            console.info('[AUTH][Offscreen] sign-in cancelled by user');
+          } else {
+            console.error('[AUTH][Offscreen] iframe returned error:', error);
+          }
           chrome.runtime.sendMessage({ type: 'AUTH_RESULT', ok: false, error }).catch(
             (err: unknown) => console.error('[AUTH][Offscreen] Failed to relay AUTH_RESULT error:', err),
           );

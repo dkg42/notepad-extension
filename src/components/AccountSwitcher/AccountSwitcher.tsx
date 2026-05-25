@@ -7,6 +7,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
+import { isAuthCancellation, getFriendlyAuthError } from '@/utils/auth-errors';
 import './AccountSwitcher.css';
 
 interface Props {
@@ -53,11 +54,14 @@ export default function AccountSwitcher({ user, onSignOut }: Props) {
     setSignInError(null);
     try {
       const response = await authService.signIn();
-      if (!response.ok) {
+      if (!response.ok && !isAuthCancellation(response.error)) {
         setSignInError(getFriendlyAuthError(response.error ?? ''));
       }
     } catch (err) {
-      setSignInError(getFriendlyAuthError(err instanceof Error ? err.message : ''));
+      const msg = err instanceof Error ? err.message : '';
+      if (!isAuthCancellation(msg)) {
+        setSignInError(getFriendlyAuthError(msg));
+      }
     } finally {
       setSigningIn(false);
     }
@@ -149,18 +153,3 @@ function getInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-function getFriendlyAuthError(raw: string): string {
-  if (raw.includes('popup-closed-by-user') || raw.includes('cancelled-popup-request')) {
-    return 'Sign-in was cancelled.';
-  }
-  if (raw.includes('network-request-failed')) {
-    return 'Network error. Try again.';
-  }
-  if (raw.includes('too-many-requests')) {
-    return 'Too many attempts. Try again later.';
-  }
-  if (raw.includes('operation-not-allowed')) {
-    return 'Sign-in not configured.';
-  }
-  return 'Sign-in failed. Please try again.';
-}

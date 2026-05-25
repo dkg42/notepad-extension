@@ -6,6 +6,7 @@
  */
 import React, { useState } from 'react';
 import { authService } from '@/services/auth-service';
+import { isAuthCancellation, getFriendlyAuthError } from '@/utils/auth-errors';
 import './AuthButton.css';
 
 interface Props {
@@ -34,15 +35,23 @@ export default function AuthButton({ onSignIn, onError }: Props) {
         onSignIn?.();
       } else {
         const msg = response.error ?? 'Sign-in failed';
-        console.error('[AUTH][AuthButton] Sign-in failed:', msg);
-        setError(msg);
-        onError?.(msg);
+        if (isAuthCancellation(msg)) {
+          console.info('[AUTH][AuthButton] sign-in cancelled by user');
+        } else {
+          console.error('[AUTH][AuthButton] Sign-in failed:', msg);
+          setError(getFriendlyAuthError(msg));
+          onError?.(msg);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed';
-      console.error('[AUTH][AuthButton] Unexpected error:', err);
-      setError(msg);
-      onError?.(msg);
+      if (isAuthCancellation(msg)) {
+        console.info('[AUTH][AuthButton] sign-in cancelled by user');
+      } else {
+        console.error('[AUTH][AuthButton] Unexpected error:', err);
+        setError(getFriendlyAuthError(msg));
+        onError?.(msg);
+      }
     } finally {
       setLoading(false);
     }
