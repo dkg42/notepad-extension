@@ -4,7 +4,8 @@
  * @dependencies ./useNotebooksPage, @/export/source-export-registry, @/components/dashboard/NotebookFolderModal/NotebookFolderModal, @/components/dashboard/FolderTree/FolderTree, @/components/dashboard/MoveFolderDialog/MoveFolderDialog, @/contexts/NavigationContext, @/utils/folder-utils
  * @public NotebooksPage
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BookOpen, ExternalLink, Loader2, Folder, FolderOpen, ChevronRight, RefreshCw, Search, X, Layers, MoreHorizontal, Plus, GitMerge, Lock } from 'lucide-react';
 import { useNotebooksPage, UNFILED_FILTER_ID } from './useNotebooksPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
@@ -83,6 +84,26 @@ function NbRow({
   compact, rowMenuOpen, onToggleRowMenu, onCloseRowMenu, onMoveToFolder,
 }: NbRowProps) {
   const rowPad = compact ? '8px 14px' : '10px 14px';
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (!rowMenuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    const rect = menuTriggerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMenuPos({ top: rect.bottom + 2, right: window.innerWidth - rect.right });
+    }
+    const closeOnScroll = () => onCloseRowMenu();
+    window.addEventListener('scroll', closeOnScroll, true);
+    window.addEventListener('resize', closeOnScroll);
+    return () => {
+      window.removeEventListener('scroll', closeOnScroll, true);
+      window.removeEventListener('resize', closeOnScroll);
+    };
+  }, [rowMenuOpen, onCloseRowMenu]);
 
   function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
@@ -240,6 +261,7 @@ function NbRow({
         ) : (
           <div className="nb-row-menu-wrap">
             <button
+              ref={menuTriggerRef}
               className="nb-row__more-btn"
               onClick={onToggleRowMenu}
               title="More options"
@@ -247,8 +269,8 @@ function NbRow({
             >
               <MoreHorizontal size={13} />
             </button>
-            {rowMenuOpen && (
-              <div className="nb-row-menu__dropdown">
+            {rowMenuOpen && menuPos && createPortal(
+              <div className="nb-row-menu__dropdown" style={{ top: menuPos.top, right: menuPos.right }}>
                 <button
                   className="nb-row-menu__item"
                   onClick={() => { onCloseRowMenu(); onMoveToFolder(); }}
@@ -261,7 +283,8 @@ function NbRow({
                 >
                   Delete
                 </button>
-              </div>
+              </div>,
+              document.body,
             )}
           </div>
         )}

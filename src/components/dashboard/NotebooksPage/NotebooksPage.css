@@ -1162,9 +1162,7 @@
 }
 
 .nb-row-menu__dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 2px);
+  position: fixed;
   z-index: 200;
   min-width: 150px;
   background: var(--bg);
