@@ -33,7 +33,6 @@ const NAV_ACTIONS: Array<{ view: DashboardView; label: string; icon: string }> =
   { view: 'tags',          label: 'Tags',             icon: '◈' },
   { view: 'analytics',     label: 'Analytics',        icon: '◉' },
   { view: 'settings',      label: 'Settings',         icon: '⚙' },
-  { view: 'account',       label: 'Account',          icon: '◯' },
   { view: 'export-history', label: 'Export History',  icon: '↗' },
 ];
 

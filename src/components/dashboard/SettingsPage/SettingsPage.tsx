@@ -8,8 +8,10 @@ import React, { useEffect, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import type { SortColumn, SortDirection } from '@/types/dashboard';
 import { authService } from '@/services/auth-service';
+import { openCustomerPortal } from '@/services/billing-service';
 import { isAuthCancellation, getFriendlyAuthError } from '@/utils/auth-errors';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import './SettingsPage.css';
 
 function getInitials(name: string | null): string {
@@ -41,13 +43,34 @@ const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
 export default function SettingsPage() {
   const { settings, handleSettingsChange: onSettingsChange } = useNavigation();
   const { user, loading: userLoading } = useCurrentUser();
+  const { isPro } = useSubscription();
   const [signingOut, setSigningOut] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   const handleSignOut = async () => {
     setSigningOut(true);
     try { await authService.signOut(); } finally { setSigningOut(false); }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalError(null);
+    setOpeningPortal(true);
+    try {
+      const result = await openCustomerPortal();
+      if (!result.ok) {
+        const message = result.reason === 'network'
+          ? 'Could not reach the billing service. Check your connection and try again.'
+          : result.reason === 'no_subscription'
+            ? 'No active subscription found for this account.'
+            : 'Could not open the billing portal. Please try again.';
+        setPortalError(message);
+      }
+    } finally {
+      setOpeningPortal(false);
+    }
   };
 
   const handleSignIn = async () => {
@@ -96,6 +119,15 @@ export default function SettingsPage() {
                   {user.displayName && <span className="settings-row__name">{user.displayName}</span>}
                   {user.email && <span className="settings-row__description">{user.email}</span>}
                 </div>
+                {isPro && (
+                  <button
+                    className="settings-page__btn"
+                    onClick={handleManageSubscription}
+                    disabled={openingPortal}
+                  >
+                    {openingPortal ? 'Opening…' : 'Manage subscription'}
+                  </button>
+                )}
                 <button
                   className="settings-page__btn settings-page__btn--danger"
                   onClick={handleSignOut}
@@ -104,6 +136,9 @@ export default function SettingsPage() {
                   {signingOut ? 'Signing out…' : 'Sign out'}
                 </button>
               </div>
+              {portalError && (
+                <p className="settings-page__error" style={{ padding: '0 0 0 0' }}>{portalError}</p>
+              )}
             </>
           ) : (
             <div className="settings-row">

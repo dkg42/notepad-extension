@@ -24,7 +24,6 @@ export type DashboardView =
   | 'all-audio'
   | 'pipelines'
   | 'settings'
-  | 'account'
   | 'screenshots'
   | 'screenshot-editor';
 

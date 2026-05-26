@@ -23,7 +23,6 @@ import PodcastsPage from '@/components/dashboard/PodcastsPage/PodcastsPage';
 import PodcastDetailPage from '@/components/dashboard/PodcastDetailPage/PodcastDetailPage';
 import AllAudioPage from '@/components/dashboard/AllAudioPage/AllAudioPage';
 import PipelinesPage from '@/components/dashboard/PipelinesPage/PipelinesPage';
-import AccountPage from '@/components/dashboard/AccountPage/AccountPage';
 import ScreenshotsPage from '@/components/dashboard/ScreenshotsPage/ScreenshotsPage';
 import ScreenshotEditor from '@/components/dashboard/ScreenshotEditor/ScreenshotEditor';
 import AudioPlayer from '@/components/dashboard/AudioPlayer/AudioPlayer';
@@ -333,9 +332,6 @@ export default function DashboardApp() {
 
       case 'settings':
         return <SettingsPage />;
-
-      case 'account':
-        return <AccountPage />;
 
       case 'screenshots':
         return <ScreenshotsPage />;
