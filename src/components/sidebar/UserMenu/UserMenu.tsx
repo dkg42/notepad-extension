@@ -1,11 +1,11 @@
 /**
  * @module UserMenu
- * @description Popover menu displayed when the user clicks their avatar in the sidebar header. Shows profile info, account/preferences links, plan badge, and a sign-out action. Closes on backdrop click or explicit sign-out.
+ * @description Popover menu displayed when the user clicks their avatar in the sidebar header. Shows profile info, an account settings link that deep-links into the dashboard Settings view, plan badge, and a sign-out action. Closes on backdrop click or explicit sign-out.
  * @dependencies @/types
  * @public UserMenu (default export)
  */
 import React from 'react';
-import { User, Settings, LogOut } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import type { StoredAuthProfile, AuthClaims } from '@/types';
 import './UserMenu.css';
 
@@ -65,13 +65,18 @@ export default function UserMenu({ user, claims, onClose, onSignOut }: UserMenuP
         </div>
 
         <div className="user-menu__section">
-          <button className="user-menu__item">
+          <button
+            className="user-menu__item"
+            onClick={async () => {
+              await chrome.storage.local.set({
+                pendingDashboardNav: { view: 'settings' },
+              });
+              chrome.runtime.openOptionsPage();
+              onClose();
+            }}
+          >
             <User size={13} />
             <span className="user-menu__item-label">Account settings</span>
-          </button>
-          <button className="user-menu__item">
-            <Settings size={13} />
-            <span className="user-menu__item-label">Preferences</span>
           </button>
         </div>
 

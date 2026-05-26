@@ -405,6 +405,9 @@ export function useDashboardApp(isPro: boolean) {
         setSelectedCaptureId(captureId);
         setCurrentView('screenshot-editor');
         void chrome.storage.local.remove('pendingDashboardNav');
+      } else if (view === 'settings') {
+        setCurrentView('settings');
+        void chrome.storage.local.remove('pendingDashboardNav');
       }
     };
 
