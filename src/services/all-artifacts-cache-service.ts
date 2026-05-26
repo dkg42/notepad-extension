@@ -7,6 +7,7 @@
  * @public allArtifactsCacheService, AllArtifactsCache
  */
 import type { AggregatedArtifact } from '@/types';
+import { scopedStorage } from './storage/scoped-storage';
 
 const ALL_ARTIFACTS_KEY = 'allArtifactsCache';
 const TTL_MS = 30 * 60 * 1000;
@@ -18,18 +19,18 @@ export interface AllArtifactsCache {
 
 export const allArtifactsCacheService = {
   async get(): Promise<{ artifacts: AggregatedArtifact[]; isStale: boolean } | null> {
-    const result = await chrome.storage.local.get(ALL_ARTIFACTS_KEY);
-    const cache = result[ALL_ARTIFACTS_KEY] as AllArtifactsCache | undefined;
+    const result = await scopedStorage.get<AllArtifactsCache>(ALL_ARTIFACTS_KEY);
+    const cache = result[ALL_ARTIFACTS_KEY];
     if (!cache) return null;
     return { artifacts: cache.artifacts, isStale: Date.now() - cache.cachedAt > TTL_MS };
   },
 
   async set(artifacts: AggregatedArtifact[]): Promise<void> {
     const cache: AllArtifactsCache = { artifacts, cachedAt: Date.now() };
-    await chrome.storage.local.set({ [ALL_ARTIFACTS_KEY]: cache });
+    await scopedStorage.set({ [ALL_ARTIFACTS_KEY]: cache });
   },
 
   async clear(): Promise<void> {
-    await chrome.storage.local.remove(ALL_ARTIFACTS_KEY);
+    await scopedStorage.remove(ALL_ARTIFACTS_KEY);
   },
 };

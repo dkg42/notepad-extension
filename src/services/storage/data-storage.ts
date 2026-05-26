@@ -10,14 +10,15 @@ import {
   EXPORT_HISTORY_KEY,
   PODCAST_EPISODES_KEY,
 } from './shared';
+import { scopedStorage } from './scoped-storage';
 
 export const dataStorage = {
   /**
    * Removes all user data keys (snippets, folders, tags, export history, podcast episodes)
-   * from local storage. Does not touch settings.
+   * from the current user's namespace. Does not touch settings.
    */
   async clearAllData(): Promise<void> {
-    await chrome.storage.local.remove([
+    await scopedStorage.remove([
       SNIPPETS_KEY,
       FOLDERS_KEY,
       TAGS_META_KEY,

@@ -15,6 +15,7 @@ import type { TabGroup } from '@/types/tab-groups';
 import { tabGroupsStorage } from './tab-groups-storage';
 import { getValidToken } from './token-lifecycle-service';
 import { driveSyncService } from './drive/drive-sync-service';
+import { scopedStorage } from './storage/scoped-storage';
 
 /** Device-local marker of the last durable snapshot pushed to Drive. */
 const SYNC_SIG_KEY = 'tabGroupsSyncSig';
@@ -55,11 +56,11 @@ export const tabGroupsSyncService = {
     const groups = await tabGroupsStorage.getGroups();
     const sig = signature(groups);
 
-    const stored = await chrome.storage.local.get(SYNC_SIG_KEY);
+    const stored = await scopedStorage.get<string>(SYNC_SIG_KEY);
     if (stored[SYNC_SIG_KEY] === sig) return;
 
     driveSyncService.saveTabGroups(groups, tokenResult.accessToken);
-    await chrome.storage.local.set({ [SYNC_SIG_KEY]: sig });
+    await scopedStorage.set({ [SYNC_SIG_KEY]: sig });
   },
 
   /**
@@ -67,6 +68,6 @@ export const tabGroupsSyncService = {
    * so a subsequent (possibly different-account) login re-uploads cleanly.
    */
   async clearSyncSignature(): Promise<void> {
-    await chrome.storage.local.remove(SYNC_SIG_KEY);
+    await scopedStorage.remove(SYNC_SIG_KEY);
   },
 };

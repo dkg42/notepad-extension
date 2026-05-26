@@ -7,6 +7,7 @@
 import type { TagMeta } from '@/types';
 import { SNIPPETS_KEY, TAGS_META_KEY, syncToDrive, driveSyncService } from './shared';
 import { snippetStorage } from './snippet-storage';
+import { scopedStorage } from './scoped-storage';
 
 export const tagStorage = {
   // ── Tags Metadata ─────────────────────────────────────────────────────────
@@ -16,8 +17,8 @@ export const tagStorage = {
    * @returns Array of TagMeta objects; empty array if none saved.
    */
   async getTagsMeta(): Promise<TagMeta[]> {
-    const result = await chrome.storage.local.get(TAGS_META_KEY);
-    return (result[TAGS_META_KEY] as TagMeta[]) ?? [];
+    const result = await scopedStorage.get<TagMeta[]>(TAGS_META_KEY);
+    return result[TAGS_META_KEY] ?? [];
   },
 
   /**
@@ -30,7 +31,7 @@ export const tagStorage = {
     const updated = existing.some((t) => t.name === meta.name)
       ? existing.map((t) => (t.name === meta.name ? meta : t))
       : [...existing, meta];
-    await chrome.storage.local.set({ [TAGS_META_KEY]: updated });
+    await scopedStorage.set({ [TAGS_META_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveTags(updated, t));
   },
 
@@ -42,7 +43,7 @@ export const tagStorage = {
   async deleteTagMeta(name: string): Promise<void> {
     const existing = await tagStorage.getTagsMeta();
     const updated = existing.filter((t) => t.name !== name);
-    await chrome.storage.local.set({ [TAGS_META_KEY]: updated });
+    await scopedStorage.set({ [TAGS_META_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveTags(updated, t));
   },
 
@@ -62,7 +63,7 @@ export const tagStorage = {
     const updatedMeta = tagsMeta.map((t) =>
       t.name === oldName ? { ...t, name: trimmedNew } : t,
     );
-    await chrome.storage.local.set({
+    await scopedStorage.set({
       [SNIPPETS_KEY]: updatedSnippets,
       [TAGS_META_KEY]: updatedMeta,
     });

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Folder, Pipeline, PipelineRun } from '@/types';
 import { PIPELINE_TEMPLATES } from '@/services/pipeline-templates';
 import { notebookFolderService } from '@/services/notebook-folder-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 export function usePipelinesPage() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -53,16 +54,14 @@ export function usePipelinesPage() {
 
   // Keep pipeline list reactive to background changes (e.g. after a run fires)
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+    return scopedStorage.onChanged(['pipelines', 'pipelineRuns'], (changes) => {
       if ('pipelines' in changes) {
         setPipelines((changes.pipelines.newValue as Pipeline[]) ?? []);
       }
       if ('pipelineRuns' in changes) {
         setRuns((changes.pipelineRuns.newValue as PipelineRun[]) ?? []);
       }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    });
   }, []);
 
   // ── Mutations ─────────────────────────────────────────────────────────────────

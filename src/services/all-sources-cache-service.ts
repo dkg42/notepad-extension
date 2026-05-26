@@ -7,6 +7,7 @@
  * @public allSourcesCacheService, AllSourcesCache
  */
 import type { AggregatedSource } from '@/types';
+import { scopedStorage } from './storage/scoped-storage';
 
 const ALL_SOURCES_KEY = 'allSourcesCache';
 const TTL_MS = 30 * 60 * 1000;
@@ -18,18 +19,18 @@ export interface AllSourcesCache {
 
 export const allSourcesCacheService = {
   async get(): Promise<{ sources: AggregatedSource[]; isStale: boolean } | null> {
-    const result = await chrome.storage.local.get(ALL_SOURCES_KEY);
-    const cache = result[ALL_SOURCES_KEY] as AllSourcesCache | undefined;
+    const result = await scopedStorage.get<AllSourcesCache>(ALL_SOURCES_KEY);
+    const cache = result[ALL_SOURCES_KEY];
     if (!cache) return null;
     return { sources: cache.sources, isStale: Date.now() - cache.cachedAt > TTL_MS };
   },
 
   async set(sources: AggregatedSource[]): Promise<void> {
     const cache: AllSourcesCache = { sources, cachedAt: Date.now() };
-    await chrome.storage.local.set({ [ALL_SOURCES_KEY]: cache });
+    await scopedStorage.set({ [ALL_SOURCES_KEY]: cache });
   },
 
   async clear(): Promise<void> {
-    await chrome.storage.local.remove(ALL_SOURCES_KEY);
+    await scopedStorage.remove(ALL_SOURCES_KEY);
   },
 };

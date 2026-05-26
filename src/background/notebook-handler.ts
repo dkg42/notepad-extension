@@ -119,15 +119,6 @@ export async function syncNotebooks(): Promise<void> {
   const profile = await authStorageService.getAuthProfile();
   if (!profile) return;
   const uid: string | null = profile.uid;
-  // Clear stale data before syncing if the stored data belongs to a different
-  // user or was written before ownerUid tracking was introduced.
-  if (uid) {
-    const syncMeta = await notebookSyncService.getSyncMeta();
-    if (syncMeta && (!syncMeta.ownerUid || syncMeta.ownerUid !== uid)) {
-      console.warn('[SYNC] Stale or untagged notebook data — clearing before re-sync', { stored: syncMeta.ownerUid, current: uid });
-      await notebookSyncService.clear();
-    }
-  }
   try {
     const notebooks = await fetchNotebooks();
     if (notebooks.length > 0) {

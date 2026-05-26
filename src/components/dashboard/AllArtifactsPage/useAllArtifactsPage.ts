@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedArtifact } from '@/types';
 import { allArtifactsCacheService, type AllArtifactsCache } from '@/services/all-artifacts-cache-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 type SortField = 'title' | 'notebookTitle' | 'createdAt';
 type SortDir = 'asc' | 'desc';
@@ -81,14 +82,10 @@ export function useAllArtifactsPage() {
 
   // Listen for cache updates written by the background sync or a manual refresh.
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('allArtifactsCache' in changes) {
-        const cache = changes.allArtifactsCache.newValue as AllArtifactsCache | undefined;
-        if (cache?.artifacts) setArtifacts(cache.artifacts);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged<AllArtifactsCache>('allArtifactsCache', (changes) => {
+      const cache = changes.allArtifactsCache?.newValue;
+      if (cache?.artifacts) setArtifacts(cache.artifacts);
+    });
   }, []);
 
   // ── Derived values ─────────────────────────────────────────────────────────

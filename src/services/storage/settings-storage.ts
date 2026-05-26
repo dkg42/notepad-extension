@@ -6,6 +6,7 @@
  */
 import type { DashboardSettings } from '@/types/dashboard';
 import { SETTINGS_KEY, DEFAULT_SETTINGS, syncToDrive, driveSyncService } from './shared';
+import { scopedStorage } from './scoped-storage';
 
 export const settingsStorage = {
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -15,8 +16,8 @@ export const settingsStorage = {
    * @returns A complete DashboardSettings object; never returns undefined.
    */
   async getSettings(): Promise<DashboardSettings> {
-    const result = await chrome.storage.local.get(SETTINGS_KEY);
-    return { ...DEFAULT_SETTINGS, ...(result[SETTINGS_KEY] as Partial<DashboardSettings>) };
+    const result = await scopedStorage.get<Partial<DashboardSettings>>(SETTINGS_KEY);
+    return { ...DEFAULT_SETTINGS, ...(result[SETTINGS_KEY] ?? {}) };
   },
 
   /**
@@ -27,7 +28,7 @@ export const settingsStorage = {
   async saveSettings(settings: Partial<DashboardSettings>): Promise<void> {
     const current = await settingsStorage.getSettings();
     const merged = { ...current, ...settings };
-    await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
+    await scopedStorage.set({ [SETTINGS_KEY]: merged });
     syncToDrive((t) => driveSyncService.saveSettings(merged, t));
   },
 };

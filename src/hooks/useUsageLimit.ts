@@ -15,6 +15,7 @@ import {
   type CappedFeature,
 } from '@/services/usage-limit-service';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 interface UsageLimitState {
   /** Whether the user may create another entity of this feature. */
@@ -47,13 +48,10 @@ export function useUsageLimit(feature: CappedFeature): UsageLimitState {
 
   useEffect(() => {
     void refresh();
-
     const key = STORAGE_KEYS[feature];
-    const handler = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if (key in changes) void refresh();
-    };
-    chrome.storage.local.onChanged.addListener(handler);
-    return () => chrome.storage.local.onChanged.removeListener(handler);
+    return scopedStorage.onChanged(key, () => {
+      void refresh();
+    });
   }, [feature, refresh]);
 
   return { canCreate, remaining, count };

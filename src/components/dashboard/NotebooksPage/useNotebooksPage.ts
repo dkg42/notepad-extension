@@ -10,6 +10,7 @@ import { notebookSyncService, type SyncMeta } from '@/services/notebook-sync-ser
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { notebookFolderService } from '@/services/notebook-folder-service';
 import { sourceCountCacheService, type SourceCountsCache } from '@/services/source-count-cache-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 
@@ -70,24 +71,25 @@ export function useNotebooksPage() {
   // ── Storage change listener (background sync + cross-device) ───────────────
 
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('notebooksMeta' in changes) {
-        const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
-        setNotebooks(updated.sort((a, b) => b.lastSyncedAt - a.lastSyncedAt));
-      }
-      if ('notebooksSyncMeta' in changes) {
-        setSyncMeta((changes.notebooksSyncMeta.newValue as SyncMeta) ?? null);
-        setIsSyncing(false);
-      }
-      if ('notebookAnnotations' in changes) {
-        setAnnotations((changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? []);
-      }
-      if ('notebookFolders' in changes) {
-        setFolders((changes.notebookFolders.newValue as Folder[]) ?? []);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged(
+      ['notebooksMeta', 'notebooksSyncMeta', 'notebookAnnotations', 'notebookFolders'],
+      (changes) => {
+        if ('notebooksMeta' in changes) {
+          const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
+          setNotebooks(updated.sort((a, b) => b.lastSyncedAt - a.lastSyncedAt));
+        }
+        if ('notebooksSyncMeta' in changes) {
+          setSyncMeta((changes.notebooksSyncMeta.newValue as SyncMeta) ?? null);
+          setIsSyncing(false);
+        }
+        if ('notebookAnnotations' in changes) {
+          setAnnotations((changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? []);
+        }
+        if ('notebookFolders' in changes) {
+          setFolders((changes.notebookFolders.newValue as Folder[]) ?? []);
+        }
+      },
+    );
   }, []);
 
   // ── Auto-fetch source counts once notebooks are loaded ────────────────────
@@ -118,14 +120,10 @@ export function useNotebooksPage() {
   // ── Listen for source count cache updates from background sync ────────────
 
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('sourceCountsCache' in changes) {
-        const cache = changes.sourceCountsCache.newValue as SourceCountsCache | undefined;
-        if (cache?.counts) setSourceCounts(cache.counts);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged<SourceCountsCache>('sourceCountsCache', (changes) => {
+      const cache = changes.sourceCountsCache?.newValue;
+      if (cache?.counts) setSourceCounts(cache.counts);
+    });
   }, []);
 
   // ── Derived state ───────────────────────────────────────────────────────────

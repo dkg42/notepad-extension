@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedSource, NotebookMeta } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { allSourcesCacheService, type AllSourcesCache } from '@/services/all-sources-cache-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
 
 type SortField = 'title' | 'type' | 'notebookTitle';
@@ -94,14 +95,10 @@ export function useAllSourcesPage() {
 
   // Listen for cache updates written by the background sync or a manual refresh.
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('allSourcesCache' in changes) {
-        const cache = changes.allSourcesCache.newValue as AllSourcesCache | undefined;
-        if (cache?.sources) setSources(cache.sources);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged<AllSourcesCache>('allSourcesCache', (changes) => {
+      const cache = changes.allSourcesCache?.newValue;
+      if (cache?.sources) setSources(cache.sources);
+    });
   }, []);
 
   // ── Derived values ─────────────────────────────────────────────────────────

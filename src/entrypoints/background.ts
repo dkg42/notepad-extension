@@ -34,6 +34,7 @@ import { driveWriteQueue } from '@/services/drive/drive-write-queue';
 import { tabGroupsSyncService } from '@/services/tab-groups-sync-service';
 import { clipboardSessionService } from '@/services/clipboard-session-service';
 import { isAuthCancellation } from '@/utils/auth-errors';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 import { isMessage, ensureSignedIn } from '@/background/shared';
 import { syncNotebooks } from '@/background/notebook-handler';
@@ -351,21 +352,11 @@ function handleAuthSessionMessage(
         // before clearing auth data so no stale writes fire after sign-out.
         await driveInitService.teardown();
 
-        return Promise.all([
-          authStorageService.clearAll(),
-          storageService.clearAllData(),
-          chatHistoryStorage.clearAllData(),
-          pipelineService.clearAllData(),
-          notebookSyncService.clear(),
-          notebookAnnotationService.clearAllData(),
-          audioCacheService.clear(),
-          podcastAudioService.clear(),
-          domainRouterService.clearAllData(),
-          sourceCountCacheService.clear(),
-          allSourcesCacheService.clear(),
-          allArtifactsCacheService.clear(),
-          tabGroupsSyncService.clearSyncSignature(),
-        ]);
+        // Storage is now per-uid via scoped-storage. Sign-out clears only the
+        // global auth keys — the user's data remains under `u:<uid>:*` and is
+        // restored on the next sign-in with the same account. A different
+        // account signs into its own empty namespace.
+        return authStorageService.clearAll();
       })
       .then(() => sendResponse({ ok: true }))
       .catch((err: unknown) =>
@@ -475,12 +466,10 @@ export default defineBackground(() => {
   });
 
   // Storage change listener for annotation-driven pipeline triggers
-  chrome.storage.local.onChanged.addListener((changes) => {
-    if ('notebookAnnotations' in changes) {
-      const newAnnotations = (changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? [];
-      const oldAnnotations = (changes.notebookAnnotations.oldValue as NotebookAnnotation[]) ?? [];
-      void runPipelineAnnotationTriggers(newAnnotations, oldAnnotations);
-    }
+  scopedStorage.onChanged<NotebookAnnotation[]>('notebookAnnotations', (changes) => {
+    const newAnnotations = changes.notebookAnnotations?.newValue ?? [];
+    const oldAnnotations = changes.notebookAnnotations?.oldValue ?? [];
+    void runPipelineAnnotationTriggers(newAnnotations, oldAnnotations);
   });
 
   // Manual sync triggered from dashboard

@@ -6,6 +6,7 @@
  */
 import type { PodcastEpisode, EpisodeTrack } from '@/types';
 import { PODCAST_EPISODES_KEY, syncToDrive, driveSyncService } from './shared';
+import { scopedStorage } from './scoped-storage';
 
 export const podcastStorage = {
   // ── Podcast Episodes ────────────────────────────────────────────────────────
@@ -15,8 +16,8 @@ export const podcastStorage = {
    * @returns Array of PodcastEpisode objects; empty array if none saved.
    */
   async getPodcastEpisodes(): Promise<PodcastEpisode[]> {
-    const result = await chrome.storage.local.get(PODCAST_EPISODES_KEY);
-    return (result[PODCAST_EPISODES_KEY] as PodcastEpisode[]) ?? [];
+    const result = await scopedStorage.get<PodcastEpisode[]>(PODCAST_EPISODES_KEY);
+    return result[PODCAST_EPISODES_KEY] ?? [];
   },
 
   /**
@@ -32,7 +33,7 @@ export const podcastStorage = {
     } else {
       episodes.push(episode);
     }
-    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
+    await scopedStorage.set({ [PODCAST_EPISODES_KEY]:episodes });
     syncToDrive((t) => driveSyncService.savePodcastEpisodes(episodes, t));
   },
 
@@ -44,7 +45,7 @@ export const podcastStorage = {
   async deletePodcastEpisode(id: string): Promise<void> {
     const episodes = await podcastStorage.getPodcastEpisodes();
     const filtered = episodes.filter((e) => e.id !== id);
-    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: filtered });
+    await scopedStorage.set({ [PODCAST_EPISODES_KEY]:filtered });
     syncToDrive((t) => driveSyncService.savePodcastEpisodes(filtered, t));
   },
 
@@ -59,7 +60,7 @@ export const podcastStorage = {
     const idx = episodes.findIndex((e) => e.id === id);
     if (idx < 0) return;
     episodes[idx] = { ...episodes[idx], tracks, updatedAt: Date.now() };
-    await chrome.storage.local.set({ [PODCAST_EPISODES_KEY]: episodes });
+    await scopedStorage.set({ [PODCAST_EPISODES_KEY]:episodes });
     syncToDrive((t) => driveSyncService.savePodcastEpisodes(episodes, t));
   },
 };

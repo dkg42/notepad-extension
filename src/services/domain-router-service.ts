@@ -7,6 +7,7 @@
 import type { DomainRouterRule } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
+import { scopedStorage } from './storage/scoped-storage';
 
 const STORAGE_KEY = 'domainRouterRules';
 
@@ -26,8 +27,8 @@ function syncToDrive(callback: (token: string) => void): void {
  */
 export const domainRouterService = {
   async getRules(): Promise<DomainRouterRule[]> {
-    const result = await chrome.storage.local.get(STORAGE_KEY);
-    return (result[STORAGE_KEY] as DomainRouterRule[]) ?? [];
+    const result = await scopedStorage.get<DomainRouterRule[]>(STORAGE_KEY);
+    return result[STORAGE_KEY] ?? [];
   },
 
   async saveRule(rule: DomainRouterRule): Promise<void> {
@@ -38,14 +39,14 @@ export const domainRouterService = {
     } else {
       existing.push(rule);
     }
-    await chrome.storage.local.set({ [STORAGE_KEY]: existing });
+    await scopedStorage.set({ [STORAGE_KEY]:existing });
     syncToDrive((t) => driveSyncService.saveDomainRouterRules(existing, t));
   },
 
   async deleteRule(ruleId: string): Promise<void> {
     const existing = await this.getRules();
     const updated = existing.filter((r) => r.id !== ruleId);
-    await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    await scopedStorage.set({ [STORAGE_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveDomainRouterRules(updated, t));
   },
 
@@ -54,12 +55,12 @@ export const domainRouterService = {
     const updated = existing.map((r) =>
       r.id === ruleId ? { ...r, enabled: !r.enabled } : r,
     );
-    await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    await scopedStorage.set({ [STORAGE_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveDomainRouterRules(updated, t));
   },
 
   async clearAllData(): Promise<void> {
-    await chrome.storage.local.remove(STORAGE_KEY);
+    await scopedStorage.remove(STORAGE_KEY);
   },
 };
 

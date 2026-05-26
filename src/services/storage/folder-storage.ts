@@ -8,6 +8,7 @@ import type { Folder } from '@/types';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import { FOLDERS_KEY, SNIPPETS_KEY, syncToDrive, driveSyncService } from './shared';
 import { snippetStorage } from './snippet-storage';
+import { scopedStorage } from './scoped-storage';
 
 export const folderStorage = {
   // ── Folders ───────────────────────────────────────────────────────────────
@@ -17,8 +18,8 @@ export const folderStorage = {
    * @returns Array of Folder objects; empty array if none saved.
    */
   async getFolders(): Promise<Folder[]> {
-    const result = await chrome.storage.local.get(FOLDERS_KEY);
-    return (result[FOLDERS_KEY] as Folder[]) ?? [];
+    const result = await scopedStorage.get<Folder[]>(FOLDERS_KEY);
+    return result[FOLDERS_KEY] ?? [];
   },
 
   /**
@@ -43,7 +44,7 @@ export const folderStorage = {
       sortOrder: siblings.length,
     };
     const updated = [...existing, folder];
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
     return folder;
   },
@@ -62,7 +63,7 @@ export const folderStorage = {
       throw new Error(`A folder named "${trimmed}" already exists here.`);
     }
     const updated = existing.map((f) => (f.id === id ? { ...f, name: trimmed } : f));
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
   },
 
@@ -78,7 +79,7 @@ export const folderStorage = {
     const updatedSnippets = snippets.filter((s) => !s.folderId || !subtreeIds.has(s.folderId));
     // Delete all folders in the subtree
     const updatedFolders = folders.filter((f) => !subtreeIds.has(f.id));
-    await chrome.storage.local.set({
+    await scopedStorage.set({
       [FOLDERS_KEY]: updatedFolders,
       [SNIPPETS_KEY]: updatedSnippets,
     });
@@ -103,7 +104,7 @@ export const folderStorage = {
       }
     }
     const updated = existing.map((f) => (f.id === id ? { ...f, parentId: newParentId } : f));
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
   },
 
@@ -116,7 +117,7 @@ export const folderStorage = {
   async updateFolderColor(id: string, color: string | undefined): Promise<void> {
     const existing = await folderStorage.getFolders();
     const updated = existing.map((f) => (f.id === id ? { ...f, color } : f));
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
   },
 
@@ -129,7 +130,7 @@ export const folderStorage = {
   async updateFolderOrder(id: string, sortOrder: number): Promise<void> {
     const existing = await folderStorage.getFolders();
     const updated = existing.map((f) => (f.id === id ? { ...f, sortOrder } : f));
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
   },
 
@@ -146,7 +147,7 @@ export const folderStorage = {
     const updated = existing.map((f) =>
       orderMap.has(f.id) ? { ...f, sortOrder: orderMap.get(f.id)! } : f,
     );
-    await chrome.storage.local.set({ [FOLDERS_KEY]: updated });
+    await scopedStorage.set({ [FOLDERS_KEY]: updated });
     syncToDrive((t) => driveSyncService.saveFolders(updated, t));
   },
 };

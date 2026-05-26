@@ -54,6 +54,7 @@ import { cancelAll as cancelQueue, setInitializing } from './drive-write-queue';
 import { readFile } from './drive-io-service';
 import type { DriveFilename, DrivePromptMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { notebookFolderService } from '@/services/notebook-folder-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
@@ -411,7 +412,7 @@ async function applyMergedData(
           usageCount: driveMeta.usageCount,
         };
       });
-      await chrome.storage.local.set({ snippets: updatedLocalSnippets });
+      await scopedStorage.set({ snippets: updatedLocalSnippets });
 
       // Build merged prompts-meta for Drive: Drive entries + local-only entries (text included)
       const driveIds = new Set(driveMetas.map((m) => m.id));
@@ -435,9 +436,9 @@ async function applyMergedData(
       const mergedTags = [...driveTags, ...localTags.filter((t) => !driveTagNames.has(t.name))];
 
       const domainRouterRules = (driveFile.domainRouterRules as unknown[]) ?? [];
-      await chrome.storage.local.set({ folders: mergedFolders, tagsMeta: mergedTags, domainRouterRules });
+      await scopedStorage.set({ folders: mergedFolders, tagsMeta: mergedTags, domainRouterRules });
       if (driveFile.settings) {
-        await chrome.storage.local.set({ dashboardSettings: driveFile.settings });
+        await scopedStorage.set({ dashboardSettings: driveFile.settings });
       }
       driveSyncService.saveFolders(mergedFolders, token);
       driveSyncService.saveTags(mergedTags, token);
@@ -514,7 +515,7 @@ async function applyDriveData(
         // First login on empty device — reconstruct Snippet[] directly from Drive data.
         const snippets: Snippet[] = driveMetas.filter((m) => m.text.length > 0);
         if (snippets.length > 0) {
-          await chrome.storage.local.set({ snippets });
+          await scopedStorage.set({ snippets });
         }
         break;
       }
@@ -533,16 +534,16 @@ async function applyDriveData(
           usageCount: driveMeta.usageCount,
         };
       });
-      await chrome.storage.local.set({ snippets: updated });
+      await scopedStorage.set({ snippets: updated });
       break;
     }
     case 'app-settings.json': {
       const folders = (driveFile.folders as unknown[]) ?? [];
       const tagsMeta = (driveFile.tags as unknown[]) ?? [];
       const domainRouterRules = (driveFile.domainRouterRules as unknown[]) ?? [];
-      await chrome.storage.local.set({ folders, tagsMeta, domainRouterRules });
+      await scopedStorage.set({ folders, tagsMeta, domainRouterRules });
       if (driveFile.settings) {
-        await chrome.storage.local.set({ dashboardSettings: driveFile.settings });
+        await scopedStorage.set({ dashboardSettings: driveFile.settings });
       }
       break;
     }
@@ -550,13 +551,13 @@ async function applyDriveData(
       const exportHistory = (driveFile.exportHistory as unknown[]) ?? [];
       const pipelineRuns = (driveFile.pipelineRuns as unknown[]) ?? [];
       const podcastEpisodes = (driveFile.podcastEpisodes as unknown[]) ?? [];
-      await chrome.storage.local.set({ exportHistory, pipelineRuns, podcastEpisodes });
+      await scopedStorage.set({ exportHistory, pipelineRuns, podcastEpisodes });
       break;
     }
     case 'notebook-data.json': {
       const annotations = (driveFile.annotations as unknown[]) ?? [];
       const notebookFolders = (driveFile.folders as unknown[]) ?? [];
-      await chrome.storage.local.set({ notebookAnnotations: annotations, notebookFolders });
+      await scopedStorage.set({ notebookAnnotations: annotations, notebookFolders });
 
       // v1 files have no `notebooks` field — default to [] (tolerant read).
       // Seed placeholder NotebookMeta for refs not already present locally so
@@ -585,13 +586,13 @@ async function applyDriveData(
     }
     case 'pipelines.json': {
       const pipelines = (driveFile.pipelines as unknown[]) ?? [];
-      await chrome.storage.local.set({ pipelines });
+      await scopedStorage.set({ pipelines });
       break;
     }
     case 'chat-conversations-meta.json': {
       // `syncMeta` was removed in schema v2 — ignored if present in a v1 file.
       const chatConversations = (driveFile.conversations as unknown[]) ?? [];
-      await chrome.storage.local.set({ chatConversations });
+      await scopedStorage.set({ chatConversations });
       break;
     }
     case 'tab-groups.json': {
@@ -606,7 +607,7 @@ async function applyDriveData(
         tabIds: [],
         updatedAt: envelopeUpdatedAt || g.createdAt,
       }));
-      await chrome.storage.local.set({ tabGroups });
+      await scopedStorage.set({ tabGroups });
       break;
     }
     default:

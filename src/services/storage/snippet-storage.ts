@@ -6,6 +6,7 @@
  */
 import type { Snippet } from '@/types';
 import { SNIPPETS_KEY, syncToDrive, driveSyncService } from './shared';
+import { scopedStorage } from './scoped-storage';
 
 export const snippetStorage = {
   // ── Snippets ──────────────────────────────────────────────────────────────
@@ -15,8 +16,8 @@ export const snippetStorage = {
    * @returns Array of Snippet objects; empty array if none saved.
    */
   async getAll(): Promise<Snippet[]> {
-    const result = await chrome.storage.local.get(SNIPPETS_KEY);
-    return (result[SNIPPETS_KEY] as Snippet[]) ?? [];
+    const result = await scopedStorage.get<Snippet[]>(SNIPPETS_KEY);
+    return result[SNIPPETS_KEY] ?? [];
   },
 
   /**
@@ -36,7 +37,7 @@ export const snippetStorage = {
       folderId,
     };
     const existing = await snippetStorage.getAll();
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: [snippet, ...existing] });
+    await scopedStorage.set({ [SNIPPETS_KEY]:[snippet, ...existing] });
     syncToDrive((t) => driveSyncService.saveSnippet(snippet, t));
     return snippet;
   },
@@ -68,7 +69,7 @@ export const snippetStorage = {
       tags: opts.tags,
     };
     const existing = await snippetStorage.getAll();
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: [snippet, ...existing] });
+    await scopedStorage.set({ [SNIPPETS_KEY]:[snippet, ...existing] });
     syncToDrive((t) => driveSyncService.saveSnippet(snippet, t));
     return snippet;
   },
@@ -91,7 +92,7 @@ export const snippetStorage = {
       folderId,
     }));
     const existing = await snippetStorage.getAll();
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: [...newSnippets, ...existing] });
+    await scopedStorage.set({ [SNIPPETS_KEY]:[...newSnippets, ...existing] });
     syncToDrive((t) => driveSyncService.saveAllSnippets([...newSnippets, ...existing], t));
     return newSnippets;
   },
@@ -103,7 +104,7 @@ export const snippetStorage = {
    */
   async remove(id: string): Promise<void> {
     const existing = await snippetStorage.getAll();
-    await chrome.storage.local.set({
+    await scopedStorage.set({
       [SNIPPETS_KEY]: existing.filter((s) => s.id !== id),
     });
     syncToDrive((t) => driveSyncService.deleteSnippet(id, t));
@@ -114,7 +115,7 @@ export const snippetStorage = {
    * @sideEffect Drive sync
    */
   async clear(): Promise<void> {
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: [] });
+    await scopedStorage.set({ [SNIPPETS_KEY]:[] });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta([], t));
   },
 
@@ -127,7 +128,7 @@ export const snippetStorage = {
   async moveToFolder(snippetId: string, folderId: string | undefined): Promise<void> {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, folderId } : s);
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -140,7 +141,7 @@ export const snippetStorage = {
   async updateTags(snippetId: string, tags: string[]): Promise<void> {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === snippetId ? { ...s, tags } : s);
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -152,7 +153,7 @@ export const snippetStorage = {
   async toggleFavorite(id: string): Promise<void> {
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => s.id === id ? { ...s, isFavorite: !s.isFavorite } : s);
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -167,7 +168,7 @@ export const snippetStorage = {
     const idSet = new Set(ids);
     const existing = await snippetStorage.getAll();
     const updated = existing.filter((s) => !idSet.has(s.id));
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -181,7 +182,7 @@ export const snippetStorage = {
     const idSet = new Set(ids);
     const existing = await snippetStorage.getAll();
     const updated = existing.map((s) => idSet.has(s.id) ? { ...s, folderId } : s);
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -199,7 +200,7 @@ export const snippetStorage = {
       const merged = Array.from(new Set([...(s.tags ?? []), ...tags]));
       return { ...s, tags: merged };
     });
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 
@@ -212,7 +213,7 @@ export const snippetStorage = {
   async updateSnippet(id: string, updates: { title?: string; text?: string }): Promise<void> {
     const all = await snippetStorage.getAll();
     const updated = all.map((s) => s.id === id ? { ...s, ...updates } : s);
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveAllSnippets(updated, t));
   },
 
@@ -230,7 +231,7 @@ export const snippetStorage = {
       if (!idSet.has(s.id)) return s;
       return { ...s, tags: (s.tags ?? []).filter((t) => !removeSet.has(t)) };
     });
-    await chrome.storage.local.set({ [SNIPPETS_KEY]: updated });
+    await scopedStorage.set({ [SNIPPETS_KEY]:updated });
     syncToDrive((t) => driveSyncService.saveSnippetsMeta(updated, t));
   },
 };

@@ -8,6 +8,8 @@
  * @public sourceCountCacheService, SourceCountsCache
  */
 
+import { scopedStorage } from './storage/scoped-storage';
+
 const SOURCE_COUNTS_KEY = 'sourceCountsCache';
 /** Matches the background notebook sync interval so cache stays coherent with notebook list. */
 const TTL_MS = 30 * 60 * 1000;
@@ -19,18 +21,18 @@ export interface SourceCountsCache {
 
 export const sourceCountCacheService = {
   async get(): Promise<{ counts: Record<string, number>; isStale: boolean } | null> {
-    const result = await chrome.storage.local.get(SOURCE_COUNTS_KEY);
-    const cache = result[SOURCE_COUNTS_KEY] as SourceCountsCache | undefined;
+    const result = await scopedStorage.get<SourceCountsCache>(SOURCE_COUNTS_KEY);
+    const cache = result[SOURCE_COUNTS_KEY];
     if (!cache) return null;
     return { counts: cache.counts, isStale: Date.now() - cache.cachedAt > TTL_MS };
   },
 
   async set(counts: Record<string, number>): Promise<void> {
     const cache: SourceCountsCache = { counts, cachedAt: Date.now() };
-    await chrome.storage.local.set({ [SOURCE_COUNTS_KEY]: cache });
+    await scopedStorage.set({ [SOURCE_COUNTS_KEY]: cache });
   },
 
   async clear(): Promise<void> {
-    await chrome.storage.local.remove(SOURCE_COUNTS_KEY);
+    await scopedStorage.remove(SOURCE_COUNTS_KEY);
   },
 };

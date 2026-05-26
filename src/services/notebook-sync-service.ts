@@ -6,6 +6,7 @@
  */
 import type { NotebookMeta } from '@/types';
 import type { DriveNotebookRef } from './drive/types/drive-schemas';
+import { scopedStorage } from './storage/scoped-storage';
 
 const NOTEBOOKS_KEY = 'notebooksMeta';
 const SYNC_META_KEY = 'notebooksSyncMeta';
@@ -23,7 +24,7 @@ export interface SyncMeta {
  */
 export const notebookSyncService = {
   async getAll(): Promise<NotebookMeta[]> {
-    const result = await chrome.storage.local.get(NOTEBOOKS_KEY);
+    const result = await scopedStorage.get<NotebookMeta[]>(NOTEBOOKS_KEY);
     const notebooks: NotebookMeta[] = result[NOTEBOOKS_KEY] ?? [];
     return notebooks.sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
   },
@@ -48,25 +49,25 @@ export const notebookSyncService = {
 
     const sorted = Array.from(map.values()).sort((a, b) => b.lastSyncedAt - a.lastSyncedAt);
 
-    await chrome.storage.local.set({ [NOTEBOOKS_KEY]: sorted });
+    await scopedStorage.set({ [NOTEBOOKS_KEY]: sorted });
   },
 
   async remove(id: string): Promise<void> {
     const notebooks = await this.getAll();
     const filtered = notebooks.filter((n) => n.id !== id);
-    await chrome.storage.local.set({ [NOTEBOOKS_KEY]: filtered });
+    await scopedStorage.set({ [NOTEBOOKS_KEY]: filtered });
   },
 
   async clear(): Promise<void> {
-    await chrome.storage.local.remove([NOTEBOOKS_KEY, SYNC_META_KEY]);
+    await scopedStorage.remove([NOTEBOOKS_KEY, SYNC_META_KEY]);
   },
 
   async getSyncMeta(): Promise<SyncMeta | null> {
-    const result = await chrome.storage.local.get(SYNC_META_KEY);
-    return (result[SYNC_META_KEY] as SyncMeta) ?? null;
+    const result = await scopedStorage.get<SyncMeta>(SYNC_META_KEY);
+    return result[SYNC_META_KEY] ?? null;
   },
 
   async setSyncMeta(meta: SyncMeta): Promise<void> {
-    await chrome.storage.local.set({ [SYNC_META_KEY]: meta });
+    await scopedStorage.set({ [SYNC_META_KEY]: meta });
   },
 };

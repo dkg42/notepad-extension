@@ -6,6 +6,7 @@
  */
 import type { ExportRecord } from '@/types/dashboard';
 import { EXPORT_HISTORY_KEY, syncToDrive, driveSyncService } from './shared';
+import { scopedStorage } from './scoped-storage';
 
 export const exportHistoryStorage = {
   // ── Export History ─────────────────────────────────────────────────────────
@@ -15,8 +16,8 @@ export const exportHistoryStorage = {
    * @returns Array of ExportRecord objects; empty array if none saved.
    */
   async getExportHistory(): Promise<ExportRecord[]> {
-    const result = await chrome.storage.local.get(EXPORT_HISTORY_KEY);
-    return (result[EXPORT_HISTORY_KEY] as ExportRecord[]) ?? [];
+    const result = await scopedStorage.get<ExportRecord[]>(EXPORT_HISTORY_KEY);
+    return result[EXPORT_HISTORY_KEY] ?? [];
   },
 
   /**
@@ -28,7 +29,7 @@ export const exportHistoryStorage = {
     const existing = await exportHistoryStorage.getExportHistory();
     const newRecord: ExportRecord = { id: crypto.randomUUID(), ...record };
     // Keep at most 200 records (most recent first)
-    await chrome.storage.local.set({
+    await scopedStorage.set({
       [EXPORT_HISTORY_KEY]: [newRecord, ...existing].slice(0, 200),
     });
     syncToDrive((t) => driveSyncService.appendExportRecord(newRecord, t));
@@ -38,6 +39,6 @@ export const exportHistoryStorage = {
    * Empties the export history list in local storage. No Drive sync is triggered.
    */
   async clearExportHistory(): Promise<void> {
-    await chrome.storage.local.set({ [EXPORT_HISTORY_KEY]: [] });
+    await scopedStorage.set({ [EXPORT_HISTORY_KEY]: [] });
   },
 };

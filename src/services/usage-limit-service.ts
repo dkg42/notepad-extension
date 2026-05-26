@@ -7,6 +7,8 @@
  * @public usageLimitService, FREE_CAPS, CappedFeature
  */
 
+import { scopedStorage } from './storage/scoped-storage';
+
 export type CappedFeature = 'prompt_hub' | 'chat_history' | 'pipeline';
 
 export const FREE_CAPS: Record<CappedFeature, number> = {
@@ -26,8 +28,8 @@ export const usageLimitService = {
   /** Current number of stored entities for a capped feature. */
   async getCount(feature: CappedFeature): Promise<number> {
     const key = STORAGE_KEYS[feature];
-    const result = await chrome.storage.local.get(key);
-    const items = result[key] as unknown[] | undefined;
+    const result = await scopedStorage.get<unknown[]>(key);
+    const items = result[key];
     return Array.isArray(items) ? items.length : 0;
   },
 

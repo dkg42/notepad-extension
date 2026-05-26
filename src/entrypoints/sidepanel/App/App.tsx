@@ -19,6 +19,7 @@ import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 import { storageService } from '@/services/storage-service';
 import { useApp } from './useApp';
 import './App.css';
@@ -79,19 +80,10 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
       setDark(settings.theme === 'dark');
     });
 
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName === 'local' && changes['dashboardSettings']?.newValue) {
-        setDark(
-          (changes['dashboardSettings'].newValue as { theme?: string }).theme === 'dark',
-        );
-      }
-    };
-
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
+    return scopedStorage.onChanged<{ theme?: string }>('dashboardSettings', (changes) => {
+      const next = changes.dashboardSettings?.newValue;
+      if (next) setDark(next.theme === 'dark');
+    });
   }, []);
 
   const toggleDark = () => {

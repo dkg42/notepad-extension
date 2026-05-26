@@ -10,6 +10,7 @@ import { storageService } from '@/services/storage-service';
 import { usageLimitService } from '@/services/usage-limit-service';
 import { filterSnippets } from '@/utils/filter-snippets';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 export function useApp(isPro: boolean) {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -26,17 +27,9 @@ export function useApp(isPro: boolean) {
       },
     );
 
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName === 'local' && 'snippets' in changes) {
-        setSnippets(changes['snippets'].newValue ?? []);
-      }
-    };
-
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
+    return scopedStorage.onChanged<Snippet[]>('snippets', (changes) => {
+      setSnippets(changes.snippets?.newValue ?? []);
+    });
   }, []);
 
   const hasUncategorized = useMemo(() => snippets.some((s) => !s.folderId), [snippets]);

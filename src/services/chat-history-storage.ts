@@ -11,6 +11,7 @@
 import type { ChatPlatform, ConversationFull, ConversationMeta } from '@/types';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
+import { scopedStorage } from './storage/scoped-storage';
 
 const CONVERSATIONS_KEY = 'chatConversations';
 
@@ -32,7 +33,7 @@ function contentKey(platform: ChatPlatform, id: string): string {
 export const chatHistoryStorage = {
   /** Returns all saved conversations, optionally filtered by platform, sorted newest first. */
   async getConversations(platform?: ChatPlatform): Promise<ConversationMeta[]> {
-    const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
+    const result = await scopedStorage.get<ConversationMeta[]>(CONVERSATIONS_KEY);
     const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
     if (!platform) return all.sort((a, b) => b.updatedAt - a.updatedAt);
     return all.filter((c) => c.platform === platform).sort((a, b) => b.updatedAt - a.updatedAt);
@@ -44,7 +45,7 @@ export const chatHistoryStorage = {
    * Keyed by `platform + id` composite to avoid cross-platform collisions.
    */
   async upsertConversations(incoming: ConversationMeta[]): Promise<void> {
-    const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
+    const result = await scopedStorage.get<ConversationMeta[]>(CONVERSATIONS_KEY);
     const existing: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
 
     const map = new Map(existing.map((c) => [`${c.platform}:${c.id}`, c]));
@@ -53,7 +54,7 @@ export const chatHistoryStorage = {
     }
 
     const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-    await chrome.storage.local.set({ [CONVERSATIONS_KEY]: merged });
+    await scopedStorage.set({ [CONVERSATIONS_KEY]: merged });
     syncToDrive((t) => {
       driveSyncService.saveChatConversationsMeta(merged, t);
     });
@@ -62,23 +63,23 @@ export const chatHistoryStorage = {
   /** Returns the full content for a single conversation, or null if not cached. */
   async getConversationContent(platform: ChatPlatform, id: string): Promise<ConversationFull | null> {
     const key = contentKey(platform, id);
-    const result = await chrome.storage.local.get(key);
-    return (result[key] as ConversationFull) ?? null;
+    const result = await scopedStorage.get<ConversationFull>(key);
+    return result[key] ?? null;
   },
 
   /** Stores full conversation content and updates the message count in the metadata index. */
   async saveConversationContent(full: ConversationFull): Promise<void> {
     const key = contentKey(full.meta.platform, full.meta.id);
-    await chrome.storage.local.set({ [key]: full });
+    await scopedStorage.set({ [key]: full });
 
-    const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
+    const result = await scopedStorage.get<ConversationMeta[]>(CONVERSATIONS_KEY);
     const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
     const updated = all.map((c) =>
       c.platform === full.meta.platform && c.id === full.meta.id
         ? { ...c, messageCount: full.messages.length }
         : c,
     );
-    await chrome.storage.local.set({ [CONVERSATIONS_KEY]: updated });
+    await scopedStorage.set({ [CONVERSATIONS_KEY]: updated });
     syncToDrive((t) => {
       void driveSyncService.saveChatConversationContent(full, t);
       driveSyncService.saveChatConversationsMeta(updated, t);
@@ -87,19 +88,18 @@ export const chatHistoryStorage = {
 
   /** Removes a single conversation's metadata and content from storage. */
   async deleteConversation(platform: ChatPlatform, id: string): Promise<void> {
-    const result = await chrome.storage.local.get(CONVERSATIONS_KEY);
+    const result = await scopedStorage.get<ConversationMeta[]>(CONVERSATIONS_KEY);
     const all: ConversationMeta[] = result[CONVERSATIONS_KEY] ?? [];
     const filtered = all.filter((c) => !(c.platform === platform && c.id === id));
-    await chrome.storage.local.set({ [CONVERSATIONS_KEY]: filtered });
-    await chrome.storage.local.remove(contentKey(platform, id));
+    await scopedStorage.set({ [CONVERSATIONS_KEY]: filtered });
+    await scopedStorage.remove(contentKey(platform, id));
     syncToDrive((t) => {
       driveSyncService.saveChatConversationsMeta(filtered, t);
     });
   },
 
   async clearAllData(): Promise<void> {
-    const allData = await chrome.storage.local.get(null);
-    const dynamicKeys = Object.keys(allData).filter((k) => k.startsWith('chatContent_'));
-    await chrome.storage.local.remove([CONVERSATIONS_KEY, ...dynamicKeys]);
+    const dynamicKeys = await scopedStorage.listLogicalKeys('chatContent_');
+    await scopedStorage.remove([CONVERSATIONS_KEY, ...dynamicKeys]);
   },
 };

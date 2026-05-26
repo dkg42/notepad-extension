@@ -16,6 +16,7 @@ import { usageLimitService } from '@/services/usage-limit-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
 import { useGlobalAudio } from '@/hooks/useGlobalAudio';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',
@@ -90,19 +91,20 @@ export function useDashboardApp(isPro: boolean) {
 
   // Update notebooks count and annotations when local storage changes
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('notebooksMeta' in changes) {
-        const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
-        setNotebooks(updated);
-        setNotebooksCount(updated.length);
-      }
-      if ('notebookAnnotations' in changes) {
-        const updated = (changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? [];
-        setNotebookAnnotations(updated);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged(
+      ['notebooksMeta', 'notebookAnnotations'],
+      (changes) => {
+        if ('notebooksMeta' in changes) {
+          const updated = (changes.notebooksMeta.newValue as NotebookMeta[]) ?? [];
+          setNotebooks(updated);
+          setNotebooksCount(updated.length);
+        }
+        if ('notebookAnnotations' in changes) {
+          const updated = (changes.notebookAnnotations.newValue as NotebookAnnotation[]) ?? [];
+          setNotebookAnnotations(updated);
+        }
+      },
+    );
   }, []);
 
   // Load initial chat history count
@@ -119,44 +121,45 @@ export function useDashboardApp(isPro: boolean) {
 
   // React to local storage changes — covers both user edits and Drive sync writes.
   useEffect(() => {
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('snippets' in changes) {
-        setSnippets((changes.snippets.newValue as Snippet[]) ?? []);
-      }
-      if ('folders' in changes) {
-        setFolders((changes.folders.newValue as Folder[]) ?? []);
-      }
-      if ('tagsMeta' in changes) {
-        setTagsMeta((changes.tagsMeta.newValue as TagMeta[]) ?? []);
-      }
-      if ('dashboardSettings' in changes && changes.dashboardSettings.newValue) {
-        setSettings(changes.dashboardSettings.newValue as DashboardSettings);
-      }
-      if ('chatConversations' in changes) {
-        const updated = (changes.chatConversations.newValue as ConversationMeta[]) ?? [];
-        setConversations(updated);
-        setChatHistoryCount(updated.length);
-      }
-      if ('podcastEpisodes' in changes) {
-        const updated = (changes.podcastEpisodes.newValue as PodcastEpisode[]) ?? [];
-        setPodcastEpisodes(updated);
-        setPodcastsCount(updated.length);
-      }
-      if ('pipelines' in changes) {
-        const updated = (changes.pipelines.newValue as Pipeline[]) ?? [];
-        setPipelines(updated);
-        setPipelinesCount(updated.filter((p) => p.enabled).length);
-      }
-    };
-    chrome.storage.local.onChanged.addListener(listener);
-    return () => chrome.storage.local.onChanged.removeListener(listener);
+    return scopedStorage.onChanged(
+      ['snippets', 'folders', 'tagsMeta', 'dashboardSettings', 'chatConversations', 'podcastEpisodes', 'pipelines'],
+      (changes) => {
+        if ('snippets' in changes) {
+          setSnippets((changes.snippets.newValue as Snippet[]) ?? []);
+        }
+        if ('folders' in changes) {
+          setFolders((changes.folders.newValue as Folder[]) ?? []);
+        }
+        if ('tagsMeta' in changes) {
+          setTagsMeta((changes.tagsMeta.newValue as TagMeta[]) ?? []);
+        }
+        if ('dashboardSettings' in changes && changes.dashboardSettings.newValue) {
+          setSettings(changes.dashboardSettings.newValue as DashboardSettings);
+        }
+        if ('chatConversations' in changes) {
+          const updated = (changes.chatConversations.newValue as ConversationMeta[]) ?? [];
+          setConversations(updated);
+          setChatHistoryCount(updated.length);
+        }
+        if ('podcastEpisodes' in changes) {
+          const updated = (changes.podcastEpisodes.newValue as PodcastEpisode[]) ?? [];
+          setPodcastEpisodes(updated);
+          setPodcastsCount(updated.length);
+        }
+        if ('pipelines' in changes) {
+          const updated = (changes.pipelines.newValue as Pipeline[]) ?? [];
+          setPipelines(updated);
+          setPipelinesCount(updated.filter((p) => p.enabled).length);
+        }
+      },
+    );
   }, []);
 
   // Load initial pipelines count
   useEffect(() => {
-    chrome.storage.local.get('pipelines')
+    void scopedStorage.get<Pipeline[]>('pipelines')
       .then((result) => {
-        const loaded = (result.pipelines as Pipeline[]) ?? [];
+        const loaded = result.pipelines ?? [];
         setPipelines(loaded);
         setPipelinesCount(loaded.filter((p) => p.enabled).length);
       })

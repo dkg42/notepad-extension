@@ -7,6 +7,8 @@
  * @public dailyLimitService, DAILY_LIMITS, DailyFeature
  */
 
+import { scopedStorage } from './storage/scoped-storage';
+
 export type DailyFeature = 'notebook_add';
 
 export const DAILY_LIMITS: Record<DailyFeature, number> = {
@@ -24,8 +26,8 @@ function todayKey(): string {
 }
 
 async function readStore(): Promise<DailyUsageStore> {
-  const result = await chrome.storage.local.get(DAILY_STORAGE_KEY);
-  return (result[DAILY_STORAGE_KEY] as DailyUsageStore | undefined) ?? {};
+  const result = await scopedStorage.get<DailyUsageStore>(DAILY_STORAGE_KEY);
+  return result[DAILY_STORAGE_KEY] ?? {};
 }
 
 async function writeStore(store: DailyUsageStore): Promise<void> {
@@ -35,7 +37,7 @@ async function writeStore(store: DailyUsageStore): Promise<void> {
   for (const date of Object.keys(store)) {
     if (date < cutoffKey) delete store[date];
   }
-  await chrome.storage.local.set({ [DAILY_STORAGE_KEY]: store });
+  await scopedStorage.set({ [DAILY_STORAGE_KEY]: store });
 }
 
 export const dailyLimitService = {

@@ -9,6 +9,7 @@ import { notebookFolderService } from './notebook-folder-service';
 import { notebookSyncService } from './notebook-sync-service';
 import { driveSyncService } from './drive/drive-sync-service';
 import { getValidToken } from './token-lifecycle-service';
+import { scopedStorage } from './storage/scoped-storage';
 
 const ANNOTATIONS_KEY = 'notebookAnnotations';
 
@@ -24,8 +25,8 @@ function syncToDrive(callback: (token: string) => void | Promise<void>): void {
 
 export const notebookAnnotationService = {
   async getAllAnnotations(): Promise<NotebookAnnotation[]> {
-    const result = await chrome.storage.local.get(ANNOTATIONS_KEY);
-    return (result[ANNOTATIONS_KEY] as NotebookAnnotation[]) ?? [];
+    const result = await scopedStorage.get<NotebookAnnotation[]>(ANNOTATIONS_KEY);
+    return result[ANNOTATIONS_KEY] ?? [];
   },
 
   async setAnnotation(annotation: NotebookAnnotation): Promise<void> {
@@ -36,7 +37,7 @@ export const notebookAnnotationService = {
     } else {
       all.push(annotation);
     }
-    await chrome.storage.local.set({ [ANNOTATIONS_KEY]: all });
+    await scopedStorage.set({ [ANNOTATIONS_KEY]:all });
     syncToDrive(async (t) => {
       const [folders, notebooks] = await Promise.all([
         notebookFolderService.getFolders(),
@@ -49,7 +50,7 @@ export const notebookAnnotationService = {
   async removeAnnotation(notebookId: string): Promise<void> {
     const all = await this.getAllAnnotations();
     const filtered = all.filter((a) => a.notebookId !== notebookId);
-    await chrome.storage.local.set({ [ANNOTATIONS_KEY]: filtered });
+    await scopedStorage.set({ [ANNOTATIONS_KEY]:filtered });
     syncToDrive(async (t) => {
       const [folders, notebooks] = await Promise.all([
         notebookFolderService.getFolders(),
@@ -60,6 +61,6 @@ export const notebookAnnotationService = {
   },
 
   async clearAllData(): Promise<void> {
-    await chrome.storage.local.remove([ANNOTATIONS_KEY]);
+    await scopedStorage.remove([ANNOTATIONS_KEY]);
   },
 };

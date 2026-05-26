@@ -15,6 +15,7 @@ import {
   type DailyFeature,
 } from '@/services/daily-limit-service';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 interface DailyLimitState {
   /** Whether the user may use the feature again today. */
@@ -47,12 +48,9 @@ export function useDailyLimit(feature: DailyFeature): DailyLimitState {
 
   useEffect(() => {
     void refresh();
-
-    const handler = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if (DAILY_STORAGE_KEY in changes) void refresh();
-    };
-    chrome.storage.local.onChanged.addListener(handler);
-    return () => chrome.storage.local.onChanged.removeListener(handler);
+    return scopedStorage.onChanged(DAILY_STORAGE_KEY, () => {
+      void refresh();
+    });
   }, [refresh]);
 
   return { canUse, remaining, count };

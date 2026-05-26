@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ChatPlatform, ConversationMeta } from '@/types';
 import { CHAT_PLATFORM_KEYS } from '@/types';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 type SortField = 'updatedAt' | 'createdAt' | 'title';
 type SortDir = 'asc' | 'desc';
@@ -64,11 +65,9 @@ export function useChatHistoryPage(
   }, [fetchData]);
 
   useEffect(() => {
-    const handler = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('chatConversations' in changes) void fetchData();
-    };
-    chrome.storage.local.onChanged.addListener(handler);
-    return () => chrome.storage.local.onChanged.removeListener(handler);
+    return scopedStorage.onChanged('chatConversations', () => {
+      void fetchData();
+    });
   }, [fetchData]);
 
   const handleSort = useCallback((field: SortField) => {

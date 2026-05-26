@@ -9,6 +9,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ChatPlatform, ConversationFull, ConversationMeta } from '@/types';
 import { CHAT_PLATFORM_KEYS } from '@/types';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 type PlatformFilter = 'all' | ChatPlatform;
 
@@ -84,11 +85,9 @@ export function useChatHistoryView() {
 
   // Listen for storage changes so the list updates after a save
   useEffect(() => {
-    const handler = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('chatConversations' in changes) void loadConversations();
-    };
-    chrome.storage.local.onChanged.addListener(handler);
-    return () => chrome.storage.local.onChanged.removeListener(handler);
+    return scopedStorage.onChanged('chatConversations', () => {
+      void loadConversations();
+    });
   }, [loadConversations]);
 
   const handleDelete = useCallback(async (platform: ChatPlatform, id: string) => {
