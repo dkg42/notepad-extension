@@ -11,6 +11,7 @@ import { Lock } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import type { SubscriptionContextValue } from '@/contexts/SubscriptionContext';
 import type { SubscriptionPlan } from '@/types';
+import { openDashboard } from '@/utils/open-dashboard';
 import './SubscriptionGuard.css';
 
 interface SubscriptionGuardProps {
@@ -74,7 +75,7 @@ export default function SubscriptionGuard({
           <p className="sub-guard__message">This feature requires a {label} subscription.</p>
           <button
             className="sub-guard__cta"
-            onClick={() => chrome.runtime.openOptionsPage()}
+            onClick={() => { void openDashboard(); }}
           >
             {cta}
           </button>

@@ -8,6 +8,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { CaptureRecord, ScreenshotStore } from '@/types';
+import { openDashboard } from '@/utils/open-dashboard';
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
@@ -62,7 +63,7 @@ export function useScreenshotView() {
     await chrome.storage.local.set({
       pendingDashboardNav: { view: 'screenshot-editor', captureId },
     });
-    chrome.runtime.openOptionsPage();
+    await openDashboard();
   }, []);
 
   return {

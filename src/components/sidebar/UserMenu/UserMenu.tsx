@@ -7,6 +7,7 @@
 import React from 'react';
 import { User, LogOut } from 'lucide-react';
 import type { StoredAuthProfile, AuthClaims } from '@/types';
+import { openDashboard } from '@/utils/open-dashboard';
 import './UserMenu.css';
 
 function getInitials(name: string | null): string {
@@ -71,7 +72,7 @@ export default function UserMenu({ user, claims, onClose, onSignOut }: UserMenuP
               await chrome.storage.local.set({
                 pendingDashboardNav: { view: 'settings' },
               });
-              chrome.runtime.openOptionsPage();
+              await openDashboard();
               onClose();
             }}
           >

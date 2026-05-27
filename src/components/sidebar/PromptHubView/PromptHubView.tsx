@@ -30,6 +30,7 @@ import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { aiService } from '@/services/ai-service';
 import { snippetStorage } from '@/services/storage/snippet-storage';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
+import { openDashboard } from '@/utils/open-dashboard';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -941,7 +942,7 @@ export default function PromptHubView({
           ) : (
             <div className="prompt-hub__limit-notice">
               Free plan limit reached ({promptCount}/10 prompts).{' '}
-              <button className="prompt-hub__limit-upgrade" onClick={() => chrome.runtime.openOptionsPage()}>
+              <button className="prompt-hub__limit-upgrade" onClick={() => { void openDashboard(); }}>
                 Upgrade to Pro
               </button>{' '}
               for unlimited.

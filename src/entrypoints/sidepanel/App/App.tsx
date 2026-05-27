@@ -21,6 +21,7 @@ import { SubscriptionProvider, useSubscriptionState } from '@/contexts/Subscript
 import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
 import { scopedStorage } from '@/services/storage/scoped-storage';
 import { storageService } from '@/services/storage-service';
+import { openDashboard } from '@/utils/open-dashboard';
 import { useApp } from './useApp';
 import './App.css';
 
@@ -112,7 +113,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
         userMenuOpen={userMenuOpen}
         onBack={() => setView('home')}
         onToggleDark={toggleDark}
-        onOpenDashboard={() => chrome.runtime.openOptionsPage()}
+        onOpenDashboard={() => { void openDashboard(); }}
         onUserClick={() => setUserMenuOpen((o) => !o)}
       />
 
