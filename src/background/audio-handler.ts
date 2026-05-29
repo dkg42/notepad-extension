@@ -13,6 +13,21 @@ import {
 import { audioCacheService } from '@/services/audio-cache-service';
 import { ensureSignedIn } from './shared';
 
+/**
+ * chrome.runtime.sendMessage serializes its payload as JSON in some Chrome
+ * channels, which silently turns ArrayBuffer into `{}`. Encoding to base64
+ * up-front means the bytes survive the round-trip intact.
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 export function handleAudioMessage(
   message: { type: string } & Record<string, unknown>,
   sendResponse: (response: unknown) => void,
@@ -65,6 +80,23 @@ export function handleAudioMessage(
       console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cached', artifactId, blob.size, 'bytes');
     })()
       .then(() => sendResponse({ ok: true }))
+      .catch((err: unknown) =>
+        sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+      );
+    return true;
+  }
+
+  if (message.type === 'DOWNLOAD_ARTIFACT_AUDIO') {
+    const { url } = message as { type: string; url: string; artifactId: string };
+    (async () => {
+      await ensureSignedIn();
+      const { blob, mimeType, suggestedFilename } = await fetchAudioBlob(url);
+      const base64 = await blobToBase64(blob);
+      return { base64, mimeType, suggestedFilename };
+    })()
+      .then(({ base64, mimeType, suggestedFilename }) =>
+        sendResponse({ ok: true, base64, mimeType, suggestedFilename }),
+      )
       .catch((err: unknown) =>
         sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
       );

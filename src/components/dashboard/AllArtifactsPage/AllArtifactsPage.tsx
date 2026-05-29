@@ -4,10 +4,11 @@
  * @dependencies useAllArtifactsPage, SearchBar
  * @public AllArtifactsPage
  */
-import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Package } from 'lucide-react';
+import React from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Package, Download, ExternalLink } from 'lucide-react';
 import { useAllArtifactsPage } from './useAllArtifactsPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
+import { exportArtifact, getArtifactActionMeta } from '@/export/artifact/artifact-export';
 import './AllArtifactsPage.css';
 
 const ARTIFACT_TYPE_LABELS: Record<number, string> = {
@@ -53,12 +54,15 @@ export default function AllArtifactsPage() {
     setFilterStatus,
     searchQuery,
     setSearchQuery,
-    handleExportCsv,
-    handleExportJson,
     handleRefresh,
   } = useAllArtifactsPage();
 
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const handleArtifactAction = async (artifact: Parameters<typeof exportArtifact>[0]) => {
+    const result = await exportArtifact(artifact);
+    if (!result.ok && result.error) {
+      setError(result.error);
+    }
+  };
 
   return (
     <div className="all-artifacts-page">
@@ -121,37 +125,7 @@ export default function AllArtifactsPage() {
             <option value="1">Processing</option>
             <option value="2">Pending</option>
           </select>
-
-          <div className="all-artifacts-toolbar__action-wrapper">
-            <button
-              className="all-artifacts-toolbar__btn"
-              onClick={() => setShowExportMenu((v) => !v)}
-            >
-              Export
-            </button>
-            {showExportMenu && (
-              <div className="all-artifacts-toolbar__menu">
-                <button
-                  className="all-artifacts-toolbar__menu-item"
-                  onClick={() => { setShowExportMenu(false); handleExportCsv(); }}
-                >
-                  CSV (.csv)
-                </button>
-                <button
-                  className="all-artifacts-toolbar__menu-item"
-                  onClick={() => { setShowExportMenu(false); handleExportJson(); }}
-                >
-                  JSON (.json)
-                </button>
-              </div>
-            )}
-          </div>
         </div>
-      )}
-
-      {/* Overlay */}
-      {showExportMenu && (
-        <div className="all-artifacts-overlay" onClick={() => setShowExportMenu(false)} />
       )}
 
       {/* Loading */}
@@ -183,6 +157,7 @@ export default function AllArtifactsPage() {
                 <col className="all-artifacts-table__col--notebook" />
                 <col className="all-artifacts-table__col--status" />
                 <col className="all-artifacts-table__col--created" />
+                <col className="all-artifacts-table__col--action" />
               </colgroup>
               <thead className="all-artifacts-table__head">
                 <tr>
@@ -212,37 +187,54 @@ export default function AllArtifactsPage() {
                       Created <SortIndicator active={sortField === 'createdAt'} dir={sortDir} />
                     </span>
                   </th>
+                  <th className="all-artifacts-table__th">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {artifacts.length === 0 ? (
                   <tr>
-                    <td className="all-artifacts-table__empty-row" colSpan={5}>
+                    <td className="all-artifacts-table__empty-row" colSpan={6}>
                       No artifacts match the current filters.
                     </td>
                   </tr>
                 ) : (
-                  artifacts.map((artifact) => (
-                    <tr key={`${artifact.notebookId}-${artifact.id}`} className="all-artifacts-table__row">
-                      <td className="all-artifacts-table__td all-artifacts-table__td--title">
-                        <span className="all-artifacts-table__artifact-title">{artifact.title}</span>
-                      </td>
-                      <td className="all-artifacts-table__td all-artifacts-table__td--type">
-                        {ARTIFACT_TYPE_LABELS[artifact.typeCode] ?? `Type ${artifact.typeCode}`}
-                      </td>
-                      <td className="all-artifacts-table__td all-artifacts-table__td--notebook">
-                        {artifact.notebookTitle}
-                      </td>
-                      <td className="all-artifacts-table__td all-artifacts-table__td--status">
-                        <span className={`all-artifacts-status-badge all-artifacts-status-badge--${artifact.status}`}>
-                          {STATUS_LABELS[artifact.status ?? 0] ?? 'Unknown'}
-                        </span>
-                      </td>
-                      <td className="all-artifacts-table__td all-artifacts-table__td--created">
-                        {formatDate(artifact.createdAt)}
-                      </td>
-                    </tr>
-                  ))
+                  artifacts.map((artifact) => {
+                    const actionMeta = getArtifactActionMeta(artifact.typeCode, artifact.status, artifact.mediaUrl);
+                    const ActionIcon = actionMeta.kind === 'download' ? Download : ExternalLink;
+                    return (
+                      <tr key={`${artifact.notebookId}-${artifact.id}`} className="all-artifacts-table__row">
+                        <td className="all-artifacts-table__td all-artifacts-table__td--title">
+                          <span className="all-artifacts-table__artifact-title">{artifact.title}</span>
+                        </td>
+                        <td className="all-artifacts-table__td all-artifacts-table__td--type">
+                          {ARTIFACT_TYPE_LABELS[artifact.typeCode] ?? `Type ${artifact.typeCode}`}
+                        </td>
+                        <td className="all-artifacts-table__td all-artifacts-table__td--notebook">
+                          {artifact.notebookTitle}
+                        </td>
+                        <td className="all-artifacts-table__td all-artifacts-table__td--status">
+                          <span className={`all-artifacts-status-badge all-artifacts-status-badge--${artifact.status}`}>
+                            {STATUS_LABELS[artifact.status ?? 0] ?? 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="all-artifacts-table__td all-artifacts-table__td--created">
+                          {formatDate(artifact.createdAt)}
+                        </td>
+                        <td className="all-artifacts-table__td all-artifacts-table__td--action">
+                          <button
+                            className="all-artifacts-table__action-btn"
+                            onClick={() => void handleArtifactAction(artifact)}
+                            disabled={!!actionMeta.disabledReason}
+                            title={actionMeta.disabledReason ?? actionMeta.label}
+                            aria-label={actionMeta.label}
+                          >
+                            <ActionIcon size={14} strokeWidth={1.7} />
+                            <span>{actionMeta.label}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

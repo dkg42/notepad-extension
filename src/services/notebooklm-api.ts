@@ -820,7 +820,9 @@ const AUDIO_DOMAIN_ALLOWLIST = ['.google.com', '.googleusercontent.com', '.googl
  *
  * Validates the URL domain against an allowlist before fetching.
  */
-export async function fetchAudioBlob(mediaUrl: string): Promise<{ blob: Blob; mimeType: string }> {
+export async function fetchAudioBlob(
+  mediaUrl: string,
+): Promise<{ blob: Blob; mimeType: string; suggestedFilename?: string }> {
   const url = new URL(mediaUrl);
   const isAllowed = AUDIO_DOMAIN_ALLOWLIST.some((suffix) => url.hostname.endsWith(suffix));
   if (!isAllowed) {
@@ -839,12 +841,44 @@ export async function fetchAudioBlob(mediaUrl: string): Promise<{ blob: Blob; mi
     throw new Error('Authentication required — received HTML redirect instead of audio. Please open NotebookLM and sign in.');
   }
 
+  const suggestedFilename = parseContentDispositionFilename(
+    response.headers.get('content-disposition'),
+  );
+
   const blob = await response.blob();
   if (blob.size === 0) {
     throw new Error('Empty audio response');
   }
 
-  return { blob, mimeType: contentType || 'audio/mp4' };
+  return { blob, mimeType: contentType || 'audio/mp4', suggestedFilename };
+}
+
+/**
+ * Parses a Content-Disposition header and returns the filename if present.
+ * Prefers RFC 5987 `filename*=UTF-8''<percent-encoded>` over the legacy
+ * `filename="<value>"` form so non-ASCII names round-trip correctly.
+ */
+function parseContentDispositionFilename(header: string | null): string | undefined {
+  if (!header) return undefined;
+
+  const ext = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(header);
+  if (ext) {
+    try {
+      const decoded = decodeURIComponent(ext[2].trim());
+      if (decoded) return decoded;
+    } catch {
+      // fall through to legacy form
+    }
+  }
+
+  const legacy = /filename\s*=\s*("((?:[^"\\]|\\.)*)"|([^;]+))/i.exec(header);
+  if (legacy) {
+    const raw = (legacy[2] ?? legacy[3] ?? '').trim();
+    const unescaped = raw.replace(/\\(.)/g, '$1');
+    if (unescaped) return unescaped;
+  }
+
+  return undefined;
 }
 
 /**

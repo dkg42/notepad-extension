@@ -720,6 +720,38 @@
   color: var(--fg-3);
 }
 
+.notebook-artifact-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.notebook-artifact-card__action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.notebook-artifact-card__action-btn:hover:not(:disabled) {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg);
+}
+
+.notebook-artifact-card__action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Circular play button */
 .notebook-artifact-card__play-btn {
   width: 30px;

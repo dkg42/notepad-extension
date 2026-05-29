@@ -5,10 +5,11 @@
  * @public NotebookDetailPage
  */
 import React, { useState } from 'react';
-import { Headphones, Play, FileText, Video, PresentationIcon, RefreshCw } from 'lucide-react';
+import { Headphones, Play, FileText, Video, PresentationIcon, RefreshCw, Download, ExternalLink } from 'lucide-react';
 import type { AudioOverviewOptions } from '@/services/notebooklm-api';
 import { useNotebookDetailPage } from './useNotebookDetailPage';
 import { sourceExportStrategies } from '@/export/source-export-registry';
+import { exportArtifact, getArtifactActionMeta } from '@/export/artifact/artifact-export';
 import ImportSourcesModal from '@/components/dashboard/ImportSourcesModal/ImportSourcesModal';
 import NotebookFolderModal from '@/components/dashboard/NotebookFolderModal/NotebookFolderModal';
 import GenerateArtifactMenu from '@/components/dashboard/GenerateArtifactMenu/GenerateArtifactMenu';
@@ -417,6 +418,8 @@ export default function NotebookDetailPage() {
               const typeMeta = getArtifactTypeMeta(artifact.typeCode);
               const statusMeta = ARTIFACT_STATUS[artifact.status ?? 0] ?? { label: 'Unknown', cls: 'pending' };
               const canPlay = artifact.status === 3 && !!artifact.mediaUrl;
+              const actionMeta = getArtifactActionMeta(artifact.typeCode, artifact.status, artifact.mediaUrl);
+              const ActionIcon = actionMeta.kind === 'download' ? Download : ExternalLink;
 
               return (
                 <div key={artifact.id} className="notebook-artifact-card">
@@ -437,16 +440,27 @@ export default function NotebookDetailPage() {
                         )}
                       </div>
                     </div>
-                    {canPlay && (
+                    <div className="notebook-artifact-card__actions">
+                      {canPlay && (
+                        <button
+                          className="notebook-artifact-card__play-btn"
+                          onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
+                          disabled={isLoadingAudio}
+                          title="Play"
+                        >
+                          <Play size={12} />
+                        </button>
+                      )}
                       <button
-                        className="notebook-artifact-card__play-btn"
-                        onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
-                        disabled={isLoadingAudio}
-                        title="Play"
+                        className="notebook-artifact-card__action-btn"
+                        onClick={() => void exportArtifact({ ...artifact, notebookId: notebookId! })}
+                        disabled={!!actionMeta.disabledReason}
+                        title={actionMeta.disabledReason ?? actionMeta.label}
+                        aria-label={actionMeta.label}
                       >
-                        <Play size={12} />
+                        <ActionIcon size={12} strokeWidth={1.8} />
                       </button>
-                    )}
+                    </div>
                   </div>
                 </div>
               );

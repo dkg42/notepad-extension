@@ -1,6 +1,6 @@
 /**
  * @module useAllArtifactsPage
- * @description Hook for the All Artifacts dashboard page that fetches every artifact across all notebooks via the extension background, applies notebook/status filters and text search, sorts the result, and exposes CSV and JSON export handlers.
+ * @description Hook for the All Artifacts dashboard page that fetches every artifact across all notebooks via the extension background, applies notebook/status filters and text search, and sorts the result.
  * @dependencies @/types
  * @public useAllArtifactsPage
  */
@@ -11,10 +11,6 @@ import { scopedStorage } from '@/services/storage/scoped-storage';
 
 type SortField = 'title' | 'notebookTitle' | 'createdAt';
 type SortDir = 'asc' | 'desc';
-
-const ARTIFACT_TYPE_LABELS: Record<number, string> = {
-  1: 'Audio Overview',
-};
 
 interface FetchAllArtifactsResult {
   ok: boolean;
@@ -146,52 +142,6 @@ export function useAllArtifactsPage() {
     [sortField],
   );
 
-  // ── Export ─────────────────────────────────────────────────────────────────
-
-  const handleExportCsv = useCallback(() => {
-    const rows = filteredAndSorted.map((a) => ({
-      title: a.title,
-      type: ARTIFACT_TYPE_LABELS[a.typeCode] ?? `Type ${a.typeCode}`,
-      notebook: a.notebookTitle,
-      status: a.status === 3 ? 'Completed' : a.status === 1 ? 'Processing' : a.status === 2 ? 'Pending' : 'Unknown',
-      createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : '',
-    }));
-
-    const header = 'Title,Type,Notebook,Status,Created At\n';
-    const csv = header + rows.map((r) =>
-      `"${r.title.replace(/"/g, '""')}","${r.type}","${r.notebook.replace(/"/g, '""')}","${r.status}","${r.createdAt}"`,
-    ).join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'all-artifacts.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [filteredAndSorted]);
-
-  const handleExportJson = useCallback(() => {
-    const data = filteredAndSorted.map((a) => ({
-      id: a.id,
-      title: a.title,
-      typeCode: a.typeCode,
-      notebook: a.notebookTitle,
-      notebookId: a.notebookId,
-      status: a.status,
-      createdAt: a.createdAt,
-      mediaUrl: a.mediaUrl,
-    }));
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'all-artifacts.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [filteredAndSorted]);
-
   return {
     artifacts: filteredAndSorted,
     totalCount: artifacts.length,
@@ -208,8 +158,6 @@ export function useAllArtifactsPage() {
     setFilterStatus,
     searchQuery,
     setSearchQuery,
-    handleExportCsv,
-    handleExportJson,
     handleRefresh: fetchData,
   };
 }
