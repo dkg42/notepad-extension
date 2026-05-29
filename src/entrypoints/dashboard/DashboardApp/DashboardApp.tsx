@@ -17,6 +17,7 @@ import NotebooksPage from '@/components/dashboard/NotebooksPage/NotebooksPage';
 import NotebookDetailPage from '@/components/dashboard/NotebookDetailPage/NotebookDetailPage';
 import AllSourcesPage from '@/components/dashboard/AllSourcesPage/AllSourcesPage';
 import AllArtifactsPage from '@/components/dashboard/AllArtifactsPage/AllArtifactsPage';
+import SourceDiffPage from '@/components/dashboard/SourceDiffPage/SourceDiffPage';
 import ChatHistoryPage from '@/components/dashboard/ChatHistoryPage/ChatHistoryPage';
 import ChatHistoryDetailPage from '@/components/dashboard/ChatHistoryDetailPage/ChatHistoryDetailPage';
 import PodcastsPage from '@/components/dashboard/PodcastsPage/PodcastsPage';
@@ -311,6 +312,9 @@ export default function DashboardApp() {
 
       case 'all-artifacts':
         return <AllArtifactsPage />;
+
+      case 'source-diff':
+        return <SourceDiffPage />;
 
       case 'podcasts':
         return <PodcastsPage />;

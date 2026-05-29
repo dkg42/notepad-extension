@@ -17,6 +17,7 @@ export type DashboardView =
   | 'notebook-detail'
   | 'all-sources'
   | 'all-artifacts'
+  | 'source-diff'
   | 'chat-history'
   | 'chat-history-detail'
   | 'podcasts'

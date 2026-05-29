@@ -25,6 +25,7 @@ import {
   Zap,
   Search,
   Camera,
+  GitCompare,
   Moon,
   Sun,
   type LucideIcon,
@@ -65,6 +66,7 @@ const NOTEBOOKS_GROUP: NavGroup = {
     { view: 'notebooks', icon: BookOpen, label: 'All Notebooks' },
     { view: 'all-sources', icon: Database, label: 'All Sources' },
     { view: 'all-artifacts', icon: Package, label: 'All Artifacts' },
+    { view: 'source-diff', icon: GitCompare, label: 'Source Diff' },
   ],
 };
 
@@ -86,7 +88,7 @@ const SECONDARY_NAV: NavItem[] = [
   { view: 'export-history', icon: Clock, label: 'Export History' },
 ];
 
-const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts'];
+const NOTEBOOK_VIEWS: DashboardView[] = ['notebooks', 'notebook-detail', 'all-sources', 'all-artifacts', 'source-diff'];
 const PODCASTS_VIEWS: DashboardView[] = ['podcasts', 'podcast-detail', 'all-audio'];
 
 interface CollapsibleGroupProps {
