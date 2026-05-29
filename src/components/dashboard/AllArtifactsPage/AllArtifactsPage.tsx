@@ -5,11 +5,15 @@
  * @public AllArtifactsPage
  */
 import React from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Package, Download, ExternalLink } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Package, Download, ExternalLink, Play as PlayIcon } from 'lucide-react';
 import { useAllArtifactsPage } from './useAllArtifactsPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
 import { exportArtifact, getArtifactActionMeta } from '@/export/artifact/artifact-export';
+import { useNavigation } from '@/contexts/NavigationContext';
 import './AllArtifactsPage.css';
+
+const AUDIO_TYPE_CODE = 1;
+const STATUS_COMPLETED = 3;
 
 const ARTIFACT_TYPE_LABELS: Record<number, string> = {
   1: 'Audio Overview',
@@ -38,6 +42,8 @@ function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }
 }
 
 export default function AllArtifactsPage() {
+  const { playArtifact, isLoadingAudio } = useNavigation();
+
   const {
     artifacts,
     totalCount,
@@ -221,16 +227,34 @@ export default function AllArtifactsPage() {
                           {formatDate(artifact.createdAt)}
                         </td>
                         <td className="all-artifacts-table__td all-artifacts-table__td--action">
-                          <button
-                            className="all-artifacts-table__action-btn"
-                            onClick={() => void handleArtifactAction(artifact)}
-                            disabled={!!actionMeta.disabledReason}
-                            title={actionMeta.disabledReason ?? actionMeta.label}
-                            aria-label={actionMeta.label}
-                          >
-                            <ActionIcon size={14} strokeWidth={1.7} />
-                            <span>{actionMeta.label}</span>
-                          </button>
+                          <div className="all-artifacts-table__action-group">
+                            {artifact.typeCode === AUDIO_TYPE_CODE && artifact.status === STATUS_COMPLETED && artifact.mediaUrl && (
+                              <button
+                                className="all-artifacts-table__action-btn"
+                                onClick={() => void playArtifact(artifact.mediaUrl!, artifact.id, artifact.title)}
+                                disabled={isLoadingAudio}
+                                title="Play audio"
+                                aria-label="Play audio"
+                              >
+                                {isLoadingAudio ? (
+                                  <span className="all-artifacts-table__loading-spinner" />
+                                ) : (
+                                  <PlayIcon size={14} strokeWidth={1.7} />
+                                )}
+                                <span>Play</span>
+                              </button>
+                            )}
+                            <button
+                              className="all-artifacts-table__action-btn"
+                              onClick={() => void handleArtifactAction(artifact)}
+                              disabled={!!actionMeta.disabledReason}
+                              title={actionMeta.disabledReason ?? actionMeta.label}
+                              aria-label={actionMeta.label}
+                            >
+                              <ActionIcon size={14} strokeWidth={1.7} />
+                              <span>{actionMeta.label}</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
