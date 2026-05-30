@@ -20,6 +20,8 @@ import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-s
 import type { AuthError } from 'firebase/auth/web-extension';
 import type { NotebookAnnotation } from '@/types';
 import { authStorageService, type OAuthCredentialPayload } from '@/services/auth-storage-service';
+import { dataStorage } from '@/services/storage/data-storage';
+import { isProClaims } from '@/utils/subscription';
 import { verifyFirebaseIdToken } from '@/services/firebase-claims-verifier';
 import {
   TOKEN_REFRESH_ALARM,
@@ -352,10 +354,17 @@ function handleAuthSessionMessage(
         // before clearing auth data so no stale writes fire after sign-out.
         await driveInitService.teardown();
 
-        // Storage is now per-uid via scoped-storage. Sign-out clears only the
-        // global auth keys — the user's data remains under `u:<uid>:*` and is
-        // restored on the next sign-in with the same account. A different
-        // account signs into its own empty namespace.
+        // Storage is per-uid via scoped-storage. Free users keep their
+        // `u:<uid>:*` data so it restores on re-sign-in without a Drive round
+        // trip. Pro users' data is wiped on sign-out so it cannot leak to the
+        // next account that signs in on this device.
+        const [profile, claims] = await Promise.all([
+          authStorageService.getAuthProfile(),
+          authStorageService.getAuthClaims(),
+        ]);
+        if (profile?.uid && isProClaims(claims)) {
+          await dataStorage.clearScopedDataForUid(profile.uid);
+        }
         return authStorageService.clearAll();
       })
       .then(() => sendResponse({ ok: true }))

@@ -9,7 +9,8 @@
  */
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { authStorageService } from '@/services/auth-storage-service';
-import type { AuthClaims, SubscriptionPlan } from '@/types';
+import { isProClaims } from '@/utils/subscription';
+import type { AuthClaims } from '@/types';
 
 export interface SubscriptionContextValue {
   claims: AuthClaims | null;
@@ -57,8 +58,7 @@ export function useSubscriptionState(): SubscriptionContextValue {
   }, []);
 
   const isActive = claims?.subscriptionStatus === 'active';
-  const proPlanIds: SubscriptionPlan[] = ['pro_monthly', 'pro_yearly'];
-  const isPro = isActive && proPlanIds.includes(claims?.subscriptionPlan as SubscriptionPlan);
+  const isPro = isProClaims(claims);
 
   return useMemo(
     () => ({

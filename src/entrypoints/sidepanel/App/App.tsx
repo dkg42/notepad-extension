@@ -38,7 +38,6 @@ export default function App() {
     });
 
     const unsubscribe = authService.onAuthStateChange((user) => {
-      if (!user) localStorage.clear();
       setAuthUser(user);
       setIsLoadingAuth(false);
     });
@@ -68,7 +67,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const subscriptionValue = useSubscriptionState();
-  const appData = useApp(subscriptionValue.isPro);
+  const appData = useApp(subscriptionValue.isPro, user?.uid ?? null);
   const clipboardData = useClipboardTab();
 
   useEffect(() => {

@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS: DashboardSettings = {
   defaultSortDirection: 'desc',
 };
 
-export function useDashboardApp(isPro: boolean) {
+export function useDashboardApp(isPro: boolean, currentUid: string | null) {
   const globalAudio = useGlobalAudio();
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -53,6 +53,24 @@ export function useDashboardApp(isPro: boolean) {
   const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Reset all per-user state before (re)loading so a previous user's data
+    // never lingers across a sign-out / sign-in transition.
+    setSnippets([]);
+    setFolders([]);
+    setTagsMeta([]);
+    setNotebookAnnotations([]);
+    setNotebooks([]);
+    setNotebooksCount(0);
+    setPodcastEpisodes([]);
+    setPodcastsCount(0);
+
+    if (!currentUid) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
     // Trigger Drive sync in the background. Responses land via the local storage
     // change listener below — the dashboard renders immediately from local storage
     // and updates automatically when Drive init writes fresher data.
@@ -87,7 +105,7 @@ export function useDashboardApp(isPro: boolean) {
         setPodcastsCount(episodes.length);
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [currentUid]);
 
   // Update notebooks count and annotations when local storage changes
   useEffect(() => {
@@ -109,6 +127,9 @@ export function useDashboardApp(isPro: boolean) {
 
   // Load initial chat history count
   useEffect(() => {
+    setConversations([]);
+    setChatHistoryCount(0);
+    if (!currentUid) return;
     chrome.runtime.sendMessage({ type: 'GET_CHAT_CONVERSATIONS' })
       .then((res: { ok: boolean; conversations?: ConversationMeta[] }) => {
         if (res?.ok && res.conversations) {
@@ -117,7 +138,7 @@ export function useDashboardApp(isPro: boolean) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [currentUid]);
 
   // React to local storage changes — covers both user edits and Drive sync writes.
   useEffect(() => {
@@ -157,6 +178,9 @@ export function useDashboardApp(isPro: boolean) {
 
   // Load initial pipelines count
   useEffect(() => {
+    setPipelines([]);
+    setPipelinesCount(0);
+    if (!currentUid) return;
     void scopedStorage.get<Pipeline[]>('pipelines')
       .then((result) => {
         const loaded = result.pipelines ?? [];
@@ -164,7 +188,7 @@ export function useDashboardApp(isPro: boolean) {
         setPipelinesCount(loaded.filter((p) => p.enabled).length);
       })
       .catch(() => {});
-  }, []);
+  }, [currentUid]);
 
   const favoritesCount = useMemo(
     () => snippets.filter((s) => s.isFavorite).length,

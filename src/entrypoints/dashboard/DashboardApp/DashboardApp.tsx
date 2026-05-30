@@ -4,7 +4,9 @@
  * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, SnippetsContext, NavigationContext, and all dashboard page components
  * @public DashboardApp
  */
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { StoredAuthProfile } from '@/types';
+import { authService } from '@/services/auth-service';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
 import DashboardHome from '@/components/dashboard/DashboardHome/DashboardHome';
 import PromptsPage from '@/components/dashboard/PromptsPage/PromptsPage';
@@ -41,6 +43,19 @@ import './DashboardApp.css';
 
 export default function DashboardApp() {
   const subscriptionValue = useSubscriptionState();
+  const [authUser, setAuthUser] = useState<StoredAuthProfile | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    authService.getCurrentUser().then((user) => {
+      setAuthUser(user);
+      setIsLoadingAuth(false);
+    });
+    return authService.onAuthStateChange((user) => {
+      setAuthUser(user);
+      setIsLoadingAuth(false);
+    });
+  }, []);
 
   const {
     // Global audio
@@ -118,7 +133,7 @@ export default function DashboardApp() {
     handleSettingsChange,
     driveConflict,
     handleConflictResolution,
-  } = useDashboardApp(subscriptionValue.isPro);
+  } = useDashboardApp(subscriptionValue.isPro, authUser?.uid ?? null);
 
   const palette = useCommandPalette(snippets, folders, notebooks, conversations, pipelines, podcastEpisodes, setCurrentView);
 
@@ -307,7 +322,7 @@ export default function DashboardApp() {
   );
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoadingAuth || isLoading) {
       return <div className="dashboard-app__loading">Loading…</div>;
     }
 

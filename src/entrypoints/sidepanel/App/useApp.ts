@@ -12,7 +12,7 @@ import { filterSnippets } from '@/utils/filter-snippets';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
 import { scopedStorage } from '@/services/storage/scoped-storage';
 
-export function useApp(isPro: boolean) {
+export function useApp(isPro: boolean, currentUid: string | null) {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +20,10 @@ export function useApp(isPro: boolean) {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    setSnippets([]);
+    setFolders([]);
+    if (!currentUid) return;
+
     Promise.all([storageService.getAll(), storageService.getFolders()]).then(
       ([loadedSnippets, loadedFolders]) => {
         setSnippets(loadedSnippets);
@@ -30,7 +34,7 @@ export function useApp(isPro: boolean) {
     return scopedStorage.onChanged<Snippet[]>('snippets', (changes) => {
       setSnippets(changes.snippets?.newValue ?? []);
     });
-  }, []);
+  }, [currentUid]);
 
   const hasUncategorized = useMemo(() => snippets.some((s) => !s.folderId), [snippets]);
 

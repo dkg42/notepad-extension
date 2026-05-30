@@ -26,4 +26,19 @@ export const dataStorage = {
       PODCAST_EPISODES_KEY,
     ]);
   },
+
+  /**
+   * Wipes every key in the given uid's namespace (`u:<uid>:*`). Operates
+   * directly on chrome.storage.local — does not depend on the live currentUid
+   * inside scopedStorage, so it is safe to call mid-sign-out when the auth
+   * profile is about to be (or has just been) removed.
+   */
+  async clearScopedDataForUid(uid: string): Promise<void> {
+    if (!uid) return;
+    const prefix = `u:${uid}:`;
+    const all = await chrome.storage.local.get(null);
+    const keys = Object.keys(all).filter((k) => k.startsWith(prefix));
+    if (keys.length === 0) return;
+    await chrome.storage.local.remove(keys);
+  },
 };
