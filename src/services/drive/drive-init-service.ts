@@ -46,12 +46,12 @@
  *    Drive data is applied to local storage for every file.
  */
 
-import { load as loadManifest, initialize as initManifest, clearInMemory } from './drive-manifest-service';
+import { load as loadManifest, initialize as initManifest, clearInMemory, getManifest, save as saveManifest } from './drive-manifest-service';
 import { writeAllFromLocal, driveSyncService } from './drive-sync-service';
 import { invalidateAll as invalidateCache, get as cacheGet, CacheKeys } from './drive-cache-service';
 import { authStorageService } from '@/services/auth-storage-service';
 import { cancelAll as cancelQueue, setInitializing } from './drive-write-queue';
-import { readFile } from './drive-io-service';
+import { readFile, dedupeFolder } from './drive-io-service';
 import type { DriveFilename, DrivePromptMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { scopedStorage } from '@/services/storage/scoped-storage';
@@ -184,7 +184,36 @@ export async function initialize(
 
   setInitializing(true);
   try {
+    // Sweep the folder for duplicate files left behind before dedupe-on-write
+    // landed. Keeps the newest copy of each name, trashes the rest, and
+    // returns the surviving fileIds so we can reconcile the manifest below.
+    const dedupeResult = await dedupeFolder(token);
+    const keptByName = dedupeResult.ok ? dedupeResult.data.keptByName : null;
+    if (!dedupeResult.ok) {
+      console.warn('[DRIVE-INIT] dedupeFolder failed — continuing without sweep:', dedupeResult.error);
+    } else if (dedupeResult.data.trashed > 0) {
+      console.log(`[DRIVE-INIT] Trashed ${dedupeResult.data.trashed} duplicate file(s) during sweep`);
+    }
+
     const manifest = await loadManifest(token);
+
+    // If the sweep trashed any sibling that the manifest was pointing at,
+    // repoint those entries to the survivor before any reads/writes use them.
+    if (manifest && keptByName) {
+      let mutated = false;
+      for (const [filename, entry] of Object.entries(manifest.files)) {
+        if (!entry?.driveFileId) continue;
+        const survivor = keptByName.get(filename);
+        if (survivor && survivor !== entry.driveFileId) {
+          manifest.files[filename] = { ...entry, driveFileId: survivor, syncedAt: Date.now() };
+          mutated = true;
+        }
+      }
+      if (mutated) {
+        const current = getManifest();
+        if (current) await saveManifest(current, token);
+      }
+    }
 
     if (!manifest) {
       // Path A: First-time user

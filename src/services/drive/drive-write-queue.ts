@@ -41,7 +41,7 @@
  *   manifest.json:                                              0 ms (immediate)
  */
 
-import { createFile, updateFile } from './drive-io-service';
+import { createFile, updateFile, findFileByName } from './drive-io-service';
 import { upsertEntry, getEntry, getManifest, load as loadManifest } from './drive-manifest-service';
 import { DRIVE_SCHEMA_VERSION } from './types/drive-schemas';
 
@@ -140,6 +140,26 @@ async function executeWrite(filename: string, payload: string, token: string): P
       } else {
         console.warn(`[DRIVE-QUEUE] updateFile failed for ${filename}:`, result.error);
         return;
+      }
+    }
+
+    // Manifest had no entry for this filename. Before creating a new file,
+    // search Drive by name — another device may have written it, or our
+    // local manifest may be stale. findFileByName dedupes; if found, PATCH
+    // that file instead of creating a sibling with the same name.
+    if (!fileId) {
+      const found = await findFileByName(filename, token);
+      if (found.ok && found.data) {
+        fileId = found.data.id;
+        const result = await updateFile(fileId, payload, token);
+        if (result.ok) {
+          version = result.data.version;
+        } else if (result.status === 404) {
+          fileId = null;
+        } else {
+          console.warn(`[DRIVE-QUEUE] updateFile (post-lookup) failed for ${filename}:`, result.error);
+          return;
+        }
       }
     }
 

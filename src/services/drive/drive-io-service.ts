@@ -6,7 +6,7 @@
  * `ok: false` case. Files are stored in the Drive AppData space (app-private,
  * invisible to the user) unless `USE_VISIBLE_DEBUG_FOLDER` is enabled for local QA.
  * @dependencies ./types/drive-schemas (DriveFileRef)
- * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles, getPodcastAudioFolderId, createBinaryFile, readBinaryFile
+ * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles, dedupeFolder, getPodcastAudioFolderId, createBinaryFile, readBinaryFile
  */
 
 /**
@@ -391,7 +391,11 @@ export async function deleteFile(
 /**
  * Finds a file in the AppData folder by its exact name.
  * Returns null if no matching file is found.
- * If multiple files with the same name exist (should not happen), returns the first.
+ *
+ * Self-heals duplicates: results are ordered by modifiedTime desc and any
+ * stale copies beyond the newest are trashed in the background. This keeps
+ * Drive the source of truth when a stale manifest or cross-device race has
+ * caused multiple files with the same name to be created.
  */
 export async function findFileByName(
   filename: string,
@@ -408,11 +412,12 @@ export async function findFileByName(
   }
 
   const query = encodeURIComponent(queryStr);
-  const fields = encodeURIComponent('files(id,name,size,version)');
+  const fields = encodeURIComponent('files(id,name,size,version,modifiedTime)');
+  const orderBy = encodeURIComponent('modifiedTime desc');
 
   try {
     const resp = await fetch(
-      `${DRIVE_API}/files?spaces=${spaces}&q=${query}&fields=${fields}`,
+      `${DRIVE_API}/files?spaces=${spaces}&q=${query}&fields=${fields}&orderBy=${orderBy}`,
       { headers: authHeader(token) },
     );
 
@@ -424,6 +429,18 @@ export async function findFileByName(
     const json = await resp.json() as { files: Array<{ id: string; name: string; size: string; version?: string }> };
     if (!json.files || json.files.length === 0) {
       return { ok: true, data: null };
+    }
+
+    if (json.files.length > 1) {
+      console.warn(`[DRIVE-IO] Found ${json.files.length} duplicates for "${filename}" — keeping newest, trashing the rest`);
+      for (let i = 1; i < json.files.length; i++) {
+        const staleId = json.files[i].id;
+        void deleteFile(staleId, token).then((result) => {
+          if (!result.ok) {
+            console.warn(`[DRIVE-IO] Failed to trash stale duplicate ${staleId} of "${filename}":`, result.error);
+          }
+        });
+      }
     }
 
     const f = json.files[0];
@@ -471,4 +488,85 @@ export async function listAppDataFiles(token: string): Promise<DriveIOResult<Dri
   } catch (err) {
     return { ok: false, status: 0, error: `Drive listAppDataFiles network error: ${String(err)}` };
   }
+}
+
+export interface DedupeFolderResult {
+  /** Map of filename → fileId of the surviving (newest) copy. */
+  keptByName: Map<string, string>;
+  /** Number of duplicate files that were trashed. */
+  trashed: number;
+}
+
+/**
+ * Scans every file in the active Drive folder (debug folder or AppData
+ * depending on `USE_VISIBLE_DEBUG_FOLDER`), groups by name, and trashes all
+ * but the most recently modified copy of each name. Self-heals folders where
+ * stale duplicates accumulated before the dedupe-on-write fix was in place.
+ *
+ * In the common case (no duplicates) this is one list call and zero deletes.
+ */
+export async function dedupeFolder(token: string): Promise<DriveIOResult<DedupeFolderResult>> {
+  const fields = encodeURIComponent('nextPageToken,files(id,name,modifiedTime)');
+  const orderBy = encodeURIComponent('modifiedTime desc');
+
+  let baseUrl: string;
+  if (USE_VISIBLE_DEBUG_FOLDER) {
+    const folderId = await getDebugFolderId(token);
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+    baseUrl = `${DRIVE_API}/files?spaces=drive&q=${query}&fields=${fields}&orderBy=${orderBy}&pageSize=100`;
+  } else {
+    baseUrl = `${DRIVE_API}/files?spaces=appDataFolder&fields=${fields}&orderBy=${orderBy}&pageSize=100`;
+  }
+
+  const allFiles: Array<{ id: string; name: string; modifiedTime: string }> = [];
+  let pageToken: string | undefined;
+
+  try {
+    do {
+      const url = pageToken ? `${baseUrl}&pageToken=${encodeURIComponent(pageToken)}` : baseUrl;
+      const resp = await fetch(url, { headers: authHeader(token) });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        return { ok: false, status: resp.status, error: `Drive dedupeFolder list failed (${resp.status}): ${text}` };
+      }
+      const json = await resp.json() as {
+        nextPageToken?: string;
+        files?: Array<{ id: string; name: string; modifiedTime: string }>;
+      };
+      if (json.files) allFiles.push(...json.files);
+      pageToken = json.nextPageToken;
+    } while (pageToken);
+  } catch (err) {
+    return { ok: false, status: 0, error: `Drive dedupeFolder network error: ${String(err)}` };
+  }
+
+  // Files are already ordered modifiedTime desc; the first occurrence per name
+  // is the newest. Trash the rest.
+  const keptByName = new Map<string, string>();
+  const toTrash: Array<{ id: string; name: string }> = [];
+
+  for (const f of allFiles) {
+    if (keptByName.has(f.name)) {
+      toTrash.push({ id: f.id, name: f.name });
+    } else {
+      keptByName.set(f.name, f.id);
+    }
+  }
+
+  if (toTrash.length > 0) {
+    const counts = new Map<string, number>();
+    for (const f of toTrash) counts.set(f.name, (counts.get(f.name) ?? 0) + 1);
+    for (const [name, count] of counts) {
+      console.warn(`[DRIVE-IO] dedupeFolder: trashing ${count} stale copy(ies) of "${name}"`);
+    }
+    for (const f of toTrash) {
+      void deleteFile(f.id, token).then((result) => {
+        if (!result.ok) {
+          console.warn(`[DRIVE-IO] dedupeFolder: failed to trash ${f.id} (${f.name}):`, result.error);
+        }
+      });
+    }
+  }
+
+  return { ok: true, data: { keptByName, trashed: toTrash.length } };
 }
