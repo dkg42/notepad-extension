@@ -5,9 +5,10 @@
  * @public AllArtifactsPage
  */
 import React from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Package, Download, ExternalLink, Play as PlayIcon } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Package, Download, ExternalLink } from 'lucide-react';
 import { useAllArtifactsPage } from './useAllArtifactsPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
+import AudioPlayButton from '@/components/dashboard/AudioPlayButton/AudioPlayButton';
 import { exportArtifact, getArtifactActionMeta } from '@/export/artifact/artifact-export';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './AllArtifactsPage.css';
@@ -42,7 +43,7 @@ function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }
 }
 
 export default function AllArtifactsPage() {
-  const { playArtifact, isLoadingAudio } = useNavigation();
+  const { playArtifact } = useNavigation();
 
   const {
     artifacts,
@@ -229,20 +230,11 @@ export default function AllArtifactsPage() {
                         <td className="all-artifacts-table__td all-artifacts-table__td--action">
                           <div className="all-artifacts-table__action-group">
                             {artifact.typeCode === AUDIO_TYPE_CODE && artifact.status === STATUS_COMPLETED && artifact.mediaUrl && (
-                              <button
-                                className="all-artifacts-table__action-btn"
-                                onClick={() => void playArtifact(artifact.mediaUrl!, artifact.id, artifact.title)}
-                                disabled={isLoadingAudio}
-                                title="Play audio"
-                                aria-label="Play audio"
-                              >
-                                {isLoadingAudio ? (
-                                  <span className="all-artifacts-table__loading-spinner" />
-                                ) : (
-                                  <PlayIcon size={14} strokeWidth={1.7} />
-                                )}
-                                <span>Play</span>
-                              </button>
+                              <AudioPlayButton
+                                trackId={artifact.id}
+                                title={artifact.title}
+                                onPlay={() => playArtifact(artifact.mediaUrl!, artifact.id, artifact.title)}
+                              />
                             )}
                             <button
                               className="all-artifacts-table__action-btn"

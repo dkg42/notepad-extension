@@ -5,20 +5,23 @@
  * @public PodcastDetailPage
  */
 import React, { useRef, useState } from 'react';
+import type { EpisodeTrack } from '@/types';
 import { usePodcastDetailPage } from './usePodcastDetailPage';
 import { useNavigation } from '@/contexts/NavigationContext';
+import AudioPlayButton from '@/components/dashboard/AudioPlayButton/AudioPlayButton';
 import './PodcastDetailPage.css';
+
+function getTrackId(track: EpisodeTrack): string {
+  return track.source.kind === 'artifact' ? track.source.artifactId : track.source.customAudioId;
+}
 
 export default function PodcastDetailPage() {
   const {
     selectedEpisodeId: episodeId,
     handleBackToPodcasts: onBack,
     playTrack: onPlayTrack,
-    isLoadingAudio,
-    podcastContext,
+    currentTrackId,
   } = useNavigation();
-
-  const activeTrackIndex = podcastContext?.currentIndex ?? -1;
 
   const {
     episode,
@@ -121,7 +124,7 @@ export default function PodcastDetailPage() {
                   'track-item',
                   draggedIndex.current === idx ? 'track-item--dragging' : '',
                   dragOverIndex === idx ? 'track-item--drag-over' : '',
-                  activeTrackIndex === idx ? 'track-item--playing' : '',
+                  currentTrackId === getTrackId(track) ? 'track-item--playing' : '',
                 ].filter(Boolean).join(' ')}
                 draggable
                 onDragStart={() => { draggedIndex.current = idx; }}
@@ -145,14 +148,11 @@ export default function PodcastDetailPage() {
                       : 'Custom upload'}
                   </div>
                 </div>
-                <button
-                  className="track-item__play-btn"
-                  disabled={isLoadingAudio}
-                  title="Play"
-                  onClick={() => void onPlayTrack(track, episode.tracks, idx)}
-                >
-                  {activeTrackIndex === idx ? '❚❚' : (isLoadingAudio ? '…' : '▶')}
-                </button>
+                <AudioPlayButton
+                  trackId={getTrackId(track)}
+                  title={track.title}
+                  onPlay={() => onPlayTrack(track, episode.tracks, idx)}
+                />
                 <button
                   className="track-item__remove-btn"
                   title="Remove track"

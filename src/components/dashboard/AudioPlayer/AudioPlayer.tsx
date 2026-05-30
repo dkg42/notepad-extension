@@ -1,19 +1,13 @@
 /**
  * @module AudioPlayer
- * @description Persistent audio playback bar that renders play/pause, a seek slider, elapsed/total time, a playback speed selector, and a close button for notebook audio overviews.
- * @dependencies ./useAudioPlayer
+ * @description Persistent audio playback bar. Pure presentation — every piece of state (current track, isPlaying, currentTime, duration, playbackRate) is read from the global audio context, and every control dispatches back through it. The play/pause control reuses the shared AudioPlayButton.
+ * @dependencies @/contexts/NavigationContext, ../AudioPlayButton
  * @public AudioPlayer
  */
 import React from 'react';
-import { useAudioPlayer } from './useAudioPlayer';
+import { useNavigation } from '@/contexts/NavigationContext';
+import AudioPlayButton from '../AudioPlayButton/AudioPlayButton';
 import './AudioPlayer.css';
-
-interface AudioPlayerProps {
-  audioUrl: string;
-  title?: string;
-  onClose: () => void;
-  onEnded?: () => void;
-}
 
 const SPEED_OPTIONS = [
   { value: 0.5, label: '0.5×' },
@@ -31,49 +25,30 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function AudioPlayer({ audioUrl, title, onClose, onEnded }: AudioPlayerProps) {
+export default function AudioPlayer() {
   const {
-    audioRef,
-    isPlaying,
+    currentTrackId,
+    audioTitle,
     currentTime,
     duration,
     playbackRate,
-    setCurrentTime,
-    setDuration,
-    setIsPlaying,
-    setPlaybackRate,
-    togglePlay,
     seek,
-  } = useAudioPlayer();
+    setPlaybackRate,
+    resumeAudio,
+    stopAudio,
+  } = useNavigation();
+
+  if (!currentTrackId) return null;
 
   return (
     <div className="audio-player">
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        autoPlay
-        onTimeUpdate={() => {
-          if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current) {
-            setDuration(audioRef.current.duration);
-            // Apply stored playback rate when new audio loads
-            audioRef.current.playbackRate = playbackRate;
-          }
-        }}
-        onEnded={() => {
-          setIsPlaying(false);
-          onEnded?.();
-        }}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onError={onClose}
+      <AudioPlayButton
+        trackId={currentTrackId}
+        title={audioTitle}
+        size={36}
+        onPlay={resumeAudio}
       />
-      <button className="audio-player__play-btn" onClick={togglePlay}>
-        {isPlaying ? '❚❚' : '▶'}
-      </button>
-      {title && <span className="audio-player__title">{title}</span>}
+      {audioTitle && <span className="audio-player__title">{audioTitle}</span>}
       <input
         type="range"
         className="audio-player__seek"
@@ -97,10 +72,7 @@ export default function AudioPlayer({ audioUrl, title, onClose, onEnded }: Audio
       </select>
       <button
         className="audio-player__close"
-        onClick={() => {
-          if (audioRef.current) audioRef.current.pause();
-          onClose();
-        }}
+        onClick={stopAudio}
         title="Close player"
       >
         ✕

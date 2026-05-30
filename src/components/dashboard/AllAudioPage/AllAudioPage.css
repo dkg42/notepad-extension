@@ -255,35 +255,3 @@
   color: var(--color-warning, #ca8a04);
 }
 
-.all-audio-play-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: filter 0.12s;
-}
-
-.all-audio-play-btn:hover {
-  filter: brightness(0.9);
-}
-
-.all-audio-play-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.all-audio-loading-spinner {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}

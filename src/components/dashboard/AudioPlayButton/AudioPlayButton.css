@@ -1,0 +1,39 @@
+.audio-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s, filter 0.12s;
+}
+
+.audio-play-btn:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.audio-play-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.audio-play-btn--active {
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+}
+
+.audio-play-btn__spinner {
+  width: 50%;
+  height: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: audio-play-btn-spin 0.8s linear infinite;
+}
+
+@keyframes audio-play-btn-spin {
+  to { transform: rotate(360deg); }
+}

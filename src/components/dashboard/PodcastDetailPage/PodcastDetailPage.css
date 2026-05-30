@@ -184,31 +184,6 @@
   text-overflow: ellipsis;
 }
 
-.track-item__play-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  font-size: 11px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: filter 0.12s;
-}
-
-.track-item__play-btn:hover {
-  filter: brightness(0.9);
-}
-
-.track-item__play-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .track-item__remove-btn {
   background: none;
   border: none;

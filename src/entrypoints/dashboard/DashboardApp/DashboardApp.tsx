@@ -44,13 +44,23 @@ export default function DashboardApp() {
 
   const {
     // Global audio
-    audioUrl,
+    currentTrackId,
     audioTitle,
     isLoadingAudio,
+    isPlaying,
+    currentTime,
+    duration,
+    playbackRate,
+    hasAudio,
     podcastContext,
     playArtifact,
+    playCustomAudio,
     playTrack,
     playNext,
+    pauseAudio,
+    resumeAudio,
+    seek,
+    setPlaybackRate,
     stopAudio,
     // Dashboard state
     snippets,
@@ -225,13 +235,23 @@ export default function DashboardApp() {
       handleBackToScreenshots,
       driveConflict,
       handleConflictResolution,
-      audioUrl,
+      currentTrackId,
       audioTitle,
       isLoadingAudio,
+      isPlaying,
+      currentTime,
+      duration,
+      playbackRate,
+      hasAudio,
       podcastContext,
       playArtifact,
+      playCustomAudio,
       playTrack,
       playNext,
+      pauseAudio,
+      resumeAudio,
+      seek,
+      setPlaybackRate,
       stopAudio,
     }),
     [
@@ -265,13 +285,23 @@ export default function DashboardApp() {
       handleBackToScreenshots,
       driveConflict,
       handleConflictResolution,
-      audioUrl,
+      currentTrackId,
       audioTitle,
       isLoadingAudio,
+      isPlaying,
+      currentTime,
+      duration,
+      playbackRate,
+      hasAudio,
       podcastContext,
       playArtifact,
+      playCustomAudio,
       playTrack,
       playNext,
+      pauseAudio,
+      resumeAudio,
+      seek,
+      setPlaybackRate,
       stopAudio,
     ],
   );
@@ -382,15 +412,7 @@ export default function DashboardApp() {
             <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
           )}
 
-          {audioUrl && (
-            <AudioPlayer
-              key={audioUrl}
-              audioUrl={audioUrl}
-              title={audioTitle}
-              onClose={stopAudio}
-              onEnded={() => void playNext()}
-            />
-          )}
+          {hasAudio && <AudioPlayer />}
 
           {driveConflict && (
             <DriveConflictDialog

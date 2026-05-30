@@ -68,13 +68,23 @@ export interface NavigationContextValue {
   handleConflictResolution: (decision: 'merge' | 'overwrite') => Promise<void>;
 
   // Global audio
-  audioUrl: string | null;
+  currentTrackId: string | null;
   audioTitle: string | undefined;
   isLoadingAudio: boolean;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  playbackRate: number;
+  hasAudio: boolean;
   podcastContext: PodcastContext | null;
   playArtifact: (mediaUrl: string, artifactId: string, title: string) => Promise<void>;
+  playCustomAudio: (customAudioId: string, title: string) => Promise<void>;
   playTrack: (track: EpisodeTrack, playlist: EpisodeTrack[], idx: number) => Promise<void>;
   playNext: () => Promise<void>;
+  pauseAudio: () => void;
+  resumeAudio: () => void;
+  seek: (time: number) => void;
+  setPlaybackRate: (rate: number) => void;
   stopAudio: () => void;
 }
 

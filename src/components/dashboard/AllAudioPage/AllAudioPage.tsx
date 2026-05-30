@@ -5,9 +5,10 @@
  * @public AllAudioPage
  */
 import React from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Music, Play as PlayIcon } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Music } from 'lucide-react';
 import { useAllAudioPage } from './useAllAudioPage';
 import SearchBar from '@/components/dashboard/SearchBar/SearchBar';
+import AudioPlayButton from '@/components/dashboard/AudioPlayButton/AudioPlayButton';
 import { useNavigation } from '@/contexts/NavigationContext';
 import './AllAudioPage.css';
 
@@ -34,9 +35,7 @@ function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }
 }
 
 export default function AllAudioPage() {
-  const { playArtifact, isLoadingAudio } = useNavigation();
-  const onPlayAudio = (mediaUrl: string, artifactId: string, title: string) =>
-    void playArtifact(mediaUrl, artifactId, title);
+  const { playArtifact } = useNavigation();
 
   const {
     artifacts,
@@ -190,18 +189,11 @@ export default function AllAudioPage() {
                       </td>
                       <td className="all-audio-table__td all-audio-table__td--play">
                         {artifact.status === 3 && artifact.mediaUrl ? (
-                          <button
-                            className="all-audio-play-btn"
-                            disabled={isLoadingAudio}
-                            onClick={() => onPlayAudio(artifact.mediaUrl!, artifact.id, artifact.title)}
-                          >
-                            {isLoadingAudio ? (
-                              <span className="all-audio-loading-spinner" />
-                            ) : (
-                              <PlayIcon size={11} strokeWidth={2} />
-                            )}
-                            Play
-                          </button>
+                          <AudioPlayButton
+                            trackId={artifact.id}
+                            title={artifact.title}
+                            onPlay={() => playArtifact(artifact.mediaUrl!, artifact.id, artifact.title)}
+                          />
                         ) : (
                           <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>—</span>
                         )}

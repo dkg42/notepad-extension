@@ -13,26 +13,6 @@
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.audio-player__play-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  font-size: 14px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.12s;
-}
-
-.audio-player__play-btn:hover {
-  filter: brightness(0.92);
-}
-
 .audio-player__title {
   font-size: 13px;
   color: var(--color-text-primary);
