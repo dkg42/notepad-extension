@@ -6,6 +6,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AggregatedArtifact } from '@/types';
+import { allArtifactsCacheService, type AllArtifactsCache } from '@/services/all-artifacts-cache-service';
+import { scopedStorage } from '@/services/storage/scoped-storage';
 
 type SortField = 'title' | 'notebookTitle' | 'createdAt';
 type SortDir = 'asc' | 'desc';
@@ -29,6 +31,9 @@ export function useAllAudioPage() {
   const [filterNotebook, setFilterNotebook] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+  const [hasFreshCache, setHasFreshCache] = useState(false);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -51,9 +56,32 @@ export function useAllAudioPage() {
     }
   }, []);
 
+  // On mount: read cache immediately so the page renders with audio rows before any API call.
   useEffect(() => {
+    allArtifactsCacheService.get().then((cached) => {
+      if (cached) {
+        setAllArtifacts(cached.artifacts.filter((a) => a.typeCode === 1));
+        setHasFreshCache(!cached.isStale);
+        setIsLoading(false);
+      }
+    }).finally(() => setIsCacheLoaded(true));
+  }, []);
+
+  // Fetch from API only after the cache check completes and only when cache is absent or stale.
+  useEffect(() => {
+    if (!isCacheLoaded || hasFreshCache) return;
     void fetchData();
-  }, [fetchData]);
+  }, [isCacheLoaded, hasFreshCache, fetchData]);
+
+  // Listen for cache updates written by the background sync.
+  useEffect(() => {
+    return scopedStorage.onChanged<AllArtifactsCache>('allArtifactsCache', (changes) => {
+      const cache = changes.allArtifactsCache?.newValue;
+      if (cache?.artifacts) {
+        setAllArtifacts(cache.artifacts.filter((a) => a.typeCode === 1));
+      }
+    });
+  }, []);
 
   const notebookOptions = useMemo(() => {
     const map = new Map<string, string>();
