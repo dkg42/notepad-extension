@@ -1,7 +1,7 @@
 /**
  * @module pipeline-executor
- * @description Pure execution engine for the automation pipeline system. Given a set of Pipeline rules and an ExecutionContext snapshot, it evaluates each pipeline's scope and trigger conditions then sequentially executes all matching actions, returning PipelineRun records for every fired (pipeline, notebook) pair. Annotation mutations are applied via the annotation service directly; API-heavy actions (generate-audio, add-source-url, delete-all-sources) are dispatched to the background worker via chrome.runtime.sendMessage so auth and rate-limiting stay centralised.
- * @dependencies notebook-annotation-service
+ * @description Execution engine for the automation pipeline system. Runs only inside the background service worker. Given a set of Pipeline rules and an ExecutionContext snapshot, it evaluates each pipeline's scope and trigger conditions then sequentially executes all matching actions, returning PipelineRun records for every fired (pipeline, notebook) pair. Annotation mutations go through the annotation service; API-heavy actions (generate-audio, add-source-url, delete-all-sources) call the NotebookLM API directly via the shared `notebooklm-api` module, with auth funnelled through `ensureSignedIn`.
+ * @dependencies notebook-annotation-service, notebooklm-api, background/shared
  * @public evaluateAndRun, ExecutionContext
  */
 import type {
@@ -15,6 +15,13 @@ import type {
   PipelineRunStatus,
 } from '@/types';
 import { notebookAnnotationService } from './notebook-annotation-service';
+import {
+  createAudioOverview,
+  addSourceUrl,
+  fetchNotebookSourcesDetailed,
+  deleteSource,
+} from './notebooklm-api';
+import { ensureSignedIn } from '@/background/shared';
 
 // ── Execution context ──────────────────────────────────────────────────────────
 
@@ -165,8 +172,10 @@ function evaluateTrigger(
  *   never throws — all exceptions are caught and surfaced in the result.
  * @remarks Annotation mutations (`add-tag`, `remove-tag`, `move-to-collection`, `archive-notebook`)
  *   write directly to `notebookAnnotationService` (local storage). API-heavy actions
- *   (`generate-audio`, `add-source-url`, `delete-all-sources`) are dispatched to the background
- *   worker via `chrome.runtime.sendMessage` so auth-token handling stays centralised.
+ *   (`generate-audio`, `add-source-url`, `delete-all-sources`) call the `notebooklm-api` module
+ *   directly after `ensureSignedIn`. They must NOT use `chrome.runtime.sendMessage`: the executor
+ *   runs in the background service worker and the runtime does not deliver messages back to the
+ *   sender's own frame, so a self-`sendMessage` throws "Receiving end does not exist".
  */
 async function executeAction(
   action: PipelineAction,
@@ -208,28 +217,25 @@ async function executeAction(
 
       case 'generate-audio': {
         const { format, language, length, focus } = action;
-        await chrome.runtime.sendMessage({
-          type: 'CREATE_AUDIO_OVERVIEW',
-          notebookId,
-          options: { format, language, length, focus },
-        });
+        await ensureSignedIn();
+        await createAudioOverview(notebookId, { format, language, length, focus });
         break;
       }
 
       case 'add-source-url': {
-        await chrome.runtime.sendMessage({
-          type: 'ADD_SOURCE_URL',
-          notebookId,
-          url: action.url,
-        });
+        await ensureSignedIn();
+        await addSourceUrl(notebookId, action.url);
         break;
       }
 
       case 'delete-all-sources': {
-        await chrome.runtime.sendMessage({
-          type: 'DELETE_ALL_SOURCES',
-          notebookId,
-        });
+        await ensureSignedIn();
+        const sources = await fetchNotebookSourcesDetailed(notebookId);
+        for (const src of sources) {
+          await deleteSource(src.id);
+          // Match the rate-limiting pattern from import-job-service
+          await new Promise((r) => setTimeout(r, 500));
+        }
         break;
       }
     }
