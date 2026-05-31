@@ -29,6 +29,7 @@ import { usePromptHubView, type SortOrder } from './usePromptHubView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { aiService } from '@/services/ai-service';
 import { snippetStorage } from '@/services/storage/snippet-storage';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import { openDashboard } from '@/utils/open-dashboard';
 import './PromptHubView.css';
@@ -262,6 +263,11 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
     onCopy(snippet.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+    void recentActionsStorage.addRecentAction({
+      featureId: 'prompts',
+      kind: 'prompt_used',
+      label: `Copied prompt: ${getSnippetTitle(snippet)}`,
+    });
   };
 
   const handleSendToChat = async () => {

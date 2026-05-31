@@ -4,7 +4,7 @@
  * @dependencies @/types
  * @public HomeView (default export)
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Sparkles,
   Clipboard,
@@ -20,6 +20,9 @@ import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { useDailyLimit } from '@/hooks/useDailyLimit';
 import { FREE_CAPS, type CappedFeature } from '@/services/usage-limit-service';
 import { DAILY_LIMITS, type DailyFeature } from '@/services/daily-limit-service';
+import { recentActionsStorage, type RecentAction } from '@/services/storage/recent-actions-storage';
+import { scopedStorage } from '@/services/storage/scoped-storage';
+import { RECENT_ACTIONS_KEY } from '@/services/storage/shared';
 import './HomeView.css';
 
 interface Feature {
@@ -98,6 +101,44 @@ const FEATURES: Feature[] = [
 ];
 
 
+const FEATURES_BY_ID: Record<string, Feature> = FEATURES.reduce(
+  (acc, f) => { acc[f.id] = f; return acc; },
+  {} as Record<string, Feature>,
+);
+
+function relTime(ts: number): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d`;
+}
+
+function useRecentActions(enabled: boolean): RecentAction[] {
+  const [items, setItems] = useState<RecentAction[]>([]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    recentActionsStorage.getRecentActions().then((list) => {
+      if (!cancelled) setItems(list);
+    });
+    const unsubscribe = scopedStorage.onChanged<RecentAction[]>(
+      RECENT_ACTIONS_KEY,
+      (changes) => {
+        const next = changes[RECENT_ACTIONS_KEY]?.newValue;
+        if (next) setItems(next);
+      },
+    );
+    return () => { cancelled = true; unsubscribe(); };
+  }, [enabled]);
+
+  return items;
+}
+
 function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) => void }) {
   const { isActive } = useSubscription();
   // Hooks must be called unconditionally — pass safe fallbacks when the
@@ -122,7 +163,15 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
     <button
       key={f.id}
       className={`home-view__tile${isDisabled ? ' home-view__tile--disabled' : ''}`}
-      onClick={() => !isDisabled && onNavigate(f.id)}
+      onClick={() => {
+        if (isDisabled) return;
+        void recentActionsStorage.addRecentAction({
+          featureId: f.id,
+          kind: 'tile_open',
+          label: `Opened ${f.name}`,
+        });
+        onNavigate(f.id);
+      }}
       disabled={isDisabled}
     >
       <div className="home-view__tile-header">
@@ -172,6 +221,7 @@ interface HomeViewProps {
 
 export default function HomeView({ onNavigate }: HomeViewProps) {
   const { isActive } = useSubscription();
+  const recent = useRecentActions(isActive).slice(0, 5);
 
   return (
     <div className="home-view">
@@ -183,6 +233,43 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
           <FeatureCard key={f.id} f={f} onNavigate={onNavigate} />
         ))}
       </div>
+
+      {isActive && (
+        <div className="home-view__recent-section">
+          <div className="home-view__section-label">Recent</div>
+          {recent.length === 0 ? (
+            <div className="home-view__recent-empty">
+              Your recent activity will show up here.
+            </div>
+          ) : (
+            <ul className="home-view__recent">
+              {recent.map((a) => {
+                const feature = FEATURES_BY_ID[a.featureId];
+                const Icon = feature?.icon;
+                const accent = ACCENT_MAP[feature?.accent ?? 'primary'] ?? ACCENT_MAP.primary;
+                return (
+                  <li key={a.id} className="home-view__recent-row">
+                    <button
+                      type="button"
+                      className="home-view__recent-btn"
+                      onClick={() => onNavigate(a.featureId)}
+                    >
+                      <span
+                        className="home-view__recent-icon"
+                        style={{ background: accent.bg, color: accent.fg }}
+                      >
+                        {Icon ? <Icon size={12} strokeWidth={1.8} /> : null}
+                      </span>
+                      <span className="home-view__recent-label">{a.label}</span>
+                      <span className="home-view__recent-time">{relTime(a.timestamp)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {!isActive && (
         <div className="home-view__upsell">

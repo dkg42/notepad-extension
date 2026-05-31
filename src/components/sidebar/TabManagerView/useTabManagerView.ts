@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { tabGroupsStorage } from '@/services/tab-groups-storage';
 import { aiService } from '@/services/ai-service';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 
 export const FREE_PLAN_MAX_GROUPS = 3;
 export const COLORS: GroupColor[] = ['primary', 'green', 'sky', 'rose', 'violet'];
@@ -192,6 +193,11 @@ export function useTabManagerView() {
       updatedAt: now,
     };
     await persistGroups([...groups, newGroup]);
+    void recentActionsStorage.addRecentAction({
+      featureId: 'tabs',
+      kind: 'tabs_grouped',
+      label: `Created tab group: ${newGroup.name}`,
+    });
     setIsCreatingGroup(false);
     setNewGroupName('');
     setNewGroupColor('primary');

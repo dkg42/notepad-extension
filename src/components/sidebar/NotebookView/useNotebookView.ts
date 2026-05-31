@@ -11,6 +11,7 @@ import type { NotebookMeta } from '@/types';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { dailyLimitService } from '@/services/daily-limit-service';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -73,6 +74,11 @@ export function useNotebookView() {
 
       if (res?.ok) {
         if (!isPro) await dailyLimitService.incrementToday('notebook_add');
+        void recentActionsStorage.addRecentAction({
+          featureId: 'notebook',
+          kind: 'notebook_source_added',
+          label: `Added to notebook: ${tabTitle ?? tabUrl}`,
+        });
         setStatus('success');
       } else {
         setStatus('error');
@@ -82,7 +88,7 @@ export function useNotebookView() {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : String(err));
     }
-  }, [tabUrl, selectedId, isPro]);
+  }, [tabUrl, tabTitle, selectedId, isPro]);
 
   const reset = useCallback(() => {
     setStatus('idle');

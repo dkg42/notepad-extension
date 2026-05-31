@@ -7,6 +7,7 @@
 import React from 'react';
 import { Trash2, Copy, Bookmark } from 'lucide-react';
 import type { ClipboardEntry } from '@/types';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 import './SnippetsView.css';
 
 const MAX_SNIPPETS = 50;
@@ -135,7 +136,15 @@ export default function SnippetsView({
                     <>
                       <button
                         className="snippets-view__action-btn"
-                        onClick={() => entry.text && onCopyText(entry.text)}
+                        onClick={() => {
+                          if (!entry.text) return;
+                          onCopyText(entry.text);
+                          void recentActionsStorage.addRecentAction({
+                            featureId: 'snippets',
+                            kind: 'snippet_copied',
+                            label: `Copied snippet: ${entry.text.slice(0, 40).replace(/\s+/g, ' ').trim()}`,
+                          });
+                        }}
                       >
                         <Copy size={10} />
                         Copy

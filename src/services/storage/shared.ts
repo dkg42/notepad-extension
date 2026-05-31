@@ -2,7 +2,7 @@
  * @module shared
  * @description Shared utilities for storage domain modules: storage key constants, Drive sync helper, and OAuth token accessor.
  * @dependencies token-lifecycle-service, drive/drive-sync-service
- * @public syncToDrive, getDriveToken, SNIPPETS_KEY, FOLDERS_KEY, SETTINGS_KEY, TAGS_META_KEY, EXPORT_HISTORY_KEY, PODCAST_EPISODES_KEY, DEFAULT_SETTINGS
+ * @public syncToDrive, getDriveToken, SNIPPETS_KEY, FOLDERS_KEY, SETTINGS_KEY, TAGS_META_KEY, EXPORT_HISTORY_KEY, PODCAST_EPISODES_KEY, RECENT_ACTIONS_KEY, DEFAULT_SETTINGS
  */
 import type { DashboardSettings } from '@/types/dashboard';
 import { driveSyncService } from '../drive/drive-sync-service';
@@ -14,6 +14,7 @@ export const SETTINGS_KEY = 'dashboardSettings';
 export const TAGS_META_KEY = 'tagsMeta';
 export const EXPORT_HISTORY_KEY = 'exportHistory';
 export const PODCAST_EPISODES_KEY = 'podcastEpisodes';
+export const RECENT_ACTIONS_KEY = 'recentActions';
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',

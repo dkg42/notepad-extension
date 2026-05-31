@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CaptureRecord, ScreenshotStore } from '@/types';
 import { openDashboard } from '@/utils/open-dashboard';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
@@ -57,6 +58,11 @@ export function useScreenshotView() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    void recentActionsStorage.addRecentAction({
+      featureId: 'screenshot',
+      kind: 'screenshot_saved',
+      label: `Saved screenshot: ${filename}`,
+    });
   }, []);
 
   const openInDashboard = useCallback(async (captureId: string) => {

@@ -12,6 +12,7 @@ import { Download, ChevronDown } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { ConversationMessage } from '@/types/chat-history';
 import { exportStrategies } from '@/export/export-registry';
+import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 import './ChatExportMenu.css';
 
 interface ChatExportMenuProps {
@@ -62,6 +63,11 @@ export default function ChatExportMenu({
     setError(null);
     try {
       await strategy.export(messages as ChatMessage[], filename);
+      void recentActionsStorage.addRecentAction({
+        featureId: 'history',
+        kind: 'chat_exported',
+        label: `Exported chat: ${filename} (${strategy.label})`,
+      });
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
