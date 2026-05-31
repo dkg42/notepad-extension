@@ -60,11 +60,27 @@ export const chatHistoryStorage = {
     });
   },
 
-  /** Returns the full content for a single conversation, or null if not cached. */
+  /**
+   * Returns the full content for a single conversation.
+   * Reads local scoped storage first; on miss, falls back to Drive (when a
+   * Drive-scoped token is available) and back-fills the local cache so future
+   * reads are offline-friendly. Returns null only when both local and Drive miss.
+   */
   async getConversationContent(platform: ChatPlatform, id: string): Promise<ConversationFull | null> {
     const key = contentKey(platform, id);
     const result = await scopedStorage.get<ConversationFull>(key);
-    return result[key] ?? null;
+    if (result[key]) return result[key];
+
+    const token = await getDriveToken();
+    if (!token) return null;
+
+    const fromDrive = await driveSyncService.getChatConversationContent(platform, id, token);
+    if (!fromDrive) return null;
+
+    // Cache-fill: write directly to scoped storage to avoid re-enqueuing a Drive
+    // write or rewriting metadata via saveConversationContent.
+    await scopedStorage.set({ [key]: fromDrive });
+    return fromDrive;
   },
 
   /** Stores full conversation content and updates the message count in the metadata index. */
