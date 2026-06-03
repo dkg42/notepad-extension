@@ -22,8 +22,8 @@
 import { OAuthProvider } from 'firebase/auth/web-extension';
 import { isAuthCancellation } from '@/utils/auth-errors';
 
-const EXTERNAL_AUTH_URL = 'https://localhost:3000/auth';
-const EXTERNAL_AUTH_ORIGIN = 'https://localhost:3000';
+const EXTERNAL_AUTH_ORIGIN = import.meta.env.VITE_EXTERNAL_AUTH_ORIGIN as string;
+const EXTERNAL_AUTH_URL = `${EXTERNAL_AUTH_ORIGIN}/auth`;
 
 console.log('[AUTH][Offscreen] Script loaded');
 

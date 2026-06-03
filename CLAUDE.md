@@ -18,16 +18,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install        # Install dependencies and run WXT prepare (via postinstall)
-npm run dev        # Start dev server with HMR — load .output/chrome-mv3 in Chrome
-npm run build      # Production build → .output/chrome-mv3/
-npm run zip        # Build + zip for Chrome Web Store submission
+npm run dev        # Dev profile + HMR → .output-dev/chrome-mv3/ ("Notehublm Dev")
+npm run build      # Prod profile build  → .output/chrome-mv3/      ("Notehublm")
+npm run build:dev  # Dev-profile production build (no HMR) for smoke-testing
+npm run zip        # Prod build + zip for Chrome Web Store submission
 npm run typecheck  # Type-check without emitting
 ```
 
+### Build profiles
+
+Two profiles are checked into the repo: `.env.development` and `.env.production`.
+Local overrides go in `.env.<mode>.local` (gitignored). Required keys (see
+`.env.example`):
+
+- `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_API_KEY` — Firebase project that
+  signs the user in.
+- `VITE_CLOUD_FUNCTIONS_BASE_URL` — Cloud Functions deployment that proxies
+  Google OAuth + Dodo billing.
+- `VITE_EXTERNAL_AUTH_ORIGIN` — origin of the externally hosted auth page
+  loaded by the offscreen iframe. Dev: `https://localhost:3000`. Prod:
+  `https://www.notehublm.com`.
+
+`wxt.config.ts` reads these via `loadEnv()` and builds the manifest name
+(`Notehublm Dev` vs `Notehublm`), `host_permissions`, and CSP `connect-src`
+from the active profile, so dev and prod builds can be installed side-by-side
+in Chrome without ID collision.
+
 ### Loading the extension in Chrome
-1. Run `npm run dev` (or `npm run build`)
+1. `npm run dev` (dev profile) or `npm run build` (prod profile)
 2. Open `chrome://extensions/` → enable Developer mode
-3. Click **Load unpacked** → select `.output/chrome-mv3/`
+3. Click **Load unpacked** → select `.output-dev/chrome-mv3/` for dev, or
+   `.output/chrome-mv3/` for prod
 4. After code changes in dev mode the extension auto-reloads; for the popup just close and reopen it
 
 ## Architecture

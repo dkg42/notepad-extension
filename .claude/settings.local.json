@@ -25,7 +25,8 @@
       "Bash(tar -x -O \"notehub-sidebar/project/home.jsx\")",
       "WebFetch(domain:developer.chrome.com)",
       "WebFetch(domain:gist.github.com)",
-      "Skill(graphify)"
+      "Skill(graphify)",
+      "Bash(npx wxt *)"
     ]
   }
 }

@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Chrome extension to enhance LLM chatbot user experience",
   "scripts": {
-    "dev": "wxt",
-    "build": "wxt build",
-    "zip": "wxt zip",
+    "dev": "wxt --mode development",
+    "dev:prod": "wxt --mode production",
+    "build": "wxt build --mode production",
+    "build:dev": "wxt build --mode development",
+    "zip": "wxt zip --mode production",
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit"
   },
