@@ -69,8 +69,17 @@ export default function SidebarHeader({
     <div className="sidebar-header">
       {isHome ? (
         <div className="sidebar-header__logo">
-          <div className="sidebar-header__logo-mark">n</div>
-          <div className="sidebar-header__wordmark">Notehublm</div>
+          <img
+            src="/logo-mark.png"
+            alt=""
+            aria-hidden="true"
+            className="sidebar-header__logo-mark"
+          />
+          <img
+            src="/wordmark.png"
+            alt="noteHubLM"
+            className="sidebar-header__wordmark"
+          />
         </div>
       ) : (
         <div className="sidebar-header__back-btn">

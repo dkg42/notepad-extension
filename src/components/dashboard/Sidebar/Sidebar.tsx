@@ -247,11 +247,20 @@ export default function Sidebar() {
     <aside className="sidebar">
       {/* Brand */}
       <div className="sidebar__brand">
-        <div className="sidebar__brand-avatar">n</div>
-        <div className="sidebar__brand-info">
-          <span className="sidebar__brand-name">Notehublm</span>
-          <span className="sidebar__brand-subtitle">Dashboard</span>
+        <div className="sidebar__brand-lockup">
+          <img
+            src="/logo-mark.png"
+            alt=""
+            aria-hidden="true"
+            className="sidebar__brand-avatar"
+          />
+          <img
+            src="/wordmark.png"
+            alt="noteHubLM"
+            className="sidebar__brand-wordmark"
+          />
         </div>
+        <span className="sidebar__brand-subtitle">Dashboard</span>
       </div>
 
       {/* Cmd-K search trigger */}

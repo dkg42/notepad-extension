@@ -17,24 +17,26 @@
 .sidebar-header__logo-mark {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  background: var(--primary);
-  color: var(--primary-fg);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  object-fit: contain;
   flex-shrink: 0;
+  display: block;
+  transition: filter 0.15s;
 }
 
 .sidebar-header__wordmark {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  color: var(--fg);
+  height: 14px;
+  width: auto;
+  object-fit: contain;
+  display: block;
   white-space: nowrap;
+  transition: filter 0.15s;
+}
+
+[data-theme='dark'] .sidebar-header__logo-mark,
+[data-theme='dark'] .sidebar-header__wordmark,
+.dark .sidebar-header__logo-mark,
+.dark .sidebar-header__wordmark {
+  filter: invert(1);
 }
 
 .sidebar-header__back-btn {
