@@ -299,20 +299,28 @@ function handleAuthSessionMessage(
         // through it); a failure here throws and fails the sign-in via the
         // .catch, so we never persist a saved-but-broken profile.
         await establishFirebaseSdkSession(credential);
+        // Verify the Firebase ID token and persist subscription claims BEFORE
+        // writing the profile below. Writing the profile is what reactive UIs
+        // (e.g. the side panel's onProfileChanged listener) key off to fire
+        // DRIVE_INITIALIZE, and the background's own Drive init runs right after.
+        // Both gate on the stored claims via isProUser(), so the claims must be
+        // in storage first — otherwise a Pro user is briefly seen as free-tier
+        // and Drive sync is skipped until something re-triggers it.
+        // Awaited but non-fatal: a verification failure does not block sign-in
+        // (the user is treated as free-tier until the next claims refresh).
+        try {
+          const claimsResult = await verifyFirebaseIdToken(credential._tokenResponse.idToken);
+          if (claimsResult.ok) {
+            await authStorageService.saveAuthClaims(claimsResult.claims);
+          } else {
+            console.warn('[AUTH][BG] ID token claim verification failed:', claimsResult.reason);
+          }
+        } catch (err: unknown) {
+          console.warn('[AUTH][BG] Unexpected error verifying ID token claims:', err);
+        }
         console.log('[AUTH][BG] Auth complete, storing profile and session token');
         await authStorageService.saveAuthData(credential);
         void scheduleRefreshAlarm();
-        // Verify Firebase ID token and store subscription claims.
-        // Non-blocking: a verification failure does not prevent sign-in.
-        verifyFirebaseIdToken(credential._tokenResponse.idToken).then((result) => {
-          if (result.ok) {
-            void authStorageService.saveAuthClaims(result.claims);
-          } else {
-            console.warn('[AUTH][BG] ID token claim verification failed:', result.reason);
-          }
-        }).catch((err: unknown) => {
-          console.warn('[AUTH][BG] Unexpected error verifying ID token claims:', err);
-        });
         console.log('[AUTH][BG] Auth complete, sending ok to popup');
         sendResponse({ ok: true });
         // Proactively establish the NotebookLM Google session so batchRPC
