@@ -27,7 +27,9 @@ export type { OAuthCredentialPayload };
 
 const AUTH_PROFILE_KEY = 'authProfile';
 // Firebase refresh token — stored plaintext (safe: Firebase tokens are designed for client storage
-// and only work at securetoken.googleapis.com, which requires no client_secret).
+// and carry no client_secret). The Firebase Auth SDK now manages ID-token refresh from its own
+// persisted session; this copy is retained as a lightweight "signed-in" marker that token-lifecycle
+// gates on before attempting a Google OAuth refresh.
 const AUTH_FIREBASE_REFRESH_KEY = 'authFirebaseRefreshToken';
 const AUTH_SESSION_KEY = 'authSession';
 const AUTH_CLAIMS_KEY = 'authClaims';
@@ -78,8 +80,9 @@ export const authStorageService = {
     });
 
     // 3. Firebase refresh token → plaintext in chrome.storage.local.
-    //    Used only at securetoken.googleapis.com (no client_secret needed).
-    //    Google OAuth refresh is proxied through the refreshGoogleToken Cloud Function.
+    //    Retained as a signed-in marker (token-lifecycle gates on it). Firebase
+    //    ID tokens are now minted by the Auth SDK from its persisted session, and
+    //    Google OAuth refresh is proxied through the refreshGoogleToken Callable.
     const firebaseRefreshToken = credential.user.stsTokenManager?.refreshToken;
     if (firebaseRefreshToken) {
       await this.saveFirebaseRefreshToken(firebaseRefreshToken);

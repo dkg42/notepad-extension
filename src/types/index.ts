@@ -2,7 +2,7 @@
  * @module index
  * @description Central type barrel for the extension — re-exports all domain types from their sub-modules and defines the core shared interfaces (Snippet, Folder, ChatMessage, ClipboardEntry, auth tokens, podcast structures, and NotebookLM records) that are consumed across content scripts, background, and the dashboard UI.
  * @dependencies @/types/dashboard, @/types/import, @/types/chat-history, @/types/pipeline
- * @public Folder, TagMeta, Snippet, ClipboardEntry, ChatMessage, UNCATEGORIZED_ID, SourceRecord, SourceDetailRecord, ArtifactRecord, NoteRecord, NoteDetailRecord, NotebookAnnotation, EpisodeTrackSource, EpisodeTrack, PodcastEpisode, CustomAudioEntry, StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, StsTokenManager, FirebaseUserData, FirebaseTokenResponse, OAuthCredentialPayload, GoogleTokenRefreshResponse, NotebookMeta
+ * @public Folder, TagMeta, Snippet, ClipboardEntry, ChatMessage, UNCATEGORIZED_ID, SourceRecord, SourceDetailRecord, ArtifactRecord, NoteRecord, NoteDetailRecord, NotebookAnnotation, EpisodeTrackSource, EpisodeTrack, PodcastEpisode, CustomAudioEntry, StoredAuthProfile, EncryptedTokenBlob, SessionTokenData, StsTokenManager, FirebaseUserData, FirebaseTokenResponse, OAuthCredentialPayload, NotebookMeta
  */
 export * from './dashboard';
 export * from './import';
@@ -231,15 +231,12 @@ export interface OAuthCredentialPayload {
   providerId: string;
   _tokenResponse: FirebaseTokenResponse;
   operationType: string;
-}
-
-/** Response shape from Google's OAuth2 token endpoint (https://oauth2.googleapis.com/token). */
-export interface GoogleTokenRefreshResponse {
-  access_token: string;
-  expires_in: number;    // seconds until expiry
-  scope: string;         // space-separated list of granted scopes
-  token_type: 'Bearer';
-  id_token?: string;
+  /**
+   * Firebase custom token minted by the storeGoogleToken Cloud Function. Used to
+   * establish the extension's own SDK session via signInWithCustomToken, so the
+   * Functions SDK can attach the caller's ID token to Callable invocations.
+   */
+  customToken?: string;
 }
 
 // ── Subscription types ─────────────────────────────────────────────────────────

@@ -18,8 +18,10 @@ import { chatHistoryStorage } from '@/services/chat-history-storage';
 import { pipelineService } from '@/services/pipeline-service';
 import { ensureGoogleSession, invalidateSessionCache } from '@/services/google-session-service';
 import type { AuthError } from 'firebase/auth/web-extension';
+import { signInWithCustomToken, signOut } from 'firebase/auth/web-extension';
 import type { NotebookAnnotation } from '@/types';
 import { authStorageService, type OAuthCredentialPayload } from '@/services/auth-storage-service';
+import { getFirebaseAuth } from '@/services/firebase-app';
 import { dataStorage } from '@/services/storage/data-storage';
 import { isProClaims } from '@/utils/subscription';
 import { verifyFirebaseIdToken } from '@/services/firebase-claims-verifier';
@@ -215,6 +217,25 @@ async function firebaseAuth(): Promise<OAuthCredentialPayload> {
 }
 
 /**
+ * Establishes a live Firebase Auth SDK session from the custom token minted by
+ * the storeGoogleToken Cloud Function (forwarded in the BFF sign-in payload), so
+ * the Functions SDK (httpsCallable) attaches the caller's ID token automatically,
+ * populating request.auth server-side.
+ *
+ * Required, not best-effort: every Callable Function (token refresh/revoke, etc.)
+ * depends on this session, so a failure here must fail the sign-in rather than
+ * leave a silently broken state. The thrown error propagates to the firebase-auth
+ * handler's .catch, which reports { ok: false } to the popup.
+ */
+async function establishFirebaseSdkSession(credential: OAuthCredentialPayload): Promise<void> {
+  if (!credential.customToken) {
+    throw new Error('No custom token in auth payload — cannot establish Firebase SDK session');
+  }
+  await signInWithCustomToken(getFirebaseAuth(), credential.customToken);
+  console.log('[AUTH][BG] Firebase SDK session established (signInWithCustomToken)');
+}
+
+/**
  * Handles auth/session and clipboard messages that are tightly coupled to the
  * service worker lifecycle (offscreen document, Firebase auth, clipboard).
  * Kept inline in background.ts — do not extract to a handler module.
@@ -273,6 +294,11 @@ function handleAuthSessionMessage(
             allArtifactsCacheService.clear(),
           ]);
         }
+        // Establish the Firebase SDK session FIRST. It is required for every
+        // Callable Function below (ensureGoogleSession / getValidToken proxy
+        // through it); a failure here throws and fails the sign-in via the
+        // .catch, so we never persist a saved-but-broken profile.
+        await establishFirebaseSdkSession(credential);
         console.log('[AUTH][BG] Auth complete, storing profile and session token');
         await authStorageService.saveAuthData(credential);
         void scheduleRefreshAlarm();
@@ -348,6 +374,12 @@ function handleAuthSessionMessage(
         // Best-effort: a failure must not block sign-out.
         await revokeToken().catch((err: unknown) => {
           console.warn('[AUTH][BG] Token revocation failed (non-fatal):', err);
+        });
+
+        // Clear the Firebase SDK session (currentUser + IndexedDB persistence)
+        // after revocation, which needs the session to authenticate its call.
+        await signOut(getFirebaseAuth()).catch((err: unknown) => {
+          console.warn('[AUTH][BG] Firebase SDK signOut failed (non-fatal):', err);
         });
 
         // Tear down Drive sync: cancel pending writes and clear session cache

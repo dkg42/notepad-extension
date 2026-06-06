@@ -1,160 +1,74 @@
 /**
  * @module firebase-token-service
- * @description Manages Firebase ID token lifecycle in the extension background context.
- *   Refreshes Firebase ID tokens via the securetoken.googleapis.com REST endpoint using
- *   the stored Firebase refresh token. No client_secret is required — Firebase refresh
- *   tokens are designed for client-side storage and the securetoken endpoint only needs
- *   the public Firebase API key. The current ID token is cached in chrome.storage.session.
- *   Failures are classified so callers can distinguish a recoverable hiccup (network /
- *   5xx / rate-limit) from a genuinely dead refresh token — only the latter should ever
- *   trigger a forced sign-out.
- * @dependencies auth-storage-service
+ * @description Returns a valid Firebase ID token for the signed-in user, sourced
+ *   from the Firebase Auth SDK (`auth.currentUser.getIdToken()`). The SDK caches
+ *   and refreshes the token internally, so this module no longer talks to the
+ *   securetoken REST endpoint or maintains its own cache. Failures are classified
+ *   so callers can distinguish a recoverable hiccup (network) from a genuinely
+ *   dead session (re-auth required) from a signed-out state — only a dead session
+ *   should ever force a sign-out.
+ * @dependencies firebase-app
  * @public getFirebaseIdToken, FirebaseIdTokenResult
  */
 
-import { authStorageService } from './auth-storage-service';
-
-const SECURETOKEN_ENDPOINT = 'https://securetoken.googleapis.com/v1/token';
-const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY as string ?? '';
-
-const FIREBASE_ID_TOKEN_CACHE_KEY = 'firebaseIdTokenCache';
-/** Refresh the cached ID token this many ms before it expires to avoid races. */
-const LEAD_TIME_MS = 5 * 60 * 1000;
-
-interface FirebaseIdTokenCache {
-  idToken: string;
-  expiresAt: number; // Unix ms
-}
-
-interface SecureTokenResponse {
-  id_token: string;
-  refresh_token: string;
-  expires_in: string; // seconds as string
-}
+import { FirebaseError } from 'firebase/app';
+import { getFirebaseAuth, whenAuthReady } from './firebase-app';
 
 /**
  * Result of an ID-token fetch.
  *
  * `reason` discriminates failure modes so callers never treat a recoverable
  * hiccup as a dead session:
- *   - `transient`  — network error, 5xx, or 429. Retry later; auth is fine.
- *   - `invalid`    — the refresh token is genuinely dead (revoked/expired/
- *                    disabled user). Re-authentication is required.
- *   - `signed_out` — no Firebase refresh token stored (user is not signed in).
+ *   - `transient`  — network error or any ambiguous SDK failure. Retry later;
+ *                    the session is fine.
+ *   - `invalid`    — the session is genuinely dead (revoked / disabled / expired
+ *                    credential). Re-authentication is required.
+ *   - `signed_out` — no signed-in Firebase user (user is not signed in, or a
+ *                    pre-SDK session has not been re-established yet).
  */
 export type FirebaseIdTokenResult =
   | { ok: true; idToken: string }
   | { ok: false; reason: 'transient' | 'invalid' | 'signed_out' };
 
 /**
- * securetoken.googleapis.com error-body message values that indicate the
- * refresh token itself is permanently unusable. Anything else (including
- * any 5xx / 429 / network failure) is treated as transient.
- * @see https://firebase.google.com/docs/reference/rest/auth#section-refresh-token
+ * Firebase Auth error codes that mean the session is permanently unusable.
+ * Anything else — most importantly `auth/network-request-failed` — is treated as
+ * transient so an idle-time network blip never forces a sign-out.
+ * @see https://firebase.google.com/docs/auth/admin/errors
  */
-const INVALID_REFRESH_TOKEN_ERRORS = new Set([
-  'INVALID_REFRESH_TOKEN',
-  'TOKEN_EXPIRED',
-  'USER_DISABLED',
-  'USER_NOT_FOUND',
-  'MISSING_REFRESH_TOKEN',
-  'INVALID_GRANT_TYPE',
+const INVALID_SESSION_CODES = new Set([
+  'auth/user-token-expired',
+  'auth/user-disabled',
+  'auth/user-not-found',
+  'auth/invalid-user-token',
+  'auth/requires-recent-login',
 ]);
 
-interface SecureTokenErrorBody {
-  error?: { message?: string };
-}
-
-// ── Cache helpers ──────────────────────────────────────────────────────────────
-
-async function getCachedIdToken(): Promise<FirebaseIdTokenCache | null> {
-  const result = await (chrome.storage.session as typeof chrome.storage.local).get(FIREBASE_ID_TOKEN_CACHE_KEY);
-  return (result[FIREBASE_ID_TOKEN_CACHE_KEY] as FirebaseIdTokenCache) ?? null;
-}
-
-async function setCachedIdToken(idToken: string, expiresAt: number): Promise<void> {
-  await (chrome.storage.session as typeof chrome.storage.local).set({
-    [FIREBASE_ID_TOKEN_CACHE_KEY]: { idToken, expiresAt } satisfies FirebaseIdTokenCache,
-  });
-}
-
-// ── Public API ─────────────────────────────────────────────────────────────────
-
 /**
- * Returns a valid Firebase ID token, refreshing it if expired or near expiry.
+ * Returns a valid Firebase ID token, refreshing via the SDK if near expiry.
  *
  * The result discriminates failure modes (see {@link FirebaseIdTokenResult}):
- * a network blip, 5xx, or 429 is `transient` (the caller must retry, NOT sign
- * the user out); only a genuinely dead refresh token is `invalid`.
+ * a network failure is `transient` (the caller must retry, NOT sign the user
+ * out); a revoked/disabled session is `invalid`; no signed-in user is
+ * `signed_out`.
  */
 export async function getFirebaseIdToken(): Promise<FirebaseIdTokenResult> {
-  const cache = await getCachedIdToken();
-  if (cache && cache.expiresAt - Date.now() > LEAD_TIME_MS) {
-    return { ok: true, idToken: cache.idToken };
-  }
+  await whenAuthReady();
+  const user = getFirebaseAuth().currentUser;
+  if (!user) return { ok: false, reason: 'signed_out' };
 
-  const refreshToken = await authStorageService.getFirebaseRefreshToken();
-  if (!refreshToken) return { ok: false, reason: 'signed_out' };
-
-  let response: Response;
   try {
-    response = await fetch(`${SECURETOKEN_ENDPOINT}?key=${FIREBASE_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }),
-    });
+    const idToken = await user.getIdToken();
+    return { ok: true, idToken };
   } catch (err) {
-    // Network failure / service worker torn down mid-fetch — recoverable.
-    console.warn('[FIREBASE-TOKEN] Network error refreshing ID token (transient):', err);
-    return { ok: false, reason: 'transient' };
-  }
-
-  if (!response.ok) {
-    const errorMessage = await readSecureTokenError(response);
-    const isDeadToken =
-      response.status === 400 && errorMessage !== null &&
-      INVALID_REFRESH_TOKEN_ERRORS.has(errorMessage);
-
-    if (isDeadToken) {
-      console.warn('[FIREBASE-TOKEN] Refresh token rejected (invalid):', errorMessage);
+    const code = err instanceof FirebaseError ? err.code : '';
+    if (INVALID_SESSION_CODES.has(code)) {
+      console.warn('[FIREBASE-TOKEN] Session rejected (invalid):', code);
       return { ok: false, reason: 'invalid' };
     }
-
-    // 5xx, 429, or any other non-OK status: treat as recoverable so a
-    // transient outage never forces a sign-out.
-    console.warn(
-      `[FIREBASE-TOKEN] ID token refresh failed (transient): HTTP ${response.status}`,
-      errorMessage ?? '',
-    );
+    // Network failure / service worker torn down mid-refresh / anything
+    // ambiguous — recoverable. Never force a sign-out on an unclear error.
+    console.warn('[FIREBASE-TOKEN] ID token fetch failed (transient):', code || err);
     return { ok: false, reason: 'transient' };
   }
-
-  const data = await response.json() as SecureTokenResponse;
-  const expiresAt = Date.now() + parseInt(data.expires_in, 10) * 1000;
-  await setCachedIdToken(data.id_token, expiresAt);
-
-  // If the refresh token was rotated, persist the new one
-  if (data.refresh_token && data.refresh_token !== refreshToken) {
-    await authStorageService.saveFirebaseRefreshToken(data.refresh_token);
-  }
-
-  return { ok: true, idToken: data.id_token };
-}
-
-/** Best-effort parse of the securetoken error body's `error.message` field. */
-async function readSecureTokenError(response: Response): Promise<string | null> {
-  try {
-    const body = await response.json() as SecureTokenErrorBody;
-    return body.error?.message ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** Clears the cached Firebase ID token (call on sign-out). */
-export async function clearFirebaseIdTokenCache(): Promise<void> {
-  await (chrome.storage.session as typeof chrome.storage.local).remove(FIREBASE_ID_TOKEN_CACHE_KEY);
 }

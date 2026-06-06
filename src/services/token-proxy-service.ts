@@ -1,42 +1,42 @@
 /**
  * @module token-proxy-service
- * @description Replaces token-refresh-service. Proxies Google OAuth token operations
- *   through the notehublm Cloud Functions instead of calling Google's endpoints directly.
- *   This keeps GOOGLE_CLIENT_SECRET on the server and out of the extension bundle.
- *   All requests are authenticated using a Firebase ID token (no client_secret needed
- *   for that — only the public Firebase API key is required).
- * @dependencies firebase-token-service, auth-storage-service
+ * @description Proxies Google OAuth token operations through the notehublm
+ *   Callable Cloud Functions instead of calling Google's endpoints directly,
+ *   keeping GOOGLE_CLIENT_SECRET on the server and out of the extension bundle.
+ *   Calls go through the Firebase Functions SDK (httpsCallable), which attaches
+ *   the caller's Firebase ID token automatically so the functions can read
+ *   request.auth server-side — no hand-built Authorization header.
+ * @dependencies firebase-app, firebase-token-service
  * @public refreshAccessToken, revokeToken, TokenRefreshResult
  */
 
+import { httpsCallable, FunctionsError } from 'firebase/functions';
+import { getFirebaseFunctions } from './firebase-app';
 import { getFirebaseIdToken } from './firebase-token-service';
-import { authStorageService } from './auth-storage-service';
-
-const CF_BASE_URL = import.meta.env.VITE_CLOUD_FUNCTIONS_BASE_URL as string ?? '';
-
-const REFRESH_URL = `${CF_BASE_URL}/refreshGoogleToken`;
-const REVOKE_URL = `${CF_BASE_URL}/revokeGoogleToken`;
 
 export type TokenRefreshResult =
   | { ok: true; accessToken: string; expiresAt: number; scopes: string[]; idToken: undefined }
   | { ok: false; reason: 'invalid_grant' | 'network_error' | 'server_error'; error: string };
 
-interface RefreshCFResponse {
+interface RefreshCFResult {
   accessToken: string;
   expiresIn: number;
   scope: string;
 }
 
+/** Transport-level callable error codes that indicate a recoverable network issue. */
+const NETWORK_CODES = new Set(['functions/unavailable', 'functions/deadline-exceeded']);
+
 /**
  * Obtains a new Google OAuth access token by calling the refreshGoogleToken
- * Cloud Function. The server uses the stored refresh token + client_secret.
+ * Callable Function. The server uses the stored refresh token + client_secret.
  */
 export async function refreshAccessToken(): Promise<TokenRefreshResult> {
+  // Classify the session up front: only a genuinely dead/absent session warrants
+  // the destructive invalid_grant path. A transient ID-token failure must stay
+  // recoverable so an idle-time network blip never forces a sign-out.
   const idTokenResult = await getFirebaseIdToken();
   if (!idTokenResult.ok) {
-    // Only a genuinely dead refresh token (or being signed out) warrants the
-    // destructive invalid_grant path. A transient ID-token failure must stay
-    // recoverable so an idle-time network blip never forces a sign-out.
     if (idTokenResult.reason === 'transient') {
       return {
         ok: false,
@@ -48,74 +48,65 @@ export async function refreshAccessToken(): Promise<TokenRefreshResult> {
       ok: false,
       reason: 'invalid_grant',
       error: idTokenResult.reason === 'signed_out'
-        ? 'No Firebase refresh token — user is signed out'
-        : 'Firebase refresh token is invalid',
+        ? 'No signed-in Firebase user — user is signed out'
+        : 'Firebase session is invalid',
     };
   }
-  const idToken = idTokenResult.idToken;
 
-  let response: Response;
   try {
-    response = await fetch(REFRESH_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
-  } catch (err) {
+    const callRefresh = httpsCallable<Record<string, never>, RefreshCFResult>(
+      getFirebaseFunctions(),
+      'refreshGoogleToken',
+    );
+    const { data } = await callRefresh({});
     return {
-      ok: false,
-      reason: 'network_error',
-      error: err instanceof Error ? err.message : String(err),
+      ok: true,
+      accessToken: data.accessToken,
+      expiresAt: Date.now() + data.expiresIn * 1000,
+      scopes: data.scope ? data.scope.split(' ').filter(Boolean) : [],
+      idToken: undefined,
     };
-  }
+  } catch (err) {
+    const code = err instanceof FunctionsError ? err.code : '';
+    const details = err instanceof FunctionsError ? err.details : undefined;
+    const message = err instanceof Error ? err.message : String(err);
 
-  // Parse defensively: a 5xx from an upstream proxy may return non-JSON
-  // (e.g. an HTML 502). A parse failure must not throw — that would bypass
-  // the retry path and surface as an "unexpected error".
-  let body: RefreshCFResponse & { error?: string; message?: string };
-  try {
-    body = await response.json() as RefreshCFResponse & { error?: string; message?: string };
-  } catch {
-    body = {} as RefreshCFResponse & { error?: string; message?: string };
-  }
+    // A dead Google refresh token: the function throws failed-precondition and
+    // signals invalid_grant via the message/details.
+    const isInvalidGrant =
+      code === 'functions/failed-precondition' ||
+      details === 'invalid_grant' ||
+      message.includes('invalid_grant');
+    if (isInvalidGrant) {
+      return { ok: false, reason: 'invalid_grant', error: message };
+    }
 
-  if (!response.ok) {
-    const reason = body.error === 'invalid_grant' ? 'invalid_grant' : 'server_error';
-    return { ok: false, reason, error: body.message ?? body.error ?? `HTTP ${response.status}` };
+    if (NETWORK_CODES.has(code)) {
+      return { ok: false, reason: 'network_error', error: message };
+    }
+    return { ok: false, reason: 'server_error', error: message };
   }
-
-  return {
-    ok: true,
-    accessToken: body.accessToken,
-    expiresAt: Date.now() + body.expiresIn * 1000,
-    scopes: body.scope ? body.scope.split(' ').filter(Boolean) : [],
-    idToken: undefined,
-  };
 }
 
 /**
- * Revokes the stored Google OAuth token by calling the revokeGoogleToken Cloud Function.
- * The server reads + revokes the refresh token from Firestore and deletes the doc.
- * Best-effort: returns true even on server errors to not block sign-out.
+ * Revokes the stored Google OAuth token by calling the revokeGoogleToken Callable
+ * Function. The server reads + revokes the refresh token from Firestore and
+ * deletes the doc. Best-effort: a failure must not block sign-out.
  */
 export async function revokeToken(): Promise<boolean> {
   const idTokenResult = await getFirebaseIdToken();
-  if (!idTokenResult.ok) return true; // No usable ID token — nothing to revoke
+  if (!idTokenResult.ok) return true; // No usable session — nothing to revoke.
 
   try {
-    const response = await fetch(REVOKE_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idTokenResult.idToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
-    return response.ok || response.status === 404;
-  } catch {
+    const callRevoke = httpsCallable<Record<string, never>, unknown>(
+      getFirebaseFunctions(),
+      'revokeGoogleToken',
+    );
+    await callRevoke({});
+    return true;
+  } catch (err) {
+    // Already revoked / no token on file is success for our purposes.
+    if (err instanceof FunctionsError && err.code === 'functions/not-found') return true;
     return false;
   }
 }
