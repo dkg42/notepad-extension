@@ -56,6 +56,7 @@ import type { DriveFilename, DrivePromptMeta } from './types/drive-schemas';
 import { storageService } from '@/services/storage-service';
 import { scopedStorage } from '@/services/storage/scoped-storage';
 import { notebookAnnotationService } from '@/services/notebook-annotation-service';
+import { logger } from '@/utils/logger';
 import { notebookFolderService } from '@/services/notebook-folder-service';
 import { notebookSyncService } from '@/services/notebook-sync-service';
 import { pipelineService } from '@/services/pipeline-service';
@@ -130,7 +131,7 @@ async function applyCachedDriveDataToLocal(): Promise<void> {
     }
   }
   if (applied > 0) {
-    console.log(`[DRIVE-INIT] Free-tier: flushed ${applied} cached Drive files to local storage`);
+    logger.debug(`[DRIVE-INIT] Free-tier: flushed ${applied} cached Drive files to local storage`);
   }
 }
 
@@ -177,7 +178,7 @@ export async function initialize(
   // Free-tier users must not make Drive API calls. Apply any data already
   // in the session cache (from a prior Pro session) so it is not discarded.
   if (!await isProUser()) {
-    console.log('[DRIVE-INIT] Free-tier user — skipping Drive API calls');
+    logger.debug('[DRIVE-INIT] Free-tier user — skipping Drive API calls');
     await applyCachedDriveDataToLocal();
     return { isFirstTime: false, filesLoaded: 0, conflicts: [] };
   }
@@ -192,7 +193,7 @@ export async function initialize(
     if (!dedupeResult.ok) {
       console.warn('[DRIVE-INIT] dedupeFolder failed — continuing without sweep:', dedupeResult.error);
     } else if (dedupeResult.data.trashed > 0) {
-      console.log(`[DRIVE-INIT] Trashed ${dedupeResult.data.trashed} duplicate file(s) during sweep`);
+      logger.debug(`[DRIVE-INIT] Trashed ${dedupeResult.data.trashed} duplicate file(s) during sweep`);
     }
 
     const manifest = await loadManifest(token);
@@ -217,7 +218,7 @@ export async function initialize(
 
     if (!manifest) {
       // Path A: First-time user
-      console.log('[DRIVE-INIT] No manifest found — migrating local data to Drive');
+      logger.debug('[DRIVE-INIT] No manifest found — migrating local data to Drive');
       // Clear the guard before migration so writeAllFromLocal() can enqueue writes.
       setInitializing(false);
       await migrateLocalDataToDrive(token, ownerUid);
@@ -265,7 +266,7 @@ export async function initialize(
         // Second call: user made a resolution decision — apply it
         await applyConflictDecision(allDriveFiles, conflictDecision, token);
         await markDeviceInitialized();
-        console.log(`[DRIVE-INIT] Conflict resolved ('${conflictDecision}') — ${allDriveFiles.size} files processed`);
+        logger.debug(`[DRIVE-INIT] Conflict resolved ('${conflictDecision}') — ${allDriveFiles.size} files processed`);
         return { isFirstTime: false, filesLoaded: allDriveFiles.size, conflicts: [] };
       }
 
@@ -290,7 +291,7 @@ export async function initialize(
           }),
         );
         await markDeviceInitialized();
-        console.log(`[DRIVE-INIT] First-time init (empty local) — ${allDriveFiles.size} files applied from Drive`);
+        logger.debug(`[DRIVE-INIT] First-time init (empty local) — ${allDriveFiles.size} files applied from Drive`);
         return { isFirstTime: false, filesLoaded: allDriveFiles.size, conflicts: [] };
       }
 
@@ -308,7 +309,7 @@ export async function initialize(
         driveLastSync: allDriveFiles.get('prompts-meta.json')?.driveUpdatedAt ?? 0,
       };
 
-      console.log('[DRIVE-INIT] First-time init — local data detected, awaiting user conflict decision');
+      logger.debug('[DRIVE-INIT] First-time init — local data detected, awaiting user conflict decision');
       return {
         isFirstTime: false,
         filesLoaded: 0,
@@ -379,7 +380,7 @@ export async function migrateLocalDataToDrive(token: string, ownerUid: string): 
   }, token);
 
   await markDeviceInitialized();
-  console.log('[DRIVE-INIT] First-time migration complete');
+  logger.debug('[DRIVE-INIT] First-time migration complete');
 }
 
 // ── Conflict resolution helpers ────────────────────────────────────────────────

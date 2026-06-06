@@ -6,6 +6,7 @@
  */
 import type { StoredAuthProfile } from '@/types';
 import { authStorageService } from './auth-storage-service';
+import { logger } from '@/utils/logger';
 
 /**
  * Auth service for use in popup, dashboard, and components.
@@ -30,7 +31,7 @@ export const authService = {
    * to chrome.storage.local.
    */
   async signIn(): Promise<{ ok: boolean; error?: string }> {
-    console.log('[AUTH][authService] Sending firebase-auth message to background');
+    logger.debug('[AUTH][authService] Sending firebase-auth message to background');
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         { type: 'firebase-auth' },
@@ -40,7 +41,7 @@ export const authService = {
             resolve({ ok: false, error: chrome.runtime.lastError.message });
             return;
           }
-          console.log('[AUTH][authService] Received response from background:', response);
+          logger.debug('[AUTH][authService] Received response from background:', response);
           resolve(response ?? { ok: false, error: 'No response from background' });
         },
       );

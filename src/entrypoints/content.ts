@@ -12,6 +12,7 @@ import { setupSendToChat } from '@/content/send-to-chat';
 import { setupSourcePanelEnhancer } from '@/content/source-panel-enhancer/source-panel-enhancer';
 import { setupStudioPanelEnhancer } from '@/content/studio-panel-enhancer/studio-panel-enhancer';
 import { setupChatSaveHandler } from '@/content/chat-save-handler';
+import { logger } from '@/utils/logger';
 
 export default defineContentScript({
   matches: [
@@ -27,7 +28,7 @@ export default defineContentScript({
     'https://notebooklm.google.com/*',
   ],
   main() {
-    console.log('[NLM-EXT] Content script loaded on:', location.hostname, location.href);
+    logger.debug('[NLM-EXT] Content script loaded on:', location.hostname, location.href);
 
     // Feature: send saved prompts from sidebar into the active chat input
     setupSendToChat();

@@ -44,6 +44,7 @@
 import { createFile, updateFile, findFileByName } from './drive-io-service';
 import { upsertEntry, getEntry, getManifest, load as loadManifest } from './drive-manifest-service';
 import { DRIVE_SCHEMA_VERSION } from './types/drive-schemas';
+import { logger } from '@/utils/logger';
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -207,7 +208,7 @@ export function enqueue(
   debounceMs?: number,
 ): void {
   if (_initInProgress) {
-    console.debug(`[DRIVE-QUEUE] Skipping enqueue for ${filename} — init in progress`);
+    logger.debug(`[DRIVE-QUEUE] Skipping enqueue for ${filename} — init in progress`);
     return;
   }
 

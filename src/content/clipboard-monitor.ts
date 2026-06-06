@@ -5,16 +5,17 @@
  * @public setupClipboardMonitor
  */
 import type { ClipboardEntry } from '@/types';
+import { logger } from '@/utils/logger';
 
 const TAG = '[clipboard-monitor]';
 
 export function setupClipboardMonitor(): void {
-  console.log(TAG, 'initialized on', location.href);
+  logger.debug(TAG, 'initialized on', location.href);
   document.addEventListener('copy', handleCopyEvent);
 }
 
 async function handleCopyEvent(e: ClipboardEvent): Promise<void> {
-  console.log(TAG, 'copy event fired');
+  logger.debug(TAG, 'copy event fired');
 
   if (!e.clipboardData) {
     console.warn(TAG, 'clipboardData is null — skipping');
@@ -39,7 +40,7 @@ async function handleCopyEvent(e: ClipboardEvent): Promise<void> {
 
   const fromData = e.clipboardData.getData('text/plain').trim();
   const fromSelection = window.getSelection()?.toString().trim() ?? '';
-  console.log(TAG, 'text sources:', { fromData, fromSelection });
+  logger.debug(TAG, 'text sources:', { fromData, fromSelection });
 
   const text = fromData || fromSelection;
   if (text) {

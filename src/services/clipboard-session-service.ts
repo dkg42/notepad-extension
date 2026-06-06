@@ -5,6 +5,7 @@
  * @public clipboardSessionService
  */
 import type { ClipboardEntry } from '@/types';
+import { logger } from '@/utils/logger';
 
 const SESSION_KEY = 'clipboardEntries';
 const MAX_ENTRIES = 50;
@@ -16,13 +17,13 @@ export const clipboardSessionService = {
   },
 
   async add(entry: Omit<ClipboardEntry, 'id' | 'copiedAt'>): Promise<void> {
-    console.log('[clipboard-session-service] add() called', entry.type);
+    logger.debug('[clipboard-session-service] add() called', entry.type);
     const entries = await this.getAll();
-    console.log('[clipboard-session-service] existing entries:', entries.length);
+    logger.debug('[clipboard-session-service] existing entries:', entries.length);
 
     // Skip duplicate: same text as the most recent entry
     if (entry.type === 'text' && entries[0]?.type === 'text' && entries[0].text === entry.text) {
-      console.log('[clipboard-session-service] duplicate skipped');
+      logger.debug('[clipboard-session-service] duplicate skipped');
       return;
     }
 
@@ -34,7 +35,7 @@ export const clipboardSessionService = {
 
     const updated = [newEntry, ...entries].slice(0, MAX_ENTRIES);
     await chrome.storage.session.set({ [SESSION_KEY]: updated });
-    console.log('[clipboard-session-service] written to session storage, total:', updated.length);
+    logger.debug('[clipboard-session-service] written to session storage, total:', updated.length);
   },
 
   async remove(id: string): Promise<void> {

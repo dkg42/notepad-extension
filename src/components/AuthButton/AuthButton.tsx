@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { authService } from '@/services/auth-service';
 import { isAuthCancellation, getFriendlyAuthError } from '@/utils/auth-errors';
+import { logger } from '@/utils/logger';
 import './AuthButton.css';
 
 interface Props {
@@ -23,20 +24,20 @@ export default function AuthButton({ onSignIn, onError }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
-    console.log('[AUTH][AuthButton] Sign-in button clicked');
+    logger.debug('[AUTH][AuthButton] Sign-in button clicked');
     setLoading(true);
     setError(null);
     try {
-      console.log('[AUTH][AuthButton] Calling authService.signIn()...');
+      logger.debug('[AUTH][AuthButton] Calling authService.signIn()...');
       const response = await authService.signIn();
-      console.log('[AUTH][AuthButton] authService.signIn() resolved:', response);
+      logger.debug('[AUTH][AuthButton] authService.signIn() resolved:', response);
       if (response.ok) {
-        console.log('[AUTH][AuthButton] Sign-in successful, calling onSignIn callback');
+        logger.debug('[AUTH][AuthButton] Sign-in successful, calling onSignIn callback');
         onSignIn?.();
       } else {
         const msg = response.error ?? 'Sign-in failed';
         if (isAuthCancellation(msg)) {
-          console.info('[AUTH][AuthButton] sign-in cancelled by user');
+          logger.info('[AUTH][AuthButton] sign-in cancelled by user');
         } else {
           console.error('[AUTH][AuthButton] Sign-in failed:', msg);
           setError(getFriendlyAuthError(msg));
@@ -46,7 +47,7 @@ export default function AuthButton({ onSignIn, onError }: Props) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed';
       if (isAuthCancellation(msg)) {
-        console.info('[AUTH][AuthButton] sign-in cancelled by user');
+        logger.info('[AUTH][AuthButton] sign-in cancelled by user');
       } else {
         console.error('[AUTH][AuthButton] Unexpected error:', err);
         setError(getFriendlyAuthError(msg));

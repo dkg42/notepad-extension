@@ -25,6 +25,7 @@ import { authStorageService } from './auth-storage-service';
 import { verifyFirebaseIdToken } from './firebase-claims-verifier';
 import { refreshAccessToken, revokeToken } from './token-proxy-service';
 import type { TokenRefreshResult } from './token-proxy-service';
+import { logger } from '@/utils/logger';
 
 export { revokeToken };
 
@@ -164,13 +165,13 @@ export async function handleRefreshAlarm(): Promise<void> {
     const refreshResult = await runRefresh();
     if (!refreshResult) {
       // No refresh token — user is signed out; alarm is stale.
-      console.log('[TOKEN] Refresh alarm fired but no refresh token found — cancelling alarm');
+      logger.debug('[TOKEN] Refresh alarm fired but no refresh token found — cancelling alarm');
       await Promise.all([cancelRefreshAlarm(), clearRetryCount()]);
       return;
     }
 
     if (refreshResult.ok) {
-      console.log('[TOKEN] Proactive token refresh succeeded, re-arming alarm');
+      logger.debug('[TOKEN] Proactive token refresh succeeded, re-arming alarm');
       await scheduleRefreshAlarm(); // runRefresh() already cleared the retry count
       return;
     }

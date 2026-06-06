@@ -39,6 +39,7 @@ import { tabGroupsSyncService } from '@/services/tab-groups-sync-service';
 import { clipboardSessionService } from '@/services/clipboard-session-service';
 import { isAuthCancellation } from '@/utils/auth-errors';
 import { scopedStorage } from '@/services/storage/scoped-storage';
+import { logger } from '@/utils/logger';
 
 import { isMessage, ensureSignedIn } from '@/background/shared';
 import { syncNotebooks } from '@/background/notebook-handler';
@@ -92,10 +93,10 @@ async function setupOffscreenDocument(path: string): Promise<void> {
   // the iframe arrives before the external page's listener is registered.
   if (!(await hasDocument())) {
     if (creatingOffscreenDocument) {
-      console.log('[AUTH][BG] Waiting for in-progress offscreen document creation');
+      logger.debug('[AUTH][BG] Waiting for in-progress offscreen document creation');
       await creatingOffscreenDocument;
     } else {
-      console.log('[AUTH][BG] Creating offscreen document:', path);
+      logger.debug('[AUTH][BG] Creating offscreen document:', path);
       creatingOffscreenDocument = chrome.offscreen.createDocument({
         url: path,
         reasons: [chrome.offscreen.Reason.DOM_SCRAPING],
@@ -103,10 +104,10 @@ async function setupOffscreenDocument(path: string): Promise<void> {
       });
       await creatingOffscreenDocument;
       creatingOffscreenDocument = null;
-      console.log('[AUTH][BG] Offscreen document created');
+      logger.debug('[AUTH][BG] Offscreen document created');
     }
   } else {
-    console.log('[AUTH][BG] Reusing existing offscreen document');
+    logger.debug('[AUTH][BG] Reusing existing offscreen document');
   }
 }
 
@@ -115,9 +116,9 @@ async function closeOffscreenDocument(): Promise<void> {
   if (!(await hasDocument())) {
     return;
   }
-  console.log('[AUTH][BG] Closing offscreen document');
+  logger.debug('[AUTH][BG] Closing offscreen document');
   await chrome.offscreen.closeDocument();
-  console.log('[AUTH][BG] Offscreen document closed');
+  logger.debug('[AUTH][BG] Offscreen document closed');
 }
 
 /**
@@ -191,13 +192,13 @@ async function firebaseAuth(): Promise<OAuthCredentialPayload> {
 
   try {
     const credential = await requestFirebaseAuth();
-    console.log('[AUTH][BG] OAuth credential received, providerId:', credential.providerId);
+    logger.debug('[AUTH][BG] OAuth credential received, providerId:', credential.providerId);
     return credential;
   } catch (err) {
     const authErr = err as AuthError;
     const message = err instanceof Error ? err.message : String(err);
     if (authErr.code === 'auth/popup-closed-by-user' || isAuthCancellation(message)) {
-      console.info('[AUTH][BG] sign-in cancelled by user');
+      logger.info('[AUTH][BG] sign-in cancelled by user');
     } else if (authErr.code === 'auth/operation-not-allowed') {
       console.error(
         '[AUTH][BG] You must enable an OAuth provider in the Firebase console' +
@@ -232,7 +233,7 @@ async function establishFirebaseSdkSession(credential: OAuthCredentialPayload): 
     throw new Error('No custom token in auth payload — cannot establish Firebase SDK session');
   }
   await signInWithCustomToken(getFirebaseAuth(), credential.customToken);
-  console.log('[AUTH][BG] Firebase SDK session established (signInWithCustomToken)');
+  logger.debug('[AUTH][BG] Firebase SDK session established (signInWithCustomToken)');
 }
 
 /**
@@ -257,7 +258,7 @@ function handleAuthSessionMessage(
   }
 
   if (message.type === 'firebase-auth') {
-    console.log('[AUTH][BG] Received firebase-auth message from popup');
+    logger.debug('[AUTH][BG] Received firebase-auth message from popup');
     firebaseAuth()
       .then(async (credential) => {
         // Guard: a FirebaseError object ({ code, name }) must never reach storage.
@@ -278,7 +279,7 @@ function handleAuthSessionMessage(
         const isUserSwitch = existingUid && incomingUid && existingUid !== incomingUid;
         const hasOrphanedSyncData = !existingUid && syncMeta?.ownerUid;
         if (isUserSwitch || hasOrphanedSyncData) {
-          console.log('[AUTH][BG] User switch or orphaned data detected — clearing', { existingUid, incomingUid, syncOwner: syncMeta?.ownerUid });
+          logger.debug('[AUTH][BG] User switch or orphaned data detected — clearing', { existingUid, incomingUid, syncOwner: syncMeta?.ownerUid });
           invalidateSessionCache();
           await Promise.all([
             storageService.clearAllData(),
@@ -318,10 +319,10 @@ function handleAuthSessionMessage(
         } catch (err: unknown) {
           console.warn('[AUTH][BG] Unexpected error verifying ID token claims:', err);
         }
-        console.log('[AUTH][BG] Auth complete, storing profile and session token');
+        logger.debug('[AUTH][BG] Auth complete, storing profile and session token');
         await authStorageService.saveAuthData(credential);
         void scheduleRefreshAlarm();
-        console.log('[AUTH][BG] Auth complete, sending ok to popup');
+        logger.debug('[AUTH][BG] Auth complete, sending ok to popup');
         sendResponse({ ok: true });
         // Proactively establish the NotebookLM Google session so batchRPC
         // calls work immediately after sign-in. Fire-and-forget — any failure
@@ -341,7 +342,7 @@ function handleAuthSessionMessage(
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         if (isAuthCancellation(msg)) {
-          console.info('[AUTH][BG] Auth flow cancelled by user');
+          logger.info('[AUTH][BG] Auth flow cancelled by user');
         } else {
           console.error('[AUTH][BG] Auth flow error:', err);
         }

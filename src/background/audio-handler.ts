@@ -12,6 +12,7 @@ import {
 } from '@/services/notebooklm-api';
 import { audioCacheService } from '@/services/audio-cache-service';
 import { ensureSignedIn } from './shared';
+import { logger } from '@/utils/logger';
 
 /**
  * chrome.runtime.sendMessage serializes its payload as JSON in some Chrome
@@ -67,17 +68,17 @@ export function handleAudioMessage(
       // Return early if already cached in IndexedDB
       const cached = await audioCacheService.get(artifactId);
       if (cached) {
-        console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cache hit for', artifactId);
+        logger.debug('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cache hit for', artifactId);
         return;
       }
 
       // Fetch directly from the background service worker.
       // host_permissions for the Google CDN domains allows cookies to be sent
       // and CORS to be bypassed — no content script relay needed.
-      console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: fetching', url);
+      logger.debug('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: fetching', url);
       const { blob, mimeType } = await fetchAudioBlob(url);
       await audioCacheService.put(artifactId, blob, mimeType);
-      console.log('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cached', artifactId, blob.size, 'bytes');
+      logger.debug('[NLM-EXT BG] FETCH_AUDIO_FOR_PLAYBACK: cached', artifactId, blob.size, 'bytes');
     })()
       .then(() => sendResponse({ ok: true }))
       .catch((err: unknown) =>

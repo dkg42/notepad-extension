@@ -14,9 +14,12 @@
 .output-dev/
 .wxt/
 
-# Local env files (contain secrets — never commit)
+# Env profile files — never commit. Build values live in .env.<mode>.local
+# (copy from .env.example). .env.example is the only checked-in env file.
 .env.local
 .env.*.local
+.env.development
+.env.production
 
 # Dependencies
 node_modules/
