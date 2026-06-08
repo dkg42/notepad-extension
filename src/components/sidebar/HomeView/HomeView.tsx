@@ -23,6 +23,7 @@ import { DAILY_LIMITS, type DailyFeature } from '@/services/daily-limit-service'
 import { recentActionsStorage, type RecentAction } from '@/services/storage/recent-actions-storage';
 import { scopedStorage } from '@/services/storage/scoped-storage';
 import { RECENT_ACTIONS_KEY } from '@/services/storage/shared';
+import { openUpgradePage } from '@/utils/open-upgrade';
 import './HomeView.css';
 
 interface Feature {
@@ -280,7 +281,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
           <div className="home-view__upsell-desc">
             Unlimited prompts, screenshots, NotebookLM sources, and chat history search.
           </div>
-          <button className="home-view__upsell-btn">Upgrade — $5/mo</button>
+          <button className="home-view__upsell-btn" onClick={openUpgradePage}>Upgrade — $5/mo</button>
         </div>
       )}
     </div>

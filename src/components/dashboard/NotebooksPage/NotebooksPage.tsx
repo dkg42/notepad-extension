@@ -17,7 +17,7 @@ import MergeNotebookModal from '@/components/dashboard/MergeNotebookModal/MergeN
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getFolderSubtreeIds } from '@/utils/folder-utils';
-import { openDashboard } from '@/utils/open-dashboard';
+import { openUpgradePage } from '@/utils/open-upgrade';
 import type { Folder as FolderType, NotebookMeta, NotebookAnnotation } from '@/types';
 import './NotebooksPage.css';
 
@@ -821,7 +821,7 @@ export default function NotebooksPage() {
                 <div className="notebooks-content__title-actions">
                   <button
                     className="notebooks-content__action-btn notebooks-content__action-btn--primary"
-                    onClick={() => { if (isPro) setShowNewNotebookModal(true); else void openDashboard(); }}
+                    onClick={() => { if (isPro) setShowNewNotebookModal(true); else openUpgradePage(); }}
                     title={isPro ? 'Create a new notebook' : 'Creating notebooks is a Pro feature'}
                   >
                     {isPro ? <Plus size={12} strokeWidth={2} /> : <Lock size={11} strokeWidth={2} />}
@@ -830,7 +830,7 @@ export default function NotebooksPage() {
                   </button>
                   <button
                     className="notebooks-content__action-btn"
-                    onClick={() => { if (isPro) setShowMergeModal(true); else void openDashboard(); }}
+                    onClick={() => { if (isPro) setShowMergeModal(true); else openUpgradePage(); }}
                     disabled={isPro && selectedIds.size < 2}
                     title={
                       !isPro
