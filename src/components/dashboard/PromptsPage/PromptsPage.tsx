@@ -14,6 +14,7 @@ import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderSubtreeIds, getFolderPath } from '@/utils/folder-utils';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { aiService } from '@/services/ai-service';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './PromptsPage.css';
 
@@ -186,6 +187,9 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
   const [editTitle, setEditTitle] = useState(getSnippetTitle(snippet));
   const [editBody, setEditBody] = useState(snippet.text);
   const [copied, setCopied] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancedText, setEnhancedText] = useState<string | null>(null);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
 
   const breadcrumb = snippet.folderId ? getFolderPath(snippet.folderId, folders) : null;
 
@@ -195,12 +199,38 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleEnhance = async () => {
+    setEnhancing(true);
+    setEnhanceError(null);
+    setEnhancedText(null);
+    try {
+      const result = await aiService.enhancePrompt(snippet.text);
+      setEnhancedText(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'AI_UNSUPPORTED') setEnhanceError('Chrome AI is not available in this browser.');
+      else if (msg === 'AI_AFTER-DOWNLOAD') setEnhanceError('AI model is downloading. Try again shortly.');
+      else if (msg === 'AI_UNAVAILABLE') setEnhanceError('AI model unavailable. Check chrome://flags/#optimization-guide-on-device-model.');
+      else setEnhanceError(`Enhancement failed: ${msg}`);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   return (
     <div className="ph-detail">
       <div className="ph-detail__bar">
         <button className="ph-icon-btn" onClick={onBack} title="Back"><ArrowLeft size={14} /></button>
         {breadcrumb && <span className="ph-detail__breadcrumb">{breadcrumb}</span>}
         <span className="ph-detail__spacer" />
+        <button
+          className={`ph-icon-btn${enhancing ? ' ph-icon-btn--active' : ''}`}
+          title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
+          disabled={enhancing || editing}
+          onClick={handleEnhance}
+        >
+          {enhancing ? <span className="ph-spinner" /> : <Sparkles size={14} />}
+        </button>
         <button className="ph-icon-btn" title={snippet.isFavorite ? 'Unstar' : 'Star'} onClick={() => onStar(snippet.id)} style={{ color: snippet.isFavorite ? 'var(--accent)' : undefined }}>
           <Star size={14} strokeWidth={1.8} fill={snippet.isFavorite ? 'currentColor' : 'none'} />
         </button>
@@ -228,6 +258,28 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
           <span className="ph-detail__saved">Saved {new Date(snippet.savedAt).toLocaleDateString()}</span>
         </div>
       </div>
+
+      {enhancedText && (
+        <div className="ph-enhance-preview">
+          <div className="ph-enhance-preview-label">
+            <Sparkles size={11} /> Enhanced version
+          </div>
+          <div className="ph-enhance-preview-text">{enhancedText}</div>
+          <div className="ph-enhance-preview-actions">
+            <button className="ph-btn-ghost" onClick={() => setEnhancedText(null)}>Discard</button>
+            <button
+              className="ph-btn-primary"
+              onClick={() => { onSave(snippet.id, getSnippetTitle(snippet), enhancedText); setEnhancedText(null); }}
+            >
+              <Check size={13} /> Apply
+            </button>
+          </div>
+        </div>
+      )}
+
+      {enhanceError && (
+        <div className="ph-enhance-error">{enhanceError}</div>
+      )}
 
       <div className="ph-detail__actions">
         {editing ? (
