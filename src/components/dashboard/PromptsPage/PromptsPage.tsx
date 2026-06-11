@@ -20,28 +20,6 @@ import './PromptsPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-type Platform = 'chatgpt' | 'claude' | 'gemini' | 'perplexity' | 'copilot' | 'other';
-
-const PLATFORM_COLORS: Record<Platform, { bg: string; fg: string; dot: string; label: string }> = {
-  chatgpt:    { bg: 'oklch(0.27 0.06 152)', fg: 'oklch(0.86 0.12 152)', dot: 'oklch(0.62 0.18 152)', label: 'ChatGPT'    },
-  claude:     { bg: 'oklch(0.27 0.06 55)',  fg: 'oklch(0.88 0.12 55)',  dot: 'oklch(0.70 0.16 55)',  label: 'Claude'      },
-  gemini:     { bg: 'oklch(0.27 0.06 270)', fg: 'oklch(0.85 0.12 270)', dot: 'oklch(0.65 0.16 270)', label: 'Gemini'      },
-  perplexity: { bg: 'oklch(0.27 0.06 220)', fg: 'oklch(0.85 0.12 220)', dot: 'oklch(0.62 0.14 220)', label: 'Perplexity'  },
-  copilot:    { bg: 'oklch(0.27 0.05 240)', fg: 'oklch(0.85 0.10 240)', dot: 'oklch(0.58 0.14 240)', label: 'Copilot'     },
-  other:      { bg: 'var(--bg-3)',          fg: 'var(--fg-2)',           dot: 'var(--fg-3)',          label: 'Other'       },
-};
-
-function getPlatform(source: string): Platform {
-  if (!source) return 'other';
-  const s = source.toLowerCase();
-  if (s.includes('chatgpt.com') || s.includes('chat.openai.com')) return 'chatgpt';
-  if (s.includes('claude.ai')) return 'claude';
-  if (s.includes('gemini.google.com')) return 'gemini';
-  if (s.includes('perplexity.ai')) return 'perplexity';
-  if (s.includes('copilot.microsoft.com')) return 'copilot';
-  return 'other';
-}
-
 const TAG_COLORS = [
   { bg: 'var(--tag-1-bg)', fg: 'var(--tag-1-fg)' },
   { bg: 'var(--tag-2-bg)', fg: 'var(--tag-2-fg)' },
@@ -82,19 +60,6 @@ function TagChip({ tag, removable, onRemove }: { tag: string; removable?: boolea
           <X size={9} strokeWidth={2.5} />
         </button>
       )}
-    </span>
-  );
-}
-
-// ── Source badge ───────────────────────────────────────────────────────────────
-
-function SourceBadge({ source }: { source: string }) {
-  const platform = getPlatform(source);
-  const c = PLATFORM_COLORS[platform];
-  return (
-    <span className="ph-source" style={{ background: c.bg, color: c.fg }}>
-      <span className="ph-source__dot" style={{ background: c.dot }} />
-      {c.label}
     </span>
   );
 }
@@ -254,7 +219,6 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
         )}
 
         <div className="ph-detail__meta">
-          <SourceBadge source={snippet.source} />
           <span className="ph-detail__saved">Saved {new Date(snippet.savedAt).toLocaleDateString()}</span>
         </div>
       </div>
@@ -762,7 +726,6 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                         </th>
                         <th className="ph-th ph-th--star" />
                         <SortHeader col="title" label="PROMPT" current={sortCol} dir={sortDir} onSort={handleSort} />
-                        <th className="ph-th">SOURCE</th>
                         <th className="ph-th">TAGS</th>
                         <SortHeader col="usageCount" label="USES" current={sortCol} dir={sortDir} onSort={handleSort} />
                         <th className="ph-th ph-th--menu" />
@@ -770,7 +733,7 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                     </thead>
                     <tbody>
                       {paginated.length === 0 ? (
-                        <tr><td colSpan={7} className="ph-td-empty">No prompts match.</td></tr>
+                        <tr><td colSpan={6} className="ph-td-empty">No prompts match.</td></tr>
                       ) : (
                         paginated.map((s) => {
                           const title = getSnippetTitle(s);
@@ -797,7 +760,6 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                                 <div className="ph-row__title">{title}</div>
                                 {breadcrumb && <div className="ph-row__breadcrumb">{breadcrumb}</div>}
                               </td>
-                              <td className="ph-td ph-td--source"><SourceBadge source={s.source} /></td>
                               <td className="ph-td ph-td--tags">
                                 {(s.tags ?? []).slice(0, 3).map((t) => <TagChip key={t} tag={t} />)}
                                 {(s.tags?.length ?? 0) > 3 && <span className="ph-tags-more">+{(s.tags?.length ?? 0) - 3}</span>}
