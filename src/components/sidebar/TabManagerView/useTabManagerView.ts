@@ -13,8 +13,18 @@ import { tabGroupsStorage } from '@/services/tab-groups-storage';
 import { aiService } from '@/services/ai-service';
 import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 
-export const FREE_PLAN_MAX_GROUPS = 3;
 export const COLORS: GroupColor[] = ['primary', 'green', 'sky', 'rose', 'violet'];
+
+/** Case-insensitive match of a tab's title or hostname against a lowercased query. */
+function tabMatchesQuery(title: string | undefined, url: string | undefined, q: string): boolean {
+  if (title && title.toLowerCase().includes(q)) return true;
+  if (url) {
+    let hostname = url;
+    try { hostname = new URL(url).hostname; } catch { /* keep raw url */ }
+    if (hostname.toLowerCase().includes(q)) return true;
+  }
+  return false;
+}
 
 export function useTabManagerView() {
   const [openTabs, setOpenTabs] = useState<chrome.tabs.Tab[]>([]);
@@ -24,6 +34,7 @@ export function useTabManagerView() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState<GroupColor>('primary');
   const [generatingContextId, setGeneratingContextId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Cache tab metadata so it's available when onRemoved fires (chrome only gives us the ID)
   const tabMetadataCacheRef = useRef<Map<number, chrome.tabs.Tab>>(new Map());
@@ -174,10 +185,30 @@ export function useTabManagerView() {
     [groups],
   );
 
-  const atGroupLimit = groups.length >= FREE_PLAN_MAX_GROUPS;
+  // Search filtering — empty query passes everything through unchanged.
+  const filteredUngroupedTabs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return ungroupedTabs;
+    return ungroupedTabs.filter((t) => tabMatchesQuery(t.title, t.url, q));
+  }, [ungroupedTabs, searchQuery]);
+
+  const filteredGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sortedGroups;
+    const tabsById = new Map(openTabs.filter((t) => t.id != null).map((t) => [t.id!, t]));
+    return sortedGroups.filter((g) => {
+      if (g.name.toLowerCase().includes(q)) return true;
+      const liveMatch = g.tabIds.some((id) => {
+        const t = tabsById.get(id);
+        return t ? tabMatchesQuery(t.title, t.url, q) : false;
+      });
+      if (liveMatch) return true;
+      return (g.stashedTabs ?? []).some((s) => tabMatchesQuery(s.title, s.url, q));
+    });
+  }, [sortedGroups, openTabs, searchQuery]);
 
   const handleCreateGroup = useCallback(async () => {
-    if (!newGroupName.trim() || atGroupLimit) return;
+    if (!newGroupName.trim()) return;
     const now = Date.now();
     const newGroup: TabGroup = {
       id: `g_${now}`,
@@ -202,7 +233,7 @@ export function useTabManagerView() {
     setNewGroupName('');
     setNewGroupColor('primary');
     setExpandedId(newGroup.id);
-  }, [newGroupName, newGroupColor, groups, atGroupLimit, persistGroups]);
+  }, [newGroupName, newGroupColor, groups, persistGroups]);
 
   const handleRenameGroup = useCallback(
     async (id: string, name: string) => {
@@ -383,8 +414,8 @@ export function useTabManagerView() {
 
   return {
     openTabs,
-    groups: sortedGroups,
-    ungroupedTabs,
+    groups: filteredGroups,
+    ungroupedTabs: filteredUngroupedTabs,
     expandedId,
     toggleExpanded,
     isCreatingGroup,
@@ -393,7 +424,8 @@ export function useTabManagerView() {
     setNewGroupName,
     newGroupColor,
     setNewGroupColor,
-    atGroupLimit,
+    searchQuery,
+    setSearchQuery,
     handleCreateGroup,
     handleRenameGroup,
     handleDeleteGroup,
