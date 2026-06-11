@@ -7,7 +7,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Search, X, Star, LayoutGrid, Folder, ChevronDown, Plus,
-  ChevronUp, Check, Trash2, Copy, Pencil, Send,
+  ChevronUp, Check, Trash2, Copy, Pencil,
   MoreHorizontal, ArrowLeft, ArrowUpDown, Sparkles,
 } from 'lucide-react';
 import type { Snippet, Folder as FolderType } from '@/types';
@@ -172,8 +172,6 @@ function RowMenu({ snippet, folders, onEdit, onDuplicate, onMove, onDelete, onCl
 
 // ── Prompt detail panel ────────────────────────────────────────────────────────
 
-type SendStatus = 'idle' | 'sending' | 'sent' | 'no_target' | 'failed';
-
 interface DetailPanelProps {
   snippet: Snippet;
   folders: FolderType[];
@@ -188,7 +186,6 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
   const [editTitle, setEditTitle] = useState(getSnippetTitle(snippet));
   const [editBody, setEditBody] = useState(snippet.text);
   const [copied, setCopied] = useState(false);
-  const [sendStatus, setSendStatus] = useState<SendStatus>('idle');
 
   const breadcrumb = snippet.folderId ? getFolderPath(snippet.folderId, folders) : null;
 
@@ -196,22 +193,6 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
     navigator.clipboard.writeText(snippet.text).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  };
-
-  const handleSend = async () => {
-    setSendStatus('sending');
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) throw new Error('no_tab');
-      const resp = await chrome.tabs.sendMessage(tab.id, { type: 'SEND_TO_CHAT', text: snippet.text }) as { ok: boolean; error?: string };
-      if (resp.ok) { setSendStatus('sent'); setTimeout(() => setSendStatus('idle'), 1500); }
-      else if (resp.error === 'no_target') { setSendStatus('no_target'); setTimeout(() => setSendStatus('idle'), 3000); }
-      else throw new Error(resp.error);
-    } catch {
-      navigator.clipboard.writeText(snippet.text).catch(() => {});
-      setSendStatus('failed');
-      setTimeout(() => setSendStatus('idle'), 2500);
-    }
   };
 
   return (
@@ -263,18 +244,9 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
             <button className="ph-btn-ghost" onClick={handleCopy}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy'}</button>
             <span className="ph-detail__spacer" />
             <button className="ph-btn-ghost ph-btn-ghost--danger" onClick={() => onDelete(snippet.id)}><Trash2 size={13} /></button>
-            <button className="ph-btn-primary" onClick={handleSend} disabled={sendStatus === 'sending'}>
-              {sendStatus === 'sending' ? <span className="ph-send-spinner" /> : sendStatus === 'sent' ? <Check size={13} /> : <Send size={13} />}
-              {sendStatus === 'sent' ? 'Sent!' : 'Send to chat'}
-            </button>
           </>
         )}
       </div>
-      {(sendStatus === 'no_target' || sendStatus === 'failed') && (
-        <div className="ph-detail__hint">
-          {sendStatus === 'no_target' ? 'Click in the chat input first.' : 'Copied to clipboard — paste with Ctrl+V.'}
-        </div>
-      )}
     </div>
   );
 }
