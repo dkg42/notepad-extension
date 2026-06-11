@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { useTabManagerView, FREE_PLAN_MAX_GROUPS, COLORS } from './useTabManagerView';
+import { openUpgradePage } from '@/utils/open-upgrade';
 import './TabManagerView.css';
 
 const COLOR_MAP: Record<GroupColor, { bar: string; soft: string; fg: string }> = {
@@ -676,7 +677,7 @@ function UpgradeBanner() {
       <div className="tab-manager-view__upgrade-desc">
         Upgrade to Pro for unlimited groups, custom colors, and shared sessions.
       </div>
-      <button className="tab-manager-view__upgrade-btn">Upgrade — $5/mo</button>
+      <button className="tab-manager-view__upgrade-btn" onClick={openUpgradePage}>Upgrade — $5/mo</button>
     </div>
   );
 }

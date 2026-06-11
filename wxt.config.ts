@@ -34,8 +34,8 @@ export default defineConfig({
   outDir: isDev ? '.output-dev' : '.output',
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: isDev ? 'Notehublm Dev' : 'Notehublm',
-    description: 'Enhance your LLM chatbot experience by saving and managing text snippets.',
+    name: isDev ? 'Notehublm' : 'Notehublm',
+    description: 'Supercharge NotebookLM: capture sources from anywhere, organize notebooks with folders and tags, and manage audio.',
     version: '1.0.0',
     permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel', 'scripting'],
     options_ui: {

@@ -31,7 +31,7 @@ import { aiService } from '@/services/ai-service';
 import { snippetStorage } from '@/services/storage/snippet-storage';
 import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
-import { openDashboard } from '@/utils/open-dashboard';
+import { openUpgradePage } from '@/utils/open-upgrade';
 import './PromptHubView.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -948,7 +948,7 @@ export default function PromptHubView({
           ) : (
             <div className="prompt-hub__limit-notice">
               Free plan limit reached ({promptCount}/10 prompts).{' '}
-              <button className="prompt-hub__limit-upgrade" onClick={() => { void openDashboard(); }}>
+              <button className="prompt-hub__limit-upgrade" onClick={openUpgradePage}>
                 Upgrade to Pro
               </button>{' '}
               for unlimited.

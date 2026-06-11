@@ -4,7 +4,7 @@
  * between the extension and https://www.googleapis.com/drive/v3/. All methods return
  * a discriminated union `DriveIOResult<T>` and never throw; callers must handle the
  * `ok: false` case. Files are stored in the Drive AppData space (app-private,
- * invisible to the user) unless `USE_VISIBLE_DEBUG_FOLDER` is enabled for local QA.
+ * invisible to the user); only dev builds divert to a visible folder for local QA.
  * @dependencies ./types/drive-schemas (DriveFileRef)
  * @public DriveIOResult, createFile, updateFile, readFile, deleteFile, findFileByName, listAppDataFiles, dedupeFolder, getPodcastAudioFolderId, createBinaryFile, readBinaryFile
  */
@@ -23,9 +23,10 @@
  * listed with `spaces: appDataFolder`. This folder is app-private and invisible
  * to the user in their Drive UI.
  *
- * DEBUG MODE: Set USE_VISIBLE_DEBUG_FOLDER = true to store files in a visible
- * Drive folder named DEBUG_FOLDER_NAME instead of appDataFolder. This allows
- * inspection of stored files via the Drive UI. Revert to false before release.
+ * DEBUG MODE: In dev builds (MODE === 'development') USE_VISIBLE_DEBUG_FOLDER is
+ * enabled, storing files in a visible Drive folder named DEBUG_FOLDER_NAME instead
+ * of appDataFolder so they can be inspected via the Drive UI. Prod builds always
+ * use appDataFolder.
  */
 
 import type { DriveFileRef } from './types/drive-schemas';
@@ -34,8 +35,10 @@ const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 // ── Debug: visible folder mode ─────────────────────────────────────────────────
-// Set to true only for local validation. Revert to false before release.
-const USE_VISIBLE_DEBUG_FOLDER = true;
+// Driven by the build mode so it can never ship enabled: dev builds
+// (`npm run dev` / `npm run build:dev`) use the visible folder for local QA,
+// while prod builds (`npm run build` / `npm run zip`) always use appDataFolder.
+const USE_VISIBLE_DEBUG_FOLDER = import.meta.env.MODE === 'development';
 const DEBUG_FOLDER_NAME = 'NotepadExtension-Debug';
 
 /** Cached folder ID so we only create/find it once per service-worker lifetime. */
