@@ -1,0 +1,129 @@
+/* First-run guided tour — spotlight coachmarks. Themed via design tokens so it
+   adapts to light/dark when rendered inside the app's themed root container. */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+/* Full-viewport transparent layer that swallows clicks on the underlying UI. */
+.tour__catcher {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+}
+
+/* The lit area. The huge box-shadow paints the surrounding dim; the element
+   itself stays transparent so the highlighted feature shows through. */
+.tour__spotlight {
+  position: fixed;
+  border-radius: var(--r-md, 8px);
+  box-shadow:
+    0 0 0 9999px var(--tour-backdrop, rgba(0, 0, 0, 0.58)),
+    0 0 0 2px var(--primary, #6366f1) inset;
+  pointer-events: none;
+  transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease;
+}
+
+.tour__bubble {
+  position: fixed;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  padding: 14px 16px 12px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--r-lg, 12px);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.28));
+  pointer-events: auto;
+}
+
+.tour__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg, #1a202c);
+  margin-bottom: 5px;
+}
+
+.tour__body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-3, #718096);
+}
+
+.tour__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.tour__dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tour__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-2, #cbd5e0);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.tour__dot--active {
+  background: var(--primary, #6366f1);
+  transform: scale(1.25);
+}
+
+.tour__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tour__btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--r-md, 8px);
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--bg, #fff);
+  color: var(--fg, #1a202c);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.tour__btn:hover {
+  background: var(--bg-2, #f7fafc);
+}
+
+.tour__btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg-3, #718096);
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.tour__btn--ghost:hover {
+  background: transparent;
+  color: var(--fg, #1a202c);
+}
+
+.tour__btn--primary {
+  background: var(--primary, #6366f1);
+  color: var(--primary-fg, #fff);
+  border-color: var(--primary, #6366f1);
+}
+
+.tour__btn--primary:hover {
+  background: var(--primary, #6366f1);
+  filter: brightness(1.06);
+}

@@ -15,12 +15,15 @@ import ScreenshotView from '@/components/sidebar/ScreenshotView/ScreenshotView';
 import NotebookView from '@/components/sidebar/NotebookView/NotebookView';
 import UserMenu from '@/components/sidebar/UserMenu/UserMenu';
 import AuthButton from '@/components/AuthButton/AuthButton';
+import Tour from '@/components/shared/Tour/Tour';
+import { sidebarTourSteps } from '@/components/sidebar/HomeView/tour-steps';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import { SubscriptionProvider, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useClipboardTab } from '@/components/ClipboardTab/useClipboardTab';
 import { scopedStorage } from '@/services/storage/scoped-storage';
 import { storageService } from '@/services/storage-service';
+import { onboardingStorage } from '@/services/storage/onboarding-storage';
 import { openDashboard } from '@/utils/open-dashboard';
 import { useApp } from './useApp';
 import './App.css';
@@ -65,6 +68,7 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
   const [view, setView] = useState<View>('home');
   const [dark, setDark] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [runTour, setRunTour] = useState(false);
 
   const subscriptionValue = useSubscriptionState();
   const appData = useApp(subscriptionValue.isPro, user?.uid ?? null);
@@ -85,6 +89,28 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
       if (next) setDark(next.theme === 'dark');
     });
   }, []);
+
+  // First-run tour: show once per signed-in user (storage is correctly scoped
+  // per-user only after sign-in).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    onboardingStorage.getState().then((state) => {
+      if (!cancelled && !state.sidebarSeen) setRunTour(true);
+    });
+    return () => { cancelled = true; };
+  }, [user?.uid]);
+
+  const finishTour = () => {
+    setRunTour(false);
+    void onboardingStorage.markSeen('sidebar');
+  };
+
+  const replayTour = () => {
+    setUserMenuOpen(false);
+    setView('home');
+    void onboardingStorage.reset('sidebar').then(() => setRunTour(true));
+  };
 
   const toggleDark = () => {
     const next = !dark;
@@ -165,7 +191,12 @@ function AppContent({ user }: { user: StoredAuthProfile | null }) {
           claims={subscriptionValue.claims}
           onClose={() => setUserMenuOpen(false)}
           onSignOut={handleSignOut}
+          onReplayTour={replayTour}
         />
+      )}
+
+      {runTour && view === 'home' && (
+        <Tour steps={sidebarTourSteps} onComplete={finishTour} onSkip={finishTour} />
       )}
     </div>
     </SubscriptionProvider>

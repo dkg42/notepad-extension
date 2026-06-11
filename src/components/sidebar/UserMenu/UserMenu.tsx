@@ -5,7 +5,7 @@
  * @public UserMenu (default export)
  */
 import React from 'react';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, HelpCircle } from 'lucide-react';
 import type { StoredAuthProfile, AuthClaims } from '@/types';
 import { openDashboard } from '@/utils/open-dashboard';
 import './UserMenu.css';
@@ -32,6 +32,7 @@ interface UserMenuProps {
   claims?: AuthClaims | null;
   onClose: () => void;
   onSignOut: () => void;
+  onReplayTour: () => void;
 }
 
 function getPlanLabel(claims?: AuthClaims | null): string {
@@ -41,7 +42,7 @@ function getPlanLabel(claims?: AuthClaims | null): string {
     : 'Free';
 }
 
-export default function UserMenu({ user, claims, onClose, onSignOut }: UserMenuProps) {
+export default function UserMenu({ user, claims, onClose, onSignOut, onReplayTour }: UserMenuProps) {
   const planLabel = getPlanLabel(claims);
   const isActivePlan = claims?.subscriptionStatus === 'active';
   return (
@@ -78,6 +79,10 @@ export default function UserMenu({ user, claims, onClose, onSignOut }: UserMenuP
           >
             <User size={13} />
             <span className="user-menu__item-label">Account settings</span>
+          </button>
+          <button className="user-menu__item" onClick={onReplayTour}>
+            <HelpCircle size={13} />
+            <span className="user-menu__item-label">Replay tutorial</span>
           </button>
         </div>
 

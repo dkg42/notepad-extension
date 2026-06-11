@@ -32,6 +32,9 @@ export interface NavigationContextValue {
   showCommandPalette: boolean;
   setShowCommandPalette: (show: boolean) => void;
 
+  // First-run / replayable guided tour
+  startTour: () => void;
+
   // Sidebar counts
   notebooksCount: number;
   chatHistoryCount: number;

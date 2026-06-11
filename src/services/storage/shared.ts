@@ -15,6 +15,7 @@ export const TAGS_META_KEY = 'tagsMeta';
 export const EXPORT_HISTORY_KEY = 'exportHistory';
 export const PODCAST_EPISODES_KEY = 'podcastEpisodes';
 export const RECENT_ACTIONS_KEY = 'recentActions';
+export const ONBOARDING_KEY = 'onboarding';
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
   theme: 'light',
