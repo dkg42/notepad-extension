@@ -38,6 +38,17 @@ Local overrides go in `.env.<mode>.local` (gitignored). Required keys (see
 - `VITE_EXTERNAL_AUTH_ORIGIN` — origin of the externally hosted auth page
   loaded by the offscreen iframe. Dev: `https://localhost:3000`. Prod:
   `https://www.notehublm.com`.
+- `VITE_ENABLE_GEMINI_NANO` — feature toggle (`true`/`false`, default off) for
+  on-device Gemini Nano (Chrome Prompt API). See **Feature toggles** below.
+
+### Feature toggles
+
+Build-time feature flags live in `src/config/feature-flags.ts`. Each flag is a
+typed boolean that defaults OFF and can be enabled per build profile via its
+`VITE_ENABLE_*` env var. Gate unfinished or unstable features here, then check
+`isFeatureEnabled('<flag>')` at the call site to hide the UI. Currently
+`geminiNano` gates "Enhance with AI" (Prompt Hub) and "Generate AI summary"
+(Tab Manager), which depend on a Chrome browser setup that isn't yet stable.
 
 `wxt.config.ts` reads these via `loadEnv()` and builds the manifest name
 (`Notehublm Dev` vs `Notehublm`), `host_permissions`, and CSP `connect-src`

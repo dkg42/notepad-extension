@@ -15,6 +15,7 @@ import { getFolderTreeItems, getFolderSubtreeIds, getFolderPath } from '@/utils/
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { aiService } from '@/services/ai-service';
+import { isFeatureEnabled } from '@/config/feature-flags';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './PromptsPage.css';
 
@@ -188,14 +189,16 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
         <button className="ph-icon-btn" onClick={onBack} title="Back"><ArrowLeft size={14} /></button>
         {breadcrumb && <span className="ph-detail__breadcrumb">{breadcrumb}</span>}
         <span className="ph-detail__spacer" />
-        <button
-          className={`ph-icon-btn${enhancing ? ' ph-icon-btn--active' : ''}`}
-          title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
-          disabled={enhancing || editing}
-          onClick={handleEnhance}
-        >
-          {enhancing ? <span className="ph-spinner" /> : <Sparkles size={14} />}
-        </button>
+        {isFeatureEnabled('geminiNano') && (
+          <button
+            className={`ph-icon-btn${enhancing ? ' ph-icon-btn--active' : ''}`}
+            title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
+            disabled={enhancing || editing}
+            onClick={handleEnhance}
+          >
+            {enhancing ? <span className="ph-spinner" /> : <Sparkles size={14} />}
+          </button>
+        )}
         <button className="ph-icon-btn" title={snippet.isFavorite ? 'Unstar' : 'Star'} onClick={() => onStar(snippet.id)} style={{ color: snippet.isFavorite ? 'var(--accent)' : undefined }}>
           <Star size={14} strokeWidth={1.8} fill={snippet.isFavorite ? 'currentColor' : 'none'} />
         </button>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
 import { useTabManagerView, COLORS } from './useTabManagerView';
+import { isFeatureEnabled } from '@/config/feature-flags';
 import './TabManagerView.css';
 
 const COLOR_MAP: Record<GroupColor, { bar: string; soft: string; fg: string }> = {
@@ -164,18 +165,20 @@ function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel,
           <span className="tab-manager-view__context-label">
             {aiContext ? 'AI summary' : 'Your note'}
           </span>
-          <button
-            className="tab-manager-view__context-generate-btn"
-            disabled={isGenerating}
-            title={isGenerating ? 'Generating…' : 'Generate AI summary'}
-            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-          >
-            <Sparkles
-              size={9}
-              strokeWidth={2.2}
-              className={isGenerating ? 'tab-manager-view__context-generate-spin' : ''}
-            />
-          </button>
+          {isFeatureEnabled('geminiNano') && (
+            <button
+              className="tab-manager-view__context-generate-btn"
+              disabled={isGenerating}
+              title={isGenerating ? 'Generating…' : 'Generate AI summary'}
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+            >
+              <Sparkles
+                size={9}
+                strokeWidth={2.2}
+                className={isGenerating ? 'tab-manager-view__context-generate-spin' : ''}
+              />
+            </button>
+          )}
         </div>
         {isEditing ? (
           <div className="tab-manager-view__context-edit">

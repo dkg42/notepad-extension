@@ -1,3 +1,5 @@
+import { isFeatureEnabled } from '@/config/feature-flags';
+
 export type AIAvailability = 'readily' | 'after-download' | 'unavailable' | 'unsupported';
 
 export const aiService = {
@@ -15,6 +17,7 @@ export const aiService = {
   },
 
   async enhancePrompt(text: string): Promise<string> {
+    if (!isFeatureEnabled('geminiNano')) throw new Error('AI_DISABLED');
     const avail = await this.checkAvailability();
     if (avail !== 'readily') throw new Error(`AI_${avail.toUpperCase()}`);
     try {
@@ -41,6 +44,7 @@ export const aiService = {
   },
 
   async summarizeTabs(tabs: Array<{ title: string; url: string }>): Promise<string> {
+    if (!isFeatureEnabled('geminiNano')) throw new Error('AI_DISABLED');
     const tabList = tabs.map((t, i) => `${i + 1}. ${t.title} — ${t.url}`).join('\n');
 
     const avail = await this.checkAvailability();

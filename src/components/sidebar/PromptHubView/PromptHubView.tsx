@@ -28,6 +28,7 @@ import { filterSnippets } from '@/utils/filter-snippets';
 import { usePromptHubView, type SortOrder } from './usePromptHubView';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { aiService } from '@/services/ai-service';
+import { isFeatureEnabled } from '@/config/feature-flags';
 import { snippetStorage } from '@/services/storage/snippet-storage';
 import { recentActionsStorage } from '@/services/storage/recent-actions-storage';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
@@ -150,13 +151,15 @@ function PromptCard({ snippet, onClick, onStar, onEnhance, searchQuery }: Prompt
       </div>
       <div className="prompt-hub__card-footer">
         {tags.slice(0, 3).map((t) => <TagPill key={t} tag={t} />)}
-        <button
-          className="prompt-hub__card-enhance"
-          onClick={(e) => { e.stopPropagation(); onEnhance(); }}
-          title="Enhance with AI"
-        >
-          <Sparkles size={11} strokeWidth={1.8} />
-        </button>
+        {isFeatureEnabled('geminiNano') && (
+          <button
+            className="prompt-hub__card-enhance"
+            onClick={(e) => { e.stopPropagation(); onEnhance(); }}
+            title="Enhance with AI"
+          >
+            <Sparkles size={11} strokeWidth={1.8} />
+          </button>
+        )}
         <span style={{ flex: 1 }} />
         <span className="prompt-hub__card-time">{formatAge(snippet.savedAt)}</span>
       </div>
@@ -331,14 +334,16 @@ function PromptDetail({ snippet, folders, editing, onClose, onStar, onStartEdit,
           <div className="prompt-hub__detail-breadcrumb">{breadcrumb}</div>
         )}
         <span className="prompt-hub__detail-bar-spacer" />
-        <button
-          className={`prompt-hub__icon-btn${enhancing ? ' prompt-hub__icon-btn--active' : ''}`}
-          title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
-          disabled={enhancing || editing}
-          onClick={handleEnhance}
-        >
-          {enhancing ? <span className="prompt-hub__send-spinner" /> : <Sparkles size={14} />}
-        </button>
+        {isFeatureEnabled('geminiNano') && (
+          <button
+            className={`prompt-hub__icon-btn${enhancing ? ' prompt-hub__icon-btn--active' : ''}`}
+            title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
+            disabled={enhancing || editing}
+            onClick={handleEnhance}
+          >
+            {enhancing ? <span className="prompt-hub__send-spinner" /> : <Sparkles size={14} />}
+          </button>
+        )}
         <button
           className="prompt-hub__icon-btn"
           title={snippet.isFavorite ? 'Unstar' : 'Star'}
