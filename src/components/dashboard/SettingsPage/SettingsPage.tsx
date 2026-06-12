@@ -41,7 +41,7 @@ const SORT_COLUMNS: Array<{ value: SortColumn; label: string }> = [
 ];
 
 export default function SettingsPage() {
-  const { settings, handleSettingsChange: onSettingsChange } = useNavigation();
+  const { settings, handleSettingsChange: onSettingsChange, startTour } = useNavigation();
   const { user, loading: userLoading } = useCurrentUser();
   const { isPro } = useSubscription();
   const [signingOut, setSigningOut] = useState(false);
@@ -205,6 +205,22 @@ export default function SettingsPage() {
               <option value="asc">Ascending</option>
               <option value="desc">Descending</option>
             </select>
+          </div>
+        </section>
+
+        {/* Getting started */}
+        <section className="settings-section">
+          <h2 className="settings-section__title">Getting Started</h2>
+          <div className="settings-row">
+            <div className="settings-row__label">
+              <span className="settings-row__name">Product tour</span>
+              <span className="settings-row__description">
+                Replay the guided tour highlighting each dashboard feature.
+              </span>
+            </div>
+            <button className="settings-page__btn" onClick={startTour}>
+              Replay tutorial
+            </button>
           </div>
         </section>
 

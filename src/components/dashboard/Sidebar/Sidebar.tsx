@@ -114,6 +114,7 @@ function CollapsibleGroup({
     <div className="sidebar__group">
       <button
         className="sidebar__group-trigger"
+        data-tour={group.view}
         onClick={onToggle}
         title={group.label}
       >
@@ -208,6 +209,7 @@ export default function Sidebar() {
     return (
       <button
         key={item.view}
+        data-tour={item.view}
         className={`sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}
         onClick={() => onNavigate(item.view)}
         title={item.label}
@@ -267,6 +269,7 @@ export default function Sidebar() {
       <div className="sidebar__search-wrap">
         <button
           className="sidebar__search-btn"
+          data-tour="search"
           onClick={() => setShowCommandPalette(true)}
         >
           <Search size={13} />
@@ -330,6 +333,7 @@ export default function Sidebar() {
 
         <button
           className={`sidebar__nav-item${currentView === 'settings' ? ' sidebar__nav-item--active' : ''}`}
+          data-tour="settings"
           onClick={() => onNavigate('settings')}
           title="Settings"
         >

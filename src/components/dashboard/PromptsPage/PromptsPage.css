@@ -437,7 +437,6 @@
 .ph-td--check { width: 36px; }
 .ph-td--star { width: 32px; }
 .ph-td--prompt { max-width: 0; }
-.ph-td--source { width: 130px; }
 .ph-td--tags { width: 220px; }
 .ph-td--uses { width: 70px; font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); }
 .ph-td--menu { width: 36px; }
@@ -477,26 +476,6 @@
 
 .ph-star-btn:hover { color: var(--accent); }
 .ph-star-btn--on { color: var(--accent); }
-
-/* ── Source badge ────────────────────────────────────────────────────────────── */
-
-.ph-source {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.ph-source__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 
 /* ── Tag chip ────────────────────────────────────────────────────────────────── */
 
@@ -1018,4 +997,64 @@
   padding: 2px 10px;
   font-family: var(--font-mono, monospace);
   white-space: nowrap;
+}
+
+/* ── Enhance with AI ─────────────────────────────────────────────────────────── */
+.ph-icon-btn--active {
+  background: var(--bg-3);
+  color: var(--accent);
+}
+
+.ph-spinner {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: ph-spin 0.6s linear infinite;
+}
+
+@keyframes ph-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ph-enhance-preview {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-soft);
+  border-radius: 8px;
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ph-enhance-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ph-enhance-preview-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+
+.ph-enhance-preview-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ph-enhance-error {
+  padding: 5px 16px 8px;
+  font-size: 11px;
+  color: var(--fg-3);
+  text-align: center;
 }

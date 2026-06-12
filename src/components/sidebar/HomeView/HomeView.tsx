@@ -163,6 +163,7 @@ function FeatureCard({ f, onNavigate }: { f: Feature; onNavigate: (v: string) =>
   return (
     <button
       key={f.id}
+      data-tour={f.id}
       className={`home-view__tile${isDisabled ? ' home-view__tile--disabled' : ''}`}
       onClick={() => {
         if (isDisabled) return;

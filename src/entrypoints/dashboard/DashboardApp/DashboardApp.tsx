@@ -4,7 +4,7 @@
  * @dependencies useDashboardApp, useCommandPalette, useKeyboardShortcuts, Sidebar, AudioPlayer, CommandPalette, KeyboardShortcutsPanel, ThemeProvider, SnippetsContext, NavigationContext, and all dashboard page components
  * @public DashboardApp
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StoredAuthProfile } from '@/types';
 import { authService } from '@/services/auth-service';
 import Sidebar from '@/components/dashboard/Sidebar/Sidebar';
@@ -33,6 +33,9 @@ import CommandPalette from '@/components/dashboard/CommandPalette/CommandPalette
 import KeyboardShortcutsPanel from '@/components/dashboard/KeyboardShortcutsPanel/KeyboardShortcutsPanel';
 import DriveConflictDialog from '@/components/dashboard/DriveConflictDialog/DriveConflictDialog';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider/ThemeProvider';
+import Tour from '@/components/shared/Tour/Tour';
+import { dashboardTourSteps } from '@/components/dashboard/Sidebar/tour-steps';
+import { onboardingStorage } from '@/services/storage/onboarding-storage';
 import { useCommandPalette } from '@/components/dashboard/CommandPalette/useCommandPalette';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { SnippetsProvider } from '@/contexts/SnippetsContext';
@@ -45,6 +48,7 @@ export default function DashboardApp() {
   const subscriptionValue = useSubscriptionState();
   const [authUser, setAuthUser] = useState<StoredAuthProfile | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [runTour, setRunTour] = useState(false);
 
   useEffect(() => {
     authService.getCurrentUser().then((user) => {
@@ -146,6 +150,28 @@ export default function DashboardApp() {
     }
   }, [showCommandPalette]);
 
+  // First-run tour: show once per signed-in user, after initial data load.
+  useEffect(() => {
+    if (isLoadingAuth || isLoading || !authUser) return;
+    let cancelled = false;
+    onboardingStorage.getState().then((state) => {
+      if (cancelled || state.dashboardSeen) return;
+      setCurrentView('home');
+      setRunTour(true);
+    });
+    return () => { cancelled = true; };
+  }, [isLoadingAuth, isLoading, authUser?.uid, setCurrentView]);
+
+  const finishTour = useCallback(() => {
+    setRunTour(false);
+    void onboardingStorage.markSeen('dashboard');
+  }, []);
+
+  const startTour = useCallback(() => {
+    setCurrentView('home');
+    void onboardingStorage.reset('dashboard').then(() => setRunTour(true));
+  }, [setCurrentView]);
+
   const shortcuts = useMemo(
     () => [
       {
@@ -229,6 +255,7 @@ export default function DashboardApp() {
       setShowShortcuts,
       showCommandPalette,
       setShowCommandPalette,
+      startTour,
       notebooksCount,
       chatHistoryCount,
       podcastsCount,
@@ -279,6 +306,7 @@ export default function DashboardApp() {
       setShowShortcuts,
       showCommandPalette,
       setShowCommandPalette,
+      startTour,
       notebooksCount,
       chatHistoryCount,
       podcastsCount,
@@ -435,6 +463,10 @@ export default function DashboardApp() {
               onMerge={() => void handleConflictResolution('merge')}
               onOverwrite={() => void handleConflictResolution('overwrite')}
             />
+          )}
+
+          {runTour && (
+            <Tour steps={dashboardTourSteps} onComplete={finishTour} onSkip={finishTour} />
           )}
         </SnippetsProvider>
       </NavigationProvider>

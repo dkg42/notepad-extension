@@ -16,13 +16,14 @@ import {
   Star,
   MoreHorizontal,
   Plus,
+  Search,
   Sparkles,
   Check,
   Trash2,
 } from 'lucide-react';
 import type { TabGroup, StashedTab, GroupColor } from '@/types/tab-groups';
-import { useTabManagerView, FREE_PLAN_MAX_GROUPS, COLORS } from './useTabManagerView';
-import { openUpgradePage } from '@/utils/open-upgrade';
+import { useTabManagerView, COLORS } from './useTabManagerView';
+import { isFeatureEnabled } from '@/config/feature-flags';
 import './TabManagerView.css';
 
 const COLOR_MAP: Record<GroupColor, { bar: string; soft: string; fg: string }> = {
@@ -164,18 +165,20 @@ function ContextBlock({ context, aiContext, isEditing, onEdit, onSave, onCancel,
           <span className="tab-manager-view__context-label">
             {aiContext ? 'AI summary' : 'Your note'}
           </span>
-          <button
-            className="tab-manager-view__context-generate-btn"
-            disabled={isGenerating}
-            title={isGenerating ? 'Generating…' : 'Generate AI summary'}
-            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-          >
-            <Sparkles
-              size={9}
-              strokeWidth={2.2}
-              className={isGenerating ? 'tab-manager-view__context-generate-spin' : ''}
-            />
-          </button>
+          {isFeatureEnabled('geminiNano') && (
+            <button
+              className="tab-manager-view__context-generate-btn"
+              disabled={isGenerating}
+              title={isGenerating ? 'Generating…' : 'Generate AI summary'}
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+            >
+              <Sparkles
+                size={9}
+                strokeWidth={2.2}
+                className={isGenerating ? 'tab-manager-view__context-generate-spin' : ''}
+              />
+            </button>
+          )}
         </div>
         {isEditing ? (
           <div className="tab-manager-view__context-edit">
@@ -286,34 +289,24 @@ function NewGroupForm({ name, color, onNameChange, onColorChange, onCreate, onCa
 interface HeaderStripProps {
   totalTabs: number;
   groupCount: number;
-  atLimit: boolean;
   onNewGroup: () => void;
 }
 
-function HeaderStrip({ totalTabs, groupCount, atLimit, onNewGroup }: HeaderStripProps) {
-  const pct = Math.min(100, (groupCount / FREE_PLAN_MAX_GROUPS) * 100);
-
+function HeaderStrip({ totalTabs, groupCount, onNewGroup }: HeaderStripProps) {
   return (
     <div className="tab-manager-view__header-strip">
       <div className="tab-manager-view__header-stats">
         <div className="tab-manager-view__header-counts">
           <span className="tab-manager-view__header-tab-count">{totalTabs} tabs</span>
           <span className="tab-manager-view__header-group-count">
-            · {groupCount} of {FREE_PLAN_MAX_GROUPS} groups
+            · {groupCount} group{groupCount === 1 ? '' : 's'}
           </span>
-        </div>
-        <div className="tab-manager-view__progress-track">
-          <div
-            className={`tab-manager-view__progress-fill${atLimit ? ' tab-manager-view__progress-fill--full' : ''}`}
-            style={{ width: `${pct}%` }}
-          />
         </div>
       </div>
       <button
         className="tab-manager-view__new-btn"
         onClick={onNewGroup}
-        disabled={atLimit}
-        title={atLimit ? 'Free plan: 3 groups max' : 'Create a new group'}
+        title="Create a new group"
       >
         <Plus size={11} strokeWidth={2.4} />
         New group
@@ -474,6 +467,7 @@ function UngroupedSection({ tabs, groups, onClose, onAddToGroup }: UngroupedSect
 interface TabGroupCardProps {
   group: TabGroup;
   tabs: chrome.tabs.Tab[];
+  searchQuery: string;
   expanded: boolean;
   onToggle: () => void;
   onRename: (name: string) => void;
@@ -494,6 +488,7 @@ interface TabGroupCardProps {
 function TabGroupCard({
   group,
   tabs,
+  searchQuery,
   expanded,
   onToggle,
   onRename,
@@ -531,8 +526,26 @@ function TabGroupCard({
     setIsRenamingInline(false);
   };
 
-  const liveTabs = tabs.filter((t) => t.id != null && group.tabIds.includes(t.id!));
-  const stashedTabs = group.stashedTabs ?? [];
+  const q = searchQuery.trim().toLowerCase();
+  const matchesQuery = (title?: string, url?: string) => {
+    if (!q) return true;
+    if (title && title.toLowerCase().includes(q)) return true;
+    if (url) {
+      let hostname = url;
+      try { hostname = new URL(url).hostname; } catch { /* keep raw url */ }
+      if (hostname.toLowerCase().includes(q)) return true;
+    }
+    return false;
+  };
+  // When searching, a group surfaces because its name matched OR a tab matched.
+  // Only narrow the visible tabs when the group name itself didn't match.
+  const filterTabs = q.length > 0 && !group.name.toLowerCase().includes(q);
+  const liveTabs = tabs
+    .filter((t) => t.id != null && group.tabIds.includes(t.id!))
+    .filter((t) => !filterTabs || matchesQuery(t.title, t.url));
+  const stashedTabs = (group.stashedTabs ?? []).filter(
+    (s) => !filterTabs || matchesQuery(s.title, s.url),
+  );
 
   return (
     <div className="tab-manager-view__group">
@@ -668,20 +681,6 @@ function TabGroupCard({
   );
 }
 
-// ── Upgrade banner ────────────────────────────────────────────────────────────
-
-function UpgradeBanner() {
-  return (
-    <div className="tab-manager-view__upgrade">
-      <div className="tab-manager-view__upgrade-title">Free plan: 3 of 3 groups</div>
-      <div className="tab-manager-view__upgrade-desc">
-        Upgrade to Pro for unlimited groups, custom colors, and shared sessions.
-      </div>
-      <button className="tab-manager-view__upgrade-btn" onClick={openUpgradePage}>Upgrade — $5/mo</button>
-    </div>
-  );
-}
-
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function TabManagerView() {
@@ -697,7 +696,8 @@ export default function TabManagerView() {
     setNewGroupName,
     newGroupColor,
     setNewGroupColor,
-    atGroupLimit,
+    searchQuery,
+    setSearchQuery,
     handleCreateGroup,
     handleRenameGroup,
     handleDeleteGroup,
@@ -720,9 +720,17 @@ export default function TabManagerView() {
       <HeaderStrip
         totalTabs={openTabs.length}
         groupCount={groups.length}
-        atLimit={atGroupLimit}
         onNewGroup={() => setIsCreatingGroup(true)}
       />
+
+      <div className="tab-manager-view__search">
+        <Search size={13} className="tab-manager-view__search-icon" />
+        <input
+          placeholder="Search tabs…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
       <div className="tab-manager-view__scroll">
         {isCreatingGroup && (
@@ -736,20 +744,14 @@ export default function TabManagerView() {
           />
         )}
 
-        <UngroupedSection
-          tabs={ungroupedTabs}
-          groups={groups}
-          onClose={(tabId) => void handleCloseTab(tabId)}
-          onAddToGroup={(tabId, groupId) => void handleAddTabToGroup(tabId, groupId)}
-        />
-
         <div className="tab-manager-view__groups">
           {groups.map((group) => (
             <TabGroupCard
               key={group.id}
               group={group}
               tabs={openTabs}
-              expanded={expandedId === group.id}
+              searchQuery={searchQuery}
+              expanded={searchQuery.trim() ? true : expandedId === group.id}
               onToggle={() => toggleExpanded(group.id)}
               onRename={(name) => void handleRenameGroup(group.id, name)}
               onDelete={() => void handleDeleteGroup(group.id)}
@@ -768,9 +770,20 @@ export default function TabManagerView() {
           ))}
         </div>
 
-        {atGroupLimit && <UpgradeBanner />}
+        <UngroupedSection
+          tabs={ungroupedTabs}
+          groups={groups}
+          onClose={(tabId) => void handleCloseTab(tabId)}
+          onAddToGroup={(tabId, groupId) => void handleAddTabToGroup(tabId, groupId)}
+        />
 
-        {groups.length === 0 && !isCreatingGroup && (
+        {searchQuery.trim() && groups.length === 0 && ungroupedTabs.length === 0 && (
+          <div className="tab-manager-view__empty">
+            No tabs match your search.
+          </div>
+        )}
+
+        {!searchQuery.trim() && groups.length === 0 && !isCreatingGroup && (
           <div className="tab-manager-view__empty">
             Create a group to start organizing your open tabs.
           </div>

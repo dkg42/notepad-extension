@@ -7,39 +7,19 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Search, X, Star, LayoutGrid, Folder, ChevronDown, Plus,
-  ChevronUp, Check, Trash2, Copy, Pencil, Send,
+  ChevronUp, Check, Trash2, Copy, Pencil,
   MoreHorizontal, ArrowLeft, ArrowUpDown, Sparkles,
 } from 'lucide-react';
 import type { Snippet, Folder as FolderType } from '@/types';
 import { getFolderTreeItems, getFolderSubtreeIds, getFolderPath } from '@/utils/folder-utils';
 import { useSnippets } from '@/contexts/SnippetsContext';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { aiService } from '@/services/ai-service';
+import { isFeatureEnabled } from '@/config/feature-flags';
 import FolderNav from '@/components/dashboard/FolderNav/FolderNav';
 import './PromptsPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-type Platform = 'chatgpt' | 'claude' | 'gemini' | 'perplexity' | 'copilot' | 'other';
-
-const PLATFORM_COLORS: Record<Platform, { bg: string; fg: string; dot: string; label: string }> = {
-  chatgpt:    { bg: 'oklch(0.27 0.06 152)', fg: 'oklch(0.86 0.12 152)', dot: 'oklch(0.62 0.18 152)', label: 'ChatGPT'    },
-  claude:     { bg: 'oklch(0.27 0.06 55)',  fg: 'oklch(0.88 0.12 55)',  dot: 'oklch(0.70 0.16 55)',  label: 'Claude'      },
-  gemini:     { bg: 'oklch(0.27 0.06 270)', fg: 'oklch(0.85 0.12 270)', dot: 'oklch(0.65 0.16 270)', label: 'Gemini'      },
-  perplexity: { bg: 'oklch(0.27 0.06 220)', fg: 'oklch(0.85 0.12 220)', dot: 'oklch(0.62 0.14 220)', label: 'Perplexity'  },
-  copilot:    { bg: 'oklch(0.27 0.05 240)', fg: 'oklch(0.85 0.10 240)', dot: 'oklch(0.58 0.14 240)', label: 'Copilot'     },
-  other:      { bg: 'var(--bg-3)',          fg: 'var(--fg-2)',           dot: 'var(--fg-3)',          label: 'Other'       },
-};
-
-function getPlatform(source: string): Platform {
-  if (!source) return 'other';
-  const s = source.toLowerCase();
-  if (s.includes('chatgpt.com') || s.includes('chat.openai.com')) return 'chatgpt';
-  if (s.includes('claude.ai')) return 'claude';
-  if (s.includes('gemini.google.com')) return 'gemini';
-  if (s.includes('perplexity.ai')) return 'perplexity';
-  if (s.includes('copilot.microsoft.com')) return 'copilot';
-  return 'other';
-}
 
 const TAG_COLORS = [
   { bg: 'var(--tag-1-bg)', fg: 'var(--tag-1-fg)' },
@@ -81,19 +61,6 @@ function TagChip({ tag, removable, onRemove }: { tag: string; removable?: boolea
           <X size={9} strokeWidth={2.5} />
         </button>
       )}
-    </span>
-  );
-}
-
-// ── Source badge ───────────────────────────────────────────────────────────────
-
-function SourceBadge({ source }: { source: string }) {
-  const platform = getPlatform(source);
-  const c = PLATFORM_COLORS[platform];
-  return (
-    <span className="ph-source" style={{ background: c.bg, color: c.fg }}>
-      <span className="ph-source__dot" style={{ background: c.dot }} />
-      {c.label}
     </span>
   );
 }
@@ -172,8 +139,6 @@ function RowMenu({ snippet, folders, onEdit, onDuplicate, onMove, onDelete, onCl
 
 // ── Prompt detail panel ────────────────────────────────────────────────────────
 
-type SendStatus = 'idle' | 'sending' | 'sent' | 'no_target' | 'failed';
-
 interface DetailPanelProps {
   snippet: Snippet;
   folders: FolderType[];
@@ -188,7 +153,9 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
   const [editTitle, setEditTitle] = useState(getSnippetTitle(snippet));
   const [editBody, setEditBody] = useState(snippet.text);
   const [copied, setCopied] = useState(false);
-  const [sendStatus, setSendStatus] = useState<SendStatus>('idle');
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancedText, setEnhancedText] = useState<string | null>(null);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
 
   const breadcrumb = snippet.folderId ? getFolderPath(snippet.folderId, folders) : null;
 
@@ -198,19 +165,21 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleSend = async () => {
-    setSendStatus('sending');
+  const handleEnhance = async () => {
+    setEnhancing(true);
+    setEnhanceError(null);
+    setEnhancedText(null);
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) throw new Error('no_tab');
-      const resp = await chrome.tabs.sendMessage(tab.id, { type: 'SEND_TO_CHAT', text: snippet.text }) as { ok: boolean; error?: string };
-      if (resp.ok) { setSendStatus('sent'); setTimeout(() => setSendStatus('idle'), 1500); }
-      else if (resp.error === 'no_target') { setSendStatus('no_target'); setTimeout(() => setSendStatus('idle'), 3000); }
-      else throw new Error(resp.error);
-    } catch {
-      navigator.clipboard.writeText(snippet.text).catch(() => {});
-      setSendStatus('failed');
-      setTimeout(() => setSendStatus('idle'), 2500);
+      const result = await aiService.enhancePrompt(snippet.text);
+      setEnhancedText(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'AI_UNSUPPORTED') setEnhanceError('Chrome AI is not available in this browser.');
+      else if (msg === 'AI_AFTER-DOWNLOAD') setEnhanceError('AI model is downloading. Try again shortly.');
+      else if (msg === 'AI_UNAVAILABLE') setEnhanceError('AI model unavailable. Check chrome://flags/#optimization-guide-on-device-model.');
+      else setEnhanceError(`Enhancement failed: ${msg}`);
+    } finally {
+      setEnhancing(false);
     }
   };
 
@@ -220,6 +189,16 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
         <button className="ph-icon-btn" onClick={onBack} title="Back"><ArrowLeft size={14} /></button>
         {breadcrumb && <span className="ph-detail__breadcrumb">{breadcrumb}</span>}
         <span className="ph-detail__spacer" />
+        {isFeatureEnabled('geminiNano') && (
+          <button
+            className={`ph-icon-btn${enhancing ? ' ph-icon-btn--active' : ''}`}
+            title={enhancing ? 'Enhancing…' : 'Enhance with AI'}
+            disabled={enhancing || editing}
+            onClick={handleEnhance}
+          >
+            {enhancing ? <span className="ph-spinner" /> : <Sparkles size={14} />}
+          </button>
+        )}
         <button className="ph-icon-btn" title={snippet.isFavorite ? 'Unstar' : 'Star'} onClick={() => onStar(snippet.id)} style={{ color: snippet.isFavorite ? 'var(--accent)' : undefined }}>
           <Star size={14} strokeWidth={1.8} fill={snippet.isFavorite ? 'currentColor' : 'none'} />
         </button>
@@ -243,10 +222,31 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
         )}
 
         <div className="ph-detail__meta">
-          <SourceBadge source={snippet.source} />
           <span className="ph-detail__saved">Saved {new Date(snippet.savedAt).toLocaleDateString()}</span>
         </div>
       </div>
+
+      {enhancedText && (
+        <div className="ph-enhance-preview">
+          <div className="ph-enhance-preview-label">
+            <Sparkles size={11} /> Enhanced version
+          </div>
+          <div className="ph-enhance-preview-text">{enhancedText}</div>
+          <div className="ph-enhance-preview-actions">
+            <button className="ph-btn-ghost" onClick={() => setEnhancedText(null)}>Discard</button>
+            <button
+              className="ph-btn-primary"
+              onClick={() => { onSave(snippet.id, getSnippetTitle(snippet), enhancedText); setEnhancedText(null); }}
+            >
+              <Check size={13} /> Apply
+            </button>
+          </div>
+        </div>
+      )}
+
+      {enhanceError && (
+        <div className="ph-enhance-error">{enhanceError}</div>
+      )}
 
       <div className="ph-detail__actions">
         {editing ? (
@@ -263,18 +263,9 @@ function DetailPanel({ snippet, folders, onBack, onStar, onSave, onDelete }: Det
             <button className="ph-btn-ghost" onClick={handleCopy}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy'}</button>
             <span className="ph-detail__spacer" />
             <button className="ph-btn-ghost ph-btn-ghost--danger" onClick={() => onDelete(snippet.id)}><Trash2 size={13} /></button>
-            <button className="ph-btn-primary" onClick={handleSend} disabled={sendStatus === 'sending'}>
-              {sendStatus === 'sending' ? <span className="ph-send-spinner" /> : sendStatus === 'sent' ? <Check size={13} /> : <Send size={13} />}
-              {sendStatus === 'sent' ? 'Sent!' : 'Send to chat'}
-            </button>
           </>
         )}
       </div>
-      {(sendStatus === 'no_target' || sendStatus === 'failed') && (
-        <div className="ph-detail__hint">
-          {sendStatus === 'no_target' ? 'Click in the chat input first.' : 'Copied to clipboard — paste with Ctrl+V.'}
-        </div>
-      )}
     </div>
   );
 }
@@ -738,7 +729,6 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                         </th>
                         <th className="ph-th ph-th--star" />
                         <SortHeader col="title" label="PROMPT" current={sortCol} dir={sortDir} onSort={handleSort} />
-                        <th className="ph-th">SOURCE</th>
                         <th className="ph-th">TAGS</th>
                         <SortHeader col="usageCount" label="USES" current={sortCol} dir={sortDir} onSort={handleSort} />
                         <th className="ph-th ph-th--menu" />
@@ -746,7 +736,7 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                     </thead>
                     <tbody>
                       {paginated.length === 0 ? (
-                        <tr><td colSpan={7} className="ph-td-empty">No prompts match.</td></tr>
+                        <tr><td colSpan={6} className="ph-td-empty">No prompts match.</td></tr>
                       ) : (
                         paginated.map((s) => {
                           const title = getSnippetTitle(s);
@@ -773,7 +763,6 @@ export default function PromptsPage({ initialFolder }: PromptsPageProps) {
                                 <div className="ph-row__title">{title}</div>
                                 {breadcrumb && <div className="ph-row__breadcrumb">{breadcrumb}</div>}
                               </td>
-                              <td className="ph-td ph-td--source"><SourceBadge source={s.source} /></td>
                               <td className="ph-td ph-td--tags">
                                 {(s.tags ?? []).slice(0, 3).map((t) => <TagChip key={t} tag={t} />)}
                                 {(s.tags?.length ?? 0) > 3 && <span className="ph-tags-more">+{(s.tags?.length ?? 0) - 3}</span>}
