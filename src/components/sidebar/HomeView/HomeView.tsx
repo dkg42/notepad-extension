@@ -282,7 +282,7 @@ export default function HomeView({ onNavigate }: HomeViewProps) {
           <div className="home-view__upsell-desc">
             Unlimited prompts, screenshots, NotebookLM sources, and chat history search.
           </div>
-          <button className="home-view__upsell-btn" onClick={openUpgradePage}>Upgrade — $5/mo</button>
+          <button className="home-view__upsell-btn" onClick={openUpgradePage}>Upgrade to Pro</button>
         </div>
       )}
     </div>
