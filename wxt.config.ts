@@ -1,6 +1,24 @@
 import { defineConfig } from 'wxt';
 import { loadEnv } from 'vite';
 
+// jsPDF bakes a remote PDFObject CDN <script> loader into its
+// `output('pdfobjectnewwindow')` branch. We only ever call doc.save(), so that
+// path is dead code, but the literal CDN URL survives bundling and trips Chrome
+// Web Store's "remotely hosted code" (MV3) static scan. Replace the remote URL
+// with about:blank in the final chunks so no remote-host reference remains.
+function stripJsPdfRemoteCode() {
+  const REMOTE_URL =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.1.1/pdfobject.min.js';
+  return {
+    name: 'strip-jspdf-remote-code',
+    apply: 'build' as const,
+    renderChunk(code: string) {
+      if (!code.includes(REMOTE_URL)) return null;
+      return { code: code.split(REMOTE_URL).join('about:blank'), map: null };
+    },
+  };
+}
+
 // WXT 0.19's defineConfig accepts only a static object, so we resolve the
 // active mode (passed via the CLI `--mode <value>` flag) by parsing argv and
 // then load the matching `.env.<mode>` file via Vite's loadEnv.
@@ -30,6 +48,7 @@ if (!authOrigin) {
 const isDev = mode === 'development';
 
 export default defineConfig({
+  vite: () => ({ plugins: [stripJsPdfRemoteCode()] }),
   srcDir: 'src',
   outDir: isDev ? '.output-dev' : '.output',
   modules: ['@wxt-dev/module-react'],
