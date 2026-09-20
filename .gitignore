@@ -1,28 +1,40 @@
-# Default ignored files
-/shelf/
-/.idea
-# Ignored default folder with query files
-/queries/
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
-# Editor-based HTTP Client requests
-/httpRequests/
+# Dependencies
+node_modules/
 
-# WXT
+# WXT build output
 .output/
 .output-dev/
 .wxt/
+*.zip
 
 # Env profile files — never commit. Build values live in .env.<mode>.local
 # (copy from .env.example). .env.example is the only checked-in env file.
+.env
 .env.local
 .env.*.local
 .env.development
 .env.production
 
-# Dependencies
-node_modules/
+# Generated knowledge-graph cache (regenerate locally; not a build input)
+graphify-out/
 
-# macOS
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+/shelf/
+/queries/
+/dataSources/
+/dataSources.local.xml
+/httpRequests/
+
+# Local agent settings (machine-specific paths and permissions)
+.claude/settings.local.json
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
