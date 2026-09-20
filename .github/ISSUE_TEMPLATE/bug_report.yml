@@ -1,0 +1,68 @@
+name: Bug report
+description: Something in the extension is not working
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a **security** issue, please do not
+        file it here — see [SECURITY.md](../blob/main/SECURITY.md).
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does it happen?
+      options:
+        - Side panel
+        - Dashboard
+        - Capture on a web page
+        - NotebookLM page (source/studio panel)
+        - Chat site (ChatGPT, Claude, Gemini, …)
+        - Sign-in / account
+        - Export
+        - Drive sync
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: site
+    attributes:
+      label: Which site?
+      description: If it broke on one specific site, naming it usually points straight at the adapter.
+      placeholder: notebooklm.google.com
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Click …
+        3. Observe …
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Extension and browser version
+      placeholder: Notehublm 1.0.0, Chrome 140
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output
+      description: >
+        From chrome://extensions/ → Inspect views: service worker, and/or the
+        page console. Please redact anything personal.
+      render: shell

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+    branches: [main, 'release/**']
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Typecheck & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Real credentials are not needed to verify the build compiles — the
+      # config only requires these keys to be present. Secrets are never
+      # required for a PR build, so forks can run CI too.
+      - name: Write placeholder env
+        run: |
+          cat > .env.production.local <<'EOF'
+          VITE_FIREBASE_PROJECT_ID=ci-placeholder
+          VITE_FIREBASE_API_KEY=ci-placeholder
+          VITE_FIREBASE_AUTH_DOMAIN=ci-placeholder.firebaseapp.com
+          VITE_FIREBASE_STORAGE_BUCKET=ci-placeholder.appspot.com
+          VITE_CLOUD_FUNCTIONS_BASE_URL=https://us-central1-ci-placeholder.cloudfunctions.net
+          VITE_EXTERNAL_AUTH_ORIGIN=https://www.notehublm.com
+          VITE_ENABLE_GEMINI_NANO=false
+          EOF
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-mv3
+          path: .output/chrome-mv3/
+          retention-days: 7
