@@ -53,7 +53,8 @@ export default defineConfig({
   outDir: isDev ? '.output-dev' : '.output',
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: isDev ? 'Notehublm' : 'Notehublm',
+    // Distinct names so dev and prod builds are tellable apart in chrome://extensions.
+    name: isDev ? 'Notehublm Dev' : 'Notehublm',
     description: 'Supercharge NotebookLM: capture sources from anywhere, organize notebooks with folders and tags, and manage audio.',
     version: '1.0.0',
     permissions: ['storage', 'alarms', 'tabs', 'offscreen', 'cookies', 'sidePanel', 'scripting'],
